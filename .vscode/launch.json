@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Chromium extension",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "preLaunchTask": "build: chromium",
+      "url": "chrome://newtab",
+      "runtimeArgs": [
+        "--load-extension=${workspaceFolder}/dist/chromium",
+        "--disable-extensions-except=${workspaceFolder}/dist/chromium",
+        "--user-data-dir=${workspaceFolder}/.vscode/chromium-profile"
+      ],
+      "webRoot": "${workspaceFolder}/src"
+    },
+    {
+      "name": "Debug Edge extension",
+      "type": "pwa-msedge",
+      "request": "launch",
+      "preLaunchTask": "build: chromium",
+      "url": "edge://newtab",
+      "runtimeArgs": [
+        "--load-extension=${workspaceFolder}/dist/chromium",
+        "--disable-extensions-except=${workspaceFolder}/dist/chromium",
+        "--user-data-dir=${workspaceFolder}/.vscode/edge-profile"
+      ],
+      "webRoot": "${workspaceFolder}/src"
+    },
+    {
+      "name": "Debug Firefox extension",
+      "type": "firefox",
+      "request": "launch",
+      "preLaunchTask": "build: firefox",
+      "reAttach": true,
+      "url": "about:newtab",
+      "addonPath": "${workspaceFolder}/dist/firefox",
+      "profileDir": "${workspaceFolder}/.vscode/firefox-profile"
+    }
+  ]
+}

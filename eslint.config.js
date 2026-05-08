@@ -8,7 +8,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...svelte.configs['flat/recommended'],
   {
-    ignores: ['dist/', 'artifacts/', 'coverage/', 'node_modules/', '*.config.js']
+    ignores: [
+      'dist/',
+      'artifacts/',
+      'coverage/',
+      'node_modules/',
+      '*.config.js'
+    ]
   },
   {
     languageOptions: {

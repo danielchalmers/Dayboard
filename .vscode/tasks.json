@@ -1,0 +1,74 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "install",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "dev",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build: chromium",
+      "type": "npm",
+      "script": "build:chromium",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build: firefox",
+      "type": "npm",
+      "script": "build:firefox",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "lint",
+      "type": "npm",
+      "script": "lint",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "typecheck",
+      "type": "npm",
+      "script": "typecheck",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "type": "npm",
+      "script": "test",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "package",
+      "type": "npm",
+      "script": "package",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "screenshots",
+      "type": "npm",
+      "script": "screenshots",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

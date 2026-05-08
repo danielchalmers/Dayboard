@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCountdown, formatClock, greetingFor, isFutureTarget } from '../../src/lib/time';
+import {
+  formatCountdown,
+  formatClock,
+  greetingFor,
+  isFutureTarget
+} from '../../src/lib/time';
 
 describe('time helpers', () => {
   it('formats countdowns with calm smart units for distant targets', () => {
@@ -23,7 +28,10 @@ describe('time helpers', () => {
   });
 
   it('stops completed countdowns at zero', () => {
-    const display = formatCountdown('2026-05-08T09:00:00', new Date('2026-05-08T10:00:00'));
+    const display = formatCountdown(
+      '2026-05-08T09:00:00',
+      new Date('2026-05-08T10:00:00')
+    );
 
     expect(display.completed).toBe(true);
     expect(display.label).toBe('Completed');

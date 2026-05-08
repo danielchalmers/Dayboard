@@ -8,5 +8,11 @@
     "strict": true,
     "types": ["chrome", "vite/client", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "scripts/**/*.mjs", "tests/**/*.ts", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "scripts/**/*.mjs",
+    "tests/**/*.ts",
+    "vite.config.ts"
+  ]
 }

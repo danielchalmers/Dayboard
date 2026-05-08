@@ -32,7 +32,8 @@ function roundedTile(png, radius) {
       const left = x < radius ? radius - x : 0;
       const right = x >= png.width - radius ? x - (png.width - radius - 1) : 0;
       const top = y < radius ? radius - y : 0;
-      const bottom = y >= png.height - radius ? y - (png.height - radius - 1) : 0;
+      const bottom =
+        y >= png.height - radius ? y - (png.height - radius - 1) : 0;
       const dx = Math.max(left, right);
       const dy = Math.max(top, bottom);
       if (dx === 0 || dy === 0 || dx * dx + dy * dy <= radius * radius) {

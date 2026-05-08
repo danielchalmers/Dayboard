@@ -10,7 +10,12 @@
     normalizeSettings
   } from '../lib/settings';
   import { MAX_COUNTDOWNS, type Countdown } from '../lib/types';
-  import { initializeSettings, persistSettings, updateSettings, settingsState } from './settingsStore';
+  import {
+    initializeSettings,
+    persistSettings,
+    updateSettings,
+    settingsState
+  } from './settingsStore';
 
   let message = '';
   let editingId: string | null = null;
@@ -22,7 +27,8 @@
   });
 
   $: settings = $settingsState.settings;
-  $: editing = settings.countdowns.find((countdown) => countdown.id === editingId) ?? null;
+  $: editing =
+    settings.countdowns.find((countdown) => countdown.id === editingId) ?? null;
 
   function beginEdit(countdown: Countdown) {
     editingId = countdown.id;
@@ -41,13 +47,19 @@
     try {
       await updateSettings((current) =>
         editingId
-          ? updateCountdown(current, editingId, { name: draftName, targetLocal: draftTarget })
+          ? updateCountdown(current, editingId, {
+              name: draftName,
+              targetLocal: draftTarget
+            })
           : addCountdown(current, { name: draftName, targetLocal: draftTarget })
       );
       clearDraft();
       message = 'Countdown saved.';
     } catch (error) {
-      message = error instanceof Error ? error.message : 'Countdown could not be saved.';
+      message =
+        error instanceof Error
+          ? error.message
+          : 'Countdown could not be saved.';
     }
   }
 
@@ -64,7 +76,9 @@
   }
 
   function exportSettings() {
-    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(settings, null, 2)], {
+      type: 'application/json'
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -81,7 +95,8 @@
       clearDraft();
       message = 'Settings imported.';
     } catch (error) {
-      message = error instanceof Error ? error.message : 'Settings import failed.';
+      message =
+        error instanceof Error ? error.message : 'Settings import failed.';
     }
   }
 </script>
@@ -99,7 +114,8 @@
         <input
           type="file"
           accept="application/json"
-          on:change={(event) => importSettings(event.currentTarget.files?.[0] ?? null)}
+          on:change={(event) =>
+            importSettings(event.currentTarget.files?.[0] ?? null)}
         />
       </label>
       <button type="button" class="danger" on:click={resetAll}>Reset</button>
@@ -107,7 +123,10 @@
   </header>
 
   {#if $settingsState.status.fallbackReason}
-    <p class="notice">Using {$settingsState.status.area} storage: {$settingsState.status.fallbackReason}</p>
+    <p class="notice">
+      Using {$settingsState.status.area} storage: {$settingsState.status
+        .fallbackReason}
+    </p>
   {/if}
   {#if message}
     <p class="notice">{message}</p>
@@ -123,7 +142,10 @@
           on:change={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, timeFormat: event.currentTarget.value as 'system' | '12' | '24' },
+              clock: {
+                ...current.clock,
+                timeFormat: event.currentTarget.value as 'system' | '12' | '24'
+              },
               updatedAt: new Date().toISOString()
             }))}
         >
@@ -144,7 +166,10 @@
           on:input={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, fontScale: Number(event.currentTarget.value) },
+              clock: {
+                ...current.clock,
+                fontScale: Number(event.currentTarget.value)
+              },
               updatedAt: new Date().toISOString()
             }))}
         />
@@ -157,7 +182,10 @@
           on:change={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, showSeconds: event.currentTarget.checked },
+              clock: {
+                ...current.clock,
+                showSeconds: event.currentTarget.checked
+              },
               updatedAt: new Date().toISOString()
             }))}
         />
@@ -170,7 +198,10 @@
           on:change={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, showDate: event.currentTarget.checked },
+              clock: {
+                ...current.clock,
+                showDate: event.currentTarget.checked
+              },
               updatedAt: new Date().toISOString()
             }))}
         />
@@ -183,7 +214,10 @@
           on:change={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, showGreeting: event.currentTarget.checked },
+              clock: {
+                ...current.clock,
+                showGreeting: event.currentTarget.checked
+              },
               updatedAt: new Date().toISOString()
             }))}
         />
@@ -196,7 +230,10 @@
           on:change={(event) =>
             updateSettings((current) => ({
               ...current,
-              clock: { ...current.clock, showCountdown: event.currentTarget.checked },
+              clock: {
+                ...current.clock,
+                showCountdown: event.currentTarget.checked
+              },
               updatedAt: new Date().toISOString()
             }))}
         />
@@ -206,7 +243,9 @@
 
     <div class="panel">
       <h2>Countdowns</h2>
-      <p class="muted">{settings.countdowns.length} of {MAX_COUNTDOWNS} saved</p>
+      <p class="muted">
+        {settings.countdowns.length} of {MAX_COUNTDOWNS} saved
+      </p>
       <div class="countdown-list">
         {#each settings.countdowns as countdown}
           <div class="countdown-row">
@@ -215,13 +254,22 @@
                 type="radio"
                 name="active-countdown"
                 checked={settings.activeCountdownId === countdown.id}
-                on:change={() => updateSettings((current) => setActiveCountdown(current, countdown.id))}
+                on:change={() =>
+                  updateSettings((current) =>
+                    setActiveCountdown(current, countdown.id)
+                  )}
               />
               <span>{countdown.name}</span>
             </label>
             <div>
-              <button type="button" on:click={() => beginEdit(countdown)}>Edit</button>
-              <button type="button" class="danger" on:click={() => deleteCountdown(countdown.id)}>Remove</button>
+              <button type="button" on:click={() => beginEdit(countdown)}
+                >Edit</button
+              >
+              <button
+                type="button"
+                class="danger"
+                on:click={() => deleteCountdown(countdown.id)}>Remove</button
+              >
             </div>
           </div>
         {:else}
@@ -238,14 +286,20 @@
         <h3>{editing ? 'Edit countdown' : 'Add countdown'}</h3>
         <label class="field-row">
           <span>Name</span>
-          <input bind:value={draftName} maxlength="80" placeholder="Launch day" />
+          <input
+            bind:value={draftName}
+            maxlength="80"
+            placeholder="Launch day"
+          />
         </label>
         <label class="field-row">
           <span>Date and time</span>
           <input type="datetime-local" bind:value={draftTarget} />
         </label>
         <div class="form-actions">
-          <button type="submit">{editing ? 'Save changes' : 'Add countdown'}</button>
+          <button type="submit"
+            >{editing ? 'Save changes' : 'Add countdown'}</button
+          >
           {#if editing}
             <button type="button" on:click={clearDraft}>Cancel</button>
           {/if}

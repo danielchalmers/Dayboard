@@ -19,7 +19,11 @@ export function isFutureTarget(targetLocal: string, now = new Date()): boolean {
   return Number.isFinite(target.getTime()) && target.getTime() > now.getTime();
 }
 
-export function formatClock(date: Date, timeFormat: TimeFormat, showSeconds: boolean): string {
+export function formatClock(
+  date: Date,
+  timeFormat: TimeFormat,
+  showSeconds: boolean
+): string {
   const hour12 = timeFormat === 'system' ? undefined : timeFormat === '12';
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
@@ -45,12 +49,22 @@ export function greetingFor(date: Date): string {
   return 'Good evening';
 }
 
-export function getActiveCountdown(countdowns: Countdown[], activeId: string | null): Countdown | null {
+export function getActiveCountdown(
+  countdowns: Countdown[],
+  activeId: string | null
+): Countdown | null {
   if (countdowns.length === 0) return null;
-  return countdowns.find((countdown) => countdown.id === activeId) ?? countdowns[0] ?? null;
+  return (
+    countdowns.find((countdown) => countdown.id === activeId) ??
+    countdowns[0] ??
+    null
+  );
 }
 
-export function formatCountdown(targetLocal: string, now = new Date()): CountdownDisplay {
+export function formatCountdown(
+  targetLocal: string,
+  now = new Date()
+): CountdownDisplay {
   const target = localInputToDate(targetLocal);
   const remaining = target.getTime() - now.getTime();
 

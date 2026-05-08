@@ -4,8 +4,12 @@ test('new tab renders the clock dashboard', async ({ page }) => {
   await page.goto('/newtab.html');
 
   await expect(page.getByRole('heading', { name: /\d/ })).toBeVisible();
-  await expect(page.getByText(/Good morning|Good afternoon|Good evening/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'No countdown yet' })).toBeVisible();
+  await expect(
+    page.getByText(/Good morning|Good afternoon|Good evening/)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'No countdown yet' })
+  ).toBeVisible();
 });
 
 test('popup renders quick controls', async ({ page }) => {

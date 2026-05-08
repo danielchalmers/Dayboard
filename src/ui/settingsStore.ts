@@ -2,7 +2,11 @@ import { writable } from 'svelte/store';
 
 import { createDefaultSettings } from '../lib/defaults';
 import { loadSettings, saveSettings } from '../lib/storage';
-import type { ClockboardSettings, SettingsEnvelope, StorageStatus } from '../lib/types';
+import type {
+  ClockboardSettings,
+  SettingsEnvelope,
+  StorageStatus
+} from '../lib/types';
 
 interface SettingsState {
   ready: boolean;
@@ -35,7 +39,10 @@ export async function initializeSettings() {
     settingsState.update((state) => ({
       ...state,
       ready: true,
-      error: error instanceof Error ? error.message : 'Clockboard settings could not be loaded.'
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Clockboard settings could not be loaded.'
     }));
   }
 }
@@ -52,12 +59,17 @@ export async function persistSettings(settings: ClockboardSettings) {
   } catch (error) {
     settingsState.update((state) => ({
       ...state,
-      error: error instanceof Error ? error.message : 'Clockboard settings could not be saved.'
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Clockboard settings could not be saved.'
     }));
   }
 }
 
-export async function updateSettings(mutator: (settings: ClockboardSettings) => ClockboardSettings) {
+export async function updateSettings(
+  mutator: (settings: ClockboardSettings) => ClockboardSettings
+) {
   const base = currentEnvelope?.settings ?? createDefaultSettings();
   await persistSettings(mutator(base));
 }

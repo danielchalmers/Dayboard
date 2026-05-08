@@ -4,7 +4,11 @@
   import { getChromeRuntime } from '../lib/browser';
   import { getActiveCountdown } from '../lib/time';
   import CountdownView from './CountdownView.svelte';
-  import { initializeSettings, updateSettings, settingsState } from './settingsStore';
+  import {
+    initializeSettings,
+    updateSettings,
+    settingsState
+  } from './settingsStore';
 
   let now = new Date();
 
@@ -26,7 +30,10 @@
   }
 
   $: settings = $settingsState.settings;
-  $: activeCountdown = getActiveCountdown(settings.countdowns, settings.activeCountdownId);
+  $: activeCountdown = getActiveCountdown(
+    settings.countdowns,
+    settings.activeCountdownId
+  );
 </script>
 
 <main class="popup-shell">
@@ -35,7 +42,11 @@
     <button type="button" on:click={openOptions}>Options</button>
   </header>
 
-  <CountdownView countdown={settings.clock.showCountdown ? activeCountdown : null} {now} compact />
+  <CountdownView
+    countdown={settings.clock.showCountdown ? activeCountdown : null}
+    {now}
+    compact
+  />
 
   <label class="switch-row">
     <input
@@ -44,7 +55,10 @@
       on:change={(event) =>
         updateSettings((current) => ({
           ...current,
-          clock: { ...current.clock, showCountdown: event.currentTarget.checked },
+          clock: {
+            ...current.clock,
+            showCountdown: event.currentTarget.checked
+          },
           updatedAt: new Date().toISOString()
         }))}
     />
@@ -71,6 +85,9 @@
   {/if}
 
   {#if $settingsState.status.fallbackReason}
-    <p class="notice">Using {$settingsState.status.area} storage: {$settingsState.status.fallbackReason}</p>
+    <p class="notice">
+      Using {$settingsState.status.area} storage: {$settingsState.status
+        .fallbackReason}
+    </p>
   {/if}
 </main>

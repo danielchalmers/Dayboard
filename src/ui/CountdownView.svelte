@@ -11,7 +11,9 @@
 
 <section class:compact class="countdown-view">
   {#if countdown && display}
-    <p class="eyebrow">{display.completed ? 'Countdown complete' : 'Next countdown'}</p>
+    <p class="eyebrow">
+      {display.completed ? 'Countdown complete' : 'Next countdown'}
+    </p>
     <h2>{countdown.name}</h2>
     <div class="unit-grid" aria-label={display.label}>
       {#each display.units as unit}

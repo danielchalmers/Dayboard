@@ -58,7 +58,9 @@ const summary = await Promise.all(
   files
     .filter((file) => file.endsWith('.sha256'))
     .sort()
-    .map(async (file) => (await readFile(join(artifactsDir, file), 'utf8')).trim())
+    .map(async (file) =>
+      (await readFile(join(artifactsDir, file), 'utf8')).trim()
+    )
 );
 
 if (summary.length > 0) {

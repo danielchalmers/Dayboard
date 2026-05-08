@@ -17,7 +17,12 @@ describe('extension manifests', () => {
     const firefox = createManifest('firefox');
 
     expect(chromium).not.toHaveProperty('browser_specific_settings');
-    expect(firefox.browser_specific_settings?.gecko.id).toBe('clockboard@example.invalid');
-    expect(firefox.browser_specific_settings?.gecko.data_collection_permissions.required).toEqual(['none']);
+    expect(firefox.browser_specific_settings?.gecko.id).toBe(
+      'clockboard@example.invalid'
+    );
+    expect(
+      firefox.browser_specific_settings?.gecko.data_collection_permissions
+        .required
+    ).toEqual(['none']);
   });
 });

@@ -27,11 +27,19 @@
   }
 
   $: settings = $settingsState.settings;
-  $: activeCountdown = getActiveCountdown(settings.countdowns, settings.activeCountdownId);
+  $: activeCountdown = getActiveCountdown(
+    settings.countdowns,
+    settings.activeCountdownId
+  );
 </script>
 
 <main class="newtab-shell" aria-busy={!$settingsState.ready}>
-  <button class="icon-button settings-button" type="button" aria-label="Open options" on:click={openOptions}>
+  <button
+    class="icon-button settings-button"
+    type="button"
+    aria-label="Open options"
+    on:click={openOptions}
+  >
     <span aria-hidden="true">Options</span>
   </button>
 

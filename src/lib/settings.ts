@@ -1,6 +1,12 @@
 import { createDefaultSettings } from './defaults';
 import { isFutureTarget } from './time';
-import { MAX_COUNTDOWNS, SCHEMA_VERSION, type ClockboardSettings, type Countdown, type CountdownDraft } from './types';
+import {
+  MAX_COUNTDOWNS,
+  SCHEMA_VERSION,
+  type ClockboardSettings,
+  type Countdown,
+  type CountdownDraft
+} from './types';
 
 export const SETTINGS_KEY = 'clockboard.settings.v1';
 
@@ -15,17 +21,25 @@ function asString(value: unknown): string | null {
 }
 
 function clampFontScale(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.min(1.5, Math.max(0.8, value)) : 1;
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(1.5, Math.max(0.8, value))
+    : 1;
 }
 
 function createId(): string {
-  if ('crypto' in globalThis && typeof globalThis.crypto.randomUUID === 'function') {
+  if (
+    'crypto' in globalThis &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
     return globalThis.crypto.randomUUID();
   }
   return `countdown-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function normalizeSettings(value: unknown, now = new Date()): ClockboardSettings {
+export function normalizeSettings(
+  value: unknown,
+  now = new Date()
+): ClockboardSettings {
   const defaults = createDefaultSettings(now);
   if (!isRecord(value)) return defaults;
 
@@ -46,22 +60,39 @@ export function normalizeSettings(value: unknown, now = new Date()): ClockboardS
     .slice(0, MAX_COUNTDOWNS);
 
   const activeCountdownId = asString(value.activeCountdownId);
-  const activeExists = countdowns.some((countdown) => countdown.id === activeCountdownId);
+  const activeExists = countdowns.some(
+    (countdown) => countdown.id === activeCountdownId
+  );
 
   return {
     schemaVersion: SCHEMA_VERSION,
     updatedAt: asString(value.updatedAt) ?? defaults.updatedAt,
-    activeCountdownId: activeExists ? activeCountdownId : countdowns[0]?.id ?? null,
+    activeCountdownId: activeExists
+      ? activeCountdownId
+      : (countdowns[0]?.id ?? null),
     clock: {
       timeFormat:
-        clock.timeFormat === '12' || clock.timeFormat === '24' || clock.timeFormat === 'system'
+        clock.timeFormat === '12' ||
+        clock.timeFormat === '24' ||
+        clock.timeFormat === 'system'
           ? clock.timeFormat
           : defaults.clock.timeFormat,
-      showSeconds: typeof clock.showSeconds === 'boolean' ? clock.showSeconds : defaults.clock.showSeconds,
-      showDate: typeof clock.showDate === 'boolean' ? clock.showDate : defaults.clock.showDate,
-      showGreeting: typeof clock.showGreeting === 'boolean' ? clock.showGreeting : defaults.clock.showGreeting,
+      showSeconds:
+        typeof clock.showSeconds === 'boolean'
+          ? clock.showSeconds
+          : defaults.clock.showSeconds,
+      showDate:
+        typeof clock.showDate === 'boolean'
+          ? clock.showDate
+          : defaults.clock.showDate,
+      showGreeting:
+        typeof clock.showGreeting === 'boolean'
+          ? clock.showGreeting
+          : defaults.clock.showGreeting,
       showCountdown:
-        typeof clock.showCountdown === 'boolean' ? clock.showCountdown : defaults.clock.showCountdown,
+        typeof clock.showCountdown === 'boolean'
+          ? clock.showCountdown
+          : defaults.clock.showCountdown,
       fontScale: clampFontScale(clock.fontScale)
     },
     countdowns
@@ -119,16 +150,29 @@ export function updateCountdown(
     updatedAt: timestamp,
     countdowns: settings.countdowns.map((countdown) =>
       countdown.id === countdownId
-        ? { ...countdown, name: draft.name.trim(), targetLocal: draft.targetLocal, updatedAt: timestamp }
+        ? {
+            ...countdown,
+            name: draft.name.trim(),
+            targetLocal: draft.targetLocal,
+            updatedAt: timestamp
+          }
         : countdown
     )
   };
 }
 
-export function removeCountdown(settings: ClockboardSettings, countdownId: string, now = new Date()): ClockboardSettings {
-  const countdowns = settings.countdowns.filter((countdown) => countdown.id !== countdownId);
+export function removeCountdown(
+  settings: ClockboardSettings,
+  countdownId: string,
+  now = new Date()
+): ClockboardSettings {
+  const countdowns = settings.countdowns.filter(
+    (countdown) => countdown.id !== countdownId
+  );
   const activeCountdownId =
-    settings.activeCountdownId === countdownId ? countdowns[0]?.id ?? null : settings.activeCountdownId;
+    settings.activeCountdownId === countdownId
+      ? (countdowns[0]?.id ?? null)
+      : settings.activeCountdownId;
   return {
     ...settings,
     updatedAt: now.toISOString(),
@@ -137,9 +181,16 @@ export function removeCountdown(settings: ClockboardSettings, countdownId: strin
   };
 }
 
-export function setActiveCountdown(settings: ClockboardSettings, countdownId: string | null, now = new Date()) {
+export function setActiveCountdown(
+  settings: ClockboardSettings,
+  countdownId: string | null,
+  now = new Date()
+) {
   const activeCountdownId =
-    countdownId && settings.countdowns.some((countdown) => countdown.id === countdownId) ? countdownId : null;
+    countdownId &&
+    settings.countdowns.some((countdown) => countdown.id === countdownId)
+      ? countdownId
+      : null;
   return {
     ...settings,
     updatedAt: now.toISOString(),

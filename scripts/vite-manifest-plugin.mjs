@@ -9,8 +9,12 @@ export function buildManifestPlugin(target) {
     async writeBundle(options) {
       const outDir = options.dir ?? `dist/${target}`;
       await mkdir(outDir, { recursive: true });
-      await cp(resolve('src/extension/icons'), resolve(outDir, 'icons'), { recursive: true });
-      await cp(resolve('src/extension/_locales'), resolve(outDir, '_locales'), { recursive: true });
+      await cp(resolve('src/extension/icons'), resolve(outDir, 'icons'), {
+        recursive: true
+      });
+      await cp(resolve('src/extension/_locales'), resolve(outDir, '_locales'), {
+        recursive: true
+      });
       await writeFile(
         resolve(outDir, 'manifest.json'),
         `${JSON.stringify(createManifest(target), null, 2)}\n`

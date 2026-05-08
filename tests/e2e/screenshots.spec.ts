@@ -8,11 +8,20 @@ test('captures release screenshots', async ({ page }) => {
 
   await page.goto('/newtab.html');
   await expect(page.getByText('Release day')).toBeVisible();
-  await page.screenshot({ path: 'artifacts/screenshots/newtab.png', fullPage: true });
+  await page.screenshot({
+    path: 'artifacts/screenshots/newtab.png',
+    fullPage: true
+  });
 
   await page.goto('/popup.html');
-  await page.screenshot({ path: 'artifacts/screenshots/popup.png', fullPage: true });
+  await page.screenshot({
+    path: 'artifacts/screenshots/popup.png',
+    fullPage: true
+  });
 
   await page.goto('/options.html');
-  await page.screenshot({ path: 'artifacts/screenshots/options.png', fullPage: true });
+  await page.screenshot({
+    path: 'artifacts/screenshots/options.png',
+    fullPage: true
+  });
 });
