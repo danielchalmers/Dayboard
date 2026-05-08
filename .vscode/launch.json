@@ -6,24 +6,16 @@
       "type": "pwa-chrome",
       "request": "launch",
       "preLaunchTask": "build: chromium",
-      "url": "chrome://newtab",
+      "runtimeExecutable": "${env:LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe",
+      "url": "chrome://newtab/",
+      "userDataDir": true,
       "runtimeArgs": [
         "--load-extension=${workspaceFolder}/dist/chromium",
         "--disable-extensions-except=${workspaceFolder}/dist/chromium",
-        "--user-data-dir=${workspaceFolder}/.vscode/chromium-profile"
-      ],
-      "webRoot": "${workspaceFolder}/src"
-    },
-    {
-      "name": "Debug Edge extension",
-      "type": "pwa-msedge",
-      "request": "launch",
-      "preLaunchTask": "build: chromium",
-      "url": "edge://newtab",
-      "runtimeArgs": [
-        "--load-extension=${workspaceFolder}/dist/chromium",
-        "--disable-extensions-except=${workspaceFolder}/dist/chromium",
-        "--user-data-dir=${workspaceFolder}/.vscode/edge-profile"
+        "--disable-features=DisableLoadExtensionCommandLineSwitch",
+        "--enable-unsafe-extension-debugging",
+        "--no-first-run",
+        "--no-default-browser-check"
       ],
       "webRoot": "${workspaceFolder}/src"
     },

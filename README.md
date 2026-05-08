@@ -56,11 +56,8 @@ Firefox store signing still requires replacing the placeholder Gecko ID in `scri
 
 The workspace includes recommended extensions, editor defaults, npm tasks, and launch profiles.
 
-- `Debug Chromium extension` builds `dist/chromium` and launches Chrome with that unpacked extension.
-- `Debug Edge extension` does the same for Edge.
+- `Debug Chromium extension` builds `dist/chromium` and launches Playwright's Chrome for Testing with that unpacked extension.
 - `Debug Firefox extension` builds `dist/firefox` and uses the Firefox debug extension. Local Firefox executable/profile behavior can vary by machine.
-
-If a browser is not found, set the executable path in your user-level VS Code launch configuration or run the manual loading steps above.
 
 ## Release
 
