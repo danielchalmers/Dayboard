@@ -19,6 +19,10 @@ body {
   color: CanvasText;
 }
 
+#app {
+  min-height: 100vh;
+}
+
 button,
 input,
 select,
@@ -26,25 +30,267 @@ textarea {
   font: inherit;
 }
 
-.entry-shell {
-  display: grid;
-  min-height: 100vh;
-  place-content: center;
-  gap: 0.25rem;
-  padding: 2rem;
-  text-align: center;
+button,
+.file-button {
+  min-height: 2.25rem;
+  border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas 82%);
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+  color: CanvasText;
+  cursor: pointer;
 }
 
-.entry-shell p,
-.entry-shell h1 {
+button:hover,
+.file-button:hover {
+  background: color-mix(in srgb, Canvas 88%, CanvasText 12%);
+}
+
+button.danger {
+  color: #b42318;
+}
+
+input,
+select {
+  min-height: 2.25rem;
+  border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas 82%);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.eyebrow,
+.date-line,
+.target-line,
+.empty-copy,
+.muted,
+.notice {
   margin: 0;
-}
-
-.entry-shell p {
   color: color-mix(in srgb, CanvasText 68%, Canvas 32%);
 }
 
-.entry-shell h1 {
-  font-size: clamp(2.5rem, 18vw, 8rem);
+.eyebrow {
+  font-size: 0.82rem;
   font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.newtab-shell {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1.3fr) minmax(20rem, 0.7fr);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 6rem);
+  padding: clamp(1.25rem, 5vw, 5rem);
+}
+
+.settings-button {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+}
+
+.clock-face {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.clock-face h1 {
+  margin: 0;
+  font-size: calc(clamp(4.25rem, 14vw, 11rem) * var(--clock-scale));
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.date-line {
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+}
+
+.countdown-view {
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+.countdown-view h2 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.unit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.unit {
+  display: grid;
+  gap: 0.15rem;
+  border-top: 2px solid AccentColor;
+  padding-top: 0.65rem;
+}
+
+.unit strong {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1;
+}
+
+.unit span {
+  color: color-mix(in srgb, CanvasText 70%, Canvas 30%);
+  font-size: 0.9rem;
+}
+
+.popup-shell {
+  display: grid;
+  width: 22rem;
+  min-height: 20rem;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.popup-shell header,
+.page-header,
+.header-actions,
+.form-actions,
+.countdown-row,
+.countdown-row > div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.popup-shell header,
+.page-header,
+.countdown-row {
+  justify-content: space-between;
+}
+
+.popup-shell .countdown-view {
+  gap: 0.65rem;
+}
+
+.popup-shell .countdown-view h2 {
+  font-size: 1.5rem;
+}
+
+.popup-shell .unit strong {
+  font-size: 1.7rem;
+}
+
+.switch-row,
+.field-row {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.switch-row {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.options-shell {
+  display: grid;
+  gap: 1.5rem;
+  width: min(72rem, 100%);
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.page-header h1 {
+  margin: 0.15rem 0 0;
+  font-size: clamp(2.25rem, 8vw, 5rem);
+}
+
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  gap: 1rem;
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  border: 1px solid color-mix(in srgb, CanvasText 14%, Canvas 86%);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.panel h2,
+.panel h3 {
+  margin: 0;
+}
+
+.countdown-list,
+.countdown-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.countdown-row {
+  min-height: 3rem;
+  border-block-end: 1px solid color-mix(in srgb, CanvasText 12%, Canvas 88%);
+  padding-block-end: 0.75rem;
+}
+
+.countdown-row label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.countdown-row span {
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+.notice {
+  border-left: 3px solid AccentColor;
+  padding: 0.25rem 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .newtab-shell,
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .newtab-shell {
+    align-content: center;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .popup-shell {
+    width: 100vw;
+  }
+
+  .unit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
