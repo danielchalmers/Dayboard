@@ -1,0 +1,13 @@
+node_modules/
+dist/
+artifacts/
+coverage/
+playwright-report/
+test-results/
+.svelte-kit/
+.vite/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
