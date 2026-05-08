@@ -1,0 +1,50 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: Canvas;
+  color: CanvasText;
+  accent-color: AccentColor;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0;
+  background: Canvas;
+  color: CanvasText;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.entry-shell {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 0.25rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.entry-shell p,
+.entry-shell h1 {
+  margin: 0;
+}
+
+.entry-shell p {
+  color: color-mix(in srgb, CanvasText 68%, Canvas 32%);
+}
+
+.entry-shell h1 {
+  font-size: clamp(2.5rem, 18vw, 8rem);
+  font-weight: 700;
+}

@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Clockboard",
+    "description": "Extension name"
+  },
+  "extensionDescription": {
+    "message": "A clean new tab clock and countdown dashboard.",
+    "description": "Extension description shown in browser stores"
+  }
+}

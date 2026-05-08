@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     root,
+    base: './',
     plugins: [svelte(), buildManifestPlugin(target) as Plugin],
     build: {
       emptyOutDir: true,
@@ -24,9 +25,9 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       rollupOptions: {
         input: {
-          newtab: resolve(root, 'src/entries/newtab.html'),
-          popup: resolve(root, 'src/entries/popup.html'),
-          options: resolve(root, 'src/entries/options.html')
+          newtab: resolve(root, 'newtab.html'),
+          popup: resolve(root, 'popup.html'),
+          options: resolve(root, 'options.html')
         },
         output: {
           entryFileNames: 'assets/[name].js',

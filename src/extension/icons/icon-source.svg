@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Clockboard icon">
+  <rect width="128" height="128" rx="24" fill="#111827"/>
+  <path fill="#fff" d="M24 34h27v7H31v46h20v7H24V34Zm20 0h7v60h-7V34Zm53 0h7v60h-7V34Zm-19 53h26v7H78v-7Z"/>
+  <path fill="#2563eb" d="M60 48h7v7h-7v-7Zm0 25h7v7h-7v-7Z"/>
+</svg>
