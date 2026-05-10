@@ -5,7 +5,7 @@ Keep this file short and repo-specific. Use it as a routing layer for agents, no
 ## Source-Of-Truth Files
 
 - Product overview and development workflow: `README.md`
-- Manifest generation and permissions: `scripts/extension-manifest.mjs`
+- Manifest generation and permissions: `scripts/extension-manifest.ts`
 - Package scripts and engines: `package.json`
 - Build/package pipeline: `vite.config.ts`, `scripts/package-extension.mjs`
 - Shared settings, storage, and time logic: `src/lib/`

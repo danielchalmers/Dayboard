@@ -5,8 +5,7 @@
       "name": "Debug Chromium extension",
       "type": "pwa-chrome",
       "request": "launch",
-      "preLaunchTask": "build: chromium",
-      "runtimeExecutable": "${env:LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe",
+      "preLaunchTask": "build",
       "url": "chrome://newtab/",
       "userDataDir": true,
       "runtimeArgs": [

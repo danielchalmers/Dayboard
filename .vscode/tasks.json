@@ -2,12 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "install",
-      "type": "shell",
-      "command": "npm install",
-      "problemMatcher": []
-    },
-    {
       "label": "dev",
       "type": "npm",
       "script": "dev",
@@ -22,27 +16,6 @@
       "problemMatcher": []
     },
     {
-      "label": "build: chromium",
-      "type": "npm",
-      "script": "build:chromium",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "lint",
-      "type": "npm",
-      "script": "lint",
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "typecheck",
-      "type": "npm",
-      "script": "typecheck",
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
       "label": "test",
       "type": "npm",
       "script": "test",
@@ -54,13 +27,6 @@
       "type": "npm",
       "script": "package",
       "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "screenshots",
-      "type": "npm",
-      "script": "screenshots",
-      "group": "test",
       "problemMatcher": []
     }
   ]

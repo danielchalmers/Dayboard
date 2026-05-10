@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createManifest } from '../../scripts/extension-manifest.mjs';
+import { createManifest } from '../../scripts/extension-manifest';
 
 describe('extension manifests', () => {
   it('generates the Chromium manifest without host permissions', () => {

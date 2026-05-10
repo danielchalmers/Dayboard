@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
 
-import { buildManifestPlugin } from './scripts/vite-manifest-plugin.mjs';
+import { buildManifestPlugin } from './scripts/vite-manifest-plugin';
 
 const root = resolve(__dirname);
 
@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     test: {
-      environment: 'jsdom',
+      environment: 'node',
       include: ['tests/unit/**/*.test.ts'],
       globals: true
     }

@@ -1,9 +1,10 @@
 import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import type { Plugin } from 'vite';
 
-import { createManifest } from './extension-manifest.mjs';
+import { createManifest } from './extension-manifest';
 
-export function buildManifestPlugin(target) {
+export function buildManifestPlugin(target: string): Plugin {
   return {
     name: 'clockboard-extension-manifest',
     async writeBundle(options) {
