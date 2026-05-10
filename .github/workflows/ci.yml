@@ -35,23 +35,8 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: Browser smoke tests
-        run: npm run test:e2e
-
-      - name: Package extensions
-        run: npm run package
+      - name: Check
+        run: npm run check
 
       - name: Upload packages
         uses: actions/upload-artifact@v7

@@ -11,6 +11,7 @@ Keep this file short and repo-specific. Use it as a routing layer for agents, no
 - Shared settings, storage, and time logic: `src/lib/`
 - New tab, popup, and options UI: `src/ui/`
 - CI expectations: `.github/workflows/ci.yml`
+- Tag release workflow: `.github/workflows/release.yml`
 - Privacy policy: `PRIVACY_POLICY.md`
 
 ## Agent Workflow
@@ -24,6 +25,7 @@ Keep this file short and repo-specific. Use it as a routing layer for agents, no
 ## Extension Reminders
 
 - Manifest V3 must stay Chromium-focused for v1.
+- Keep local package and manifest version at `0.0.0`; release workflow sets the real version from `vX.Y.Z` tags.
 - Do not add analytics, telemetry, host permissions, or remote assets.
 - Keep settings compatible with `chrome.storage.sync` and preserve local fallback behavior.
 - Keep countdowns future-only and capped at 20 unless the product plan changes.

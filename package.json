@@ -1,6 +1,6 @@
 {
   "name": "clockboard",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "description": "A clean new tab clock and countdown dashboard for desktop browsers.",
   "license": "MIT",
@@ -20,6 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "check:fast": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit",
+    "check": "npm run check:fast && npm run test:e2e && npm run package",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "playwright test"

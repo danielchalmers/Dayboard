@@ -33,7 +33,9 @@ npm run test:e2e
 npm run package
 ```
 
-`npm run package` builds the Chromium output, then writes the extension zip and SHA-256 checksum to `artifacts/`.
+`npm run check` runs formatting, linting, typechecking, unit tests, browser tests, and packaging.
+
+`npm run package` builds the Chromium output, then writes the extension zip and SHA-256 checksum to `artifacts/`. Local builds intentionally use version `0.0.0`; release builds get their version from the pushed Git tag.
 
 ## Browser Loading
 
@@ -48,7 +50,16 @@ The workspace includes recommended extensions, editor defaults, npm tasks, and a
 
 ## Release
 
-Before submitting `0.1.0`, run `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run package`. Review `dist/chromium/manifest.json`, load the unpacked extension manually, and confirm target-store support contact, homepage, and privacy URL requirements.
+Release from a Git tag:
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+The release workflow validates the tag, patches `package.json` and the generated manifest to `X.Y.Z`, runs checks, packages the Chromium extension, and attaches the zip plus SHA-256 checksum to the GitHub Release.
+
+Before tagging, run `npm run check`, review `dist/chromium/manifest.json`, load the unpacked extension manually, and confirm target-store support contact, homepage, and privacy URL requirements.
 
 ## License
 

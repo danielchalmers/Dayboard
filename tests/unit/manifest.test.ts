@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import packageJson from '../../package.json';
 import { createManifest } from '../../scripts/extension-manifest';
 
 describe('extension manifests', () => {
@@ -11,5 +12,9 @@ describe('extension manifests', () => {
     expect(manifest).not.toHaveProperty('host_permissions');
     expect(manifest).not.toHaveProperty('browser_specific_settings');
     expect(manifest.chrome_url_overrides).toEqual({ newtab: 'newtab.html' });
+  });
+
+  it('uses the package version as the manifest version', () => {
+    expect(createManifest().version).toBe(packageJson.version);
   });
 });
