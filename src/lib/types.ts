@@ -2,13 +2,11 @@ export const SCHEMA_VERSION = 1;
 export const MAX_COUNTDOWNS = 20;
 
 export type TimeFormat = 'system' | '12' | '24';
+export type ClockboardItemType = 'clock' | 'date' | 'countdown';
 
 export interface ClockPreferences {
   timeFormat: TimeFormat;
   showSeconds: boolean;
-  showDate: boolean;
-  showGreeting: boolean;
-  showCountdown: boolean;
   fontScale: number;
 }
 
@@ -20,11 +18,24 @@ export interface Countdown {
   updatedAt: string;
 }
 
+export interface ClockboardItem {
+  id: string;
+  type: ClockboardItemType;
+  countdownId: string | null;
+  visible: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClockboardLayout {
+  items: ClockboardItem[];
+}
+
 export interface ClockboardSettings {
   schemaVersion: typeof SCHEMA_VERSION;
   updatedAt: string;
-  activeCountdownId: string | null;
   clock: ClockPreferences;
+  clockboard: ClockboardLayout;
   countdowns: Countdown[];
 }
 

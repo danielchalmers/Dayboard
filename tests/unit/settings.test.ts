@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultSettings } from '../../src/lib/defaults';
 import {
   addCountdown,
+  moveClockboardItemBefore,
   removeCountdown,
+  setClockboardItemVisibility,
   updateCountdown,
   normalizeSettings
 } from '../../src/lib/settings';
@@ -18,9 +20,14 @@ describe('settings helpers', () => {
 
     expect(normalized.clock.fontScale).toBe(1.5);
     expect(normalized.countdowns).toEqual([]);
+    expect(normalized.clockboard.items.map((item) => item.type)).toEqual([
+      'clock',
+      'date',
+      'countdown'
+    ]);
   });
 
-  it('adds a valid future countdown and makes it active', () => {
+  it('adds a valid future countdown and appends it to the board', () => {
     const settings = addCountdown(
       createDefaultSettings(new Date('2026-05-08T10:00:00')),
       { name: 'Launch', targetLocal: '2026-05-09T10:00' },
@@ -28,7 +35,14 @@ describe('settings helpers', () => {
     );
 
     expect(settings.countdowns).toHaveLength(1);
-    expect(settings.activeCountdownId).toBe(settings.countdowns[0]?.id);
+    expect(settings.clockboard.items.at(-1)?.countdownId).toBe(
+      settings.countdowns[0]?.id
+    );
+    expect(
+      settings.clockboard.items.some(
+        (item) => item.id === 'countdown-placeholder'
+      )
+    ).toBe(false);
   });
 
   it('rejects past countdown targets', () => {
@@ -62,7 +76,7 @@ describe('settings helpers', () => {
     ).toThrow(`${MAX_COUNTDOWNS}`);
   });
 
-  it('updates and removes countdowns without leaving a stale active id', () => {
+  it('updates and removes countdowns without leaving stale board items', () => {
     const now = new Date('2026-05-08T10:00:00');
     const created = addCountdown(
       createDefaultSettings(now),
@@ -80,6 +94,25 @@ describe('settings helpers', () => {
 
     expect(updated.countdowns[0]?.name).toBe('Release');
     expect(removed.countdowns).toEqual([]);
-    expect(removed.activeCountdownId).toBeNull();
+    expect(
+      removed.clockboard.items.some((item) => item.countdownId === id)
+    ).toBe(false);
+    expect(
+      removed.clockboard.items.some(
+        (item) => item.id === 'countdown-placeholder'
+      )
+    ).toBe(true);
+  });
+
+  it('reorders and hides clockboard items', () => {
+    const now = new Date('2026-05-08T10:00:00');
+    const settings = createDefaultSettings(now);
+    const reordered = moveClockboardItemBefore(settings, 'date', 'clock', now);
+    const hidden = setClockboardItemVisibility(reordered, 'clock', false, now);
+
+    expect(reordered.clockboard.items[0]?.id).toBe('date');
+    expect(
+      hidden.clockboard.items.find((item) => item.id === 'clock')?.visible
+    ).toBe(false);
   });
 });
