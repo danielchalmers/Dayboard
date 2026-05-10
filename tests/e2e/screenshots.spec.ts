@@ -7,7 +7,9 @@ test('captures release screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Add countdown' }).click();
 
   await page.goto('/newtab.html');
-  await expect(page.getByText('Release day')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Release day' })
+  ).toBeVisible();
   await page.screenshot({
     path: 'artifacts/screenshots/newtab.png',
     fullPage: true
