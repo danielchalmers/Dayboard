@@ -1,4 +1,4 @@
-import type { Countdown, TimeFormat } from './types';
+import type { TimeFormat } from './types';
 
 export interface CountdownDisplay {
   completed: boolean;
@@ -10,7 +10,7 @@ const minute = 60_000;
 const hour = 60 * minute;
 const day = 24 * hour;
 
-export function localInputToDate(value: string): Date {
+function localInputToDate(value: string): Date {
   return new Date(value);
 }
 
@@ -47,18 +47,6 @@ export function greetingFor(date: Date): string {
   if (hourValue < 12) return 'Good morning';
   if (hourValue < 18) return 'Good afternoon';
   return 'Good evening';
-}
-
-export function getActiveCountdown(
-  countdowns: Countdown[],
-  activeId: string | null
-): Countdown | null {
-  if (countdowns.length === 0) return null;
-  return (
-    countdowns.find((countdown) => countdown.id === activeId) ??
-    countdowns[0] ??
-    null
-  );
 }
 
 export function formatCountdown(
