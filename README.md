@@ -1,6 +1,6 @@
 # Clockboard
 
-Clockboard is a desktop browser extension that replaces the new tab page with a clean clock and countdown dashboard. It targets latest stable Chromium-family browsers and Firefox with Manifest V3.
+Clockboard is a desktop browser extension that replaces the new tab page with a clean clock and countdown dashboard. It targets latest stable Chromium-family browsers with Manifest V3.
 
 ## Features
 
@@ -16,7 +16,7 @@ Clockboard is a desktop browser extension that replaces the new tab page with a 
 ## Requirements
 
 - Node 24 and npm 10 or newer.
-- Latest stable Chrome, Edge, Brave, Opera, or Firefox for manual extension testing.
+- Latest stable Chrome, Edge, Brave, or Opera for manual extension testing.
 - Playwright browsers for local browser tests: `npx playwright install chromium`.
 
 The current local workspace may run some scripts on Node 22, but CI and the project target Node 24.
@@ -33,7 +33,7 @@ npm run test:e2e
 npm run package
 ```
 
-`npm run package` builds Chromium and Firefox outputs, then writes store-ready archives and SHA-256 checksums to `artifacts/`.
+`npm run package` builds the Chromium output, then writes a store-ready archive and SHA-256 checksum to `artifacts/`.
 
 ## Browser Loading
 
@@ -44,26 +44,16 @@ Chromium-family browsers:
 3. Enable developer mode.
 4. Load unpacked extension from `dist/chromium`.
 
-Firefox:
-
-1. Run `npm run build:firefox`.
-2. Open `about:debugging#/runtime/this-firefox`.
-3. Load temporary add-on from `dist/firefox/manifest.json`.
-
-Firefox store signing still requires replacing the placeholder Gecko ID in `scripts/extension-manifest.mjs`.
-
 ## VS Code
 
 The workspace includes recommended extensions, editor defaults, npm tasks, and launch profiles.
 
 - `Debug Chromium extension` builds `dist/chromium` and launches Playwright's Chrome for Testing with that unpacked extension.
-- `Debug Firefox extension` builds `dist/firefox` and uses the Firefox debug extension. Local Firefox executable/profile behavior can vary by machine.
 
 ## Release
 
 Before submitting `0.1.0`:
 
-- Replace the Firefox Gecko ID placeholder.
 - Add final support contact details.
 - Confirm whether the store requires a public homepage or privacy-policy URL beyond the store listing fields.
 - Review `docs/store-listing.md`, `docs/privacy.md`, and `docs/release-checklist.md`.

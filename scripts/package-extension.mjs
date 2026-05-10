@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 
 import archiver from 'archiver';
 import packageJson from '../package.json' with { type: 'json' };
 
-const targets = process.argv[2] ? [process.argv[2]] : ['chromium', 'firefox'];
+const targets = process.argv[2] ? [process.argv[2]] : ['chromium'];
 const artifactsDir = resolve('artifacts');
+const summaries = [];
 
 async function zipDirectory(sourceDir, outputFile) {
   await mkdir(artifactsDir, { recursive: true });
@@ -37,7 +38,7 @@ async function checksum(filePath) {
 }
 
 for (const target of targets) {
-  if (!['chromium', 'firefox'].includes(target)) {
+  if (target !== 'chromium') {
     throw new Error(`Unsupported package target: ${target}`);
   }
 
@@ -50,19 +51,11 @@ for (const target of targets) {
   await zipDirectory(sourceDir, zipPath);
 
   const digest = await checksum(zipPath);
-  await writeFile(`${zipPath}.sha256`, `${digest}  ${basename(zipPath)}\n`);
+  const summary = `${digest}  ${basename(zipPath)}`;
+  summaries.push(summary);
+  await writeFile(`${zipPath}.sha256`, `${summary}\n`);
 }
 
-const files = await readdir(artifactsDir).catch(() => []);
-const summary = await Promise.all(
-  files
-    .filter((file) => file.endsWith('.sha256'))
-    .sort()
-    .map(async (file) =>
-      (await readFile(join(artifactsDir, file), 'utf8')).trim()
-    )
-);
-
-if (summary.length > 0) {
-  console.log(summary.join('\n'));
+if (summaries.length > 0) {
+  console.log(summaries.join('\n'));
 }

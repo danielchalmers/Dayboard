@@ -7,8 +7,8 @@ const commonIcons = {
   128: 'icons/icon-128.png'
 };
 
-export function createManifest(target) {
-  const manifest = {
+export function createManifest() {
+  return {
     manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: 'Clockboard',
@@ -30,17 +30,4 @@ export function createManifest(target) {
       newtab: 'newtab.html'
     }
   };
-
-  if (target === 'firefox') {
-    manifest.browser_specific_settings = {
-      gecko: {
-        id: 'clockboard@example.invalid',
-        data_collection_permissions: {
-          required: ['none']
-        }
-      }
-    };
-  }
-
-  return manifest;
 }

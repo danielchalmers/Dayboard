@@ -17,7 +17,7 @@ export function buildManifestPlugin(target) {
       });
       await writeFile(
         resolve(outDir, 'manifest.json'),
-        `${JSON.stringify(createManifest(target), null, 2)}\n`
+        `${JSON.stringify(createManifest(), null, 2)}\n`
       );
     }
   };

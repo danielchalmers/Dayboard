@@ -29,13 +29,6 @@
       "problemMatcher": []
     },
     {
-      "label": "build: firefox",
-      "type": "npm",
-      "script": "build:firefox",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
       "label": "lint",
       "type": "npm",
       "script": "lint",

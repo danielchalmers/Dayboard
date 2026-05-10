@@ -6,15 +6,8 @@ import { buildManifestPlugin } from './scripts/vite-manifest-plugin.mjs';
 
 const root = resolve(__dirname);
 
-function extensionMode(): 'chromium' | 'firefox' {
-  return process.env.npm_lifecycle_event?.includes('firefox') ||
-    process.env.MODE === 'firefox'
-    ? 'firefox'
-    : 'chromium';
-}
-
 export default defineConfig(({ mode }) => {
-  const target = mode === 'firefox' ? 'firefox' : extensionMode();
+  const target = mode === 'chromium' ? mode : 'chromium';
 
   return {
     root,

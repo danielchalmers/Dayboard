@@ -38,6 +38,5 @@ Review screenshots before submission to confirm text fits, system colors render 
 
 ## Release TODO
 
-- Final Firefox Gecko ID.
 - Support contact.
 - Public homepage/privacy URL if required by the target store.

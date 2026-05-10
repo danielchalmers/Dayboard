@@ -18,16 +18,6 @@
         "--no-default-browser-check"
       ],
       "webRoot": "${workspaceFolder}/src"
-    },
-    {
-      "name": "Debug Firefox extension",
-      "type": "firefox",
-      "request": "launch",
-      "preLaunchTask": "build: firefox",
-      "reAttach": true,
-      "url": "about:newtab",
-      "addonPath": "${workspaceFolder}/dist/firefox",
-      "profileDir": "${workspaceFolder}/.vscode/firefox-profile"
     }
   ]
 }

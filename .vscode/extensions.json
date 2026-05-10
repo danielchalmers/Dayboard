@@ -4,7 +4,6 @@
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "ms-playwright.playwright",
-    "github.vscode-github-actions",
-    "firefox-devtools.vscode-firefox-debug"
+    "github.vscode-github-actions"
   ]
 }

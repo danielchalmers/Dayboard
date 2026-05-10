@@ -1,4 +1,4 @@
-export function createManifest(target: 'chromium' | 'firefox'): {
+export function createManifest(): {
   manifest_version: 3;
   name: string;
   short_name: string;
@@ -18,13 +18,5 @@ export function createManifest(target: 'chromium' | 'firefox'): {
   };
   chrome_url_overrides: {
     newtab: string;
-  };
-  browser_specific_settings?: {
-    gecko: {
-      id: string;
-      data_collection_permissions: {
-        required: string[];
-      };
-    };
   };
 };
