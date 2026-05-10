@@ -7,9 +7,9 @@ Clockboard does not collect, sell, transmit, or share personal data.
 Clockboard stores only extension settings needed for the user experience:
 
 - Clock display preferences.
+- Clockboard item order and visibility.
 - Countdown names.
 - Countdown local date/time targets.
-- Active countdown selection.
 
 Settings are stored with the browser extension storage API. Clockboard uses sync storage when available and local storage as a fallback.
 

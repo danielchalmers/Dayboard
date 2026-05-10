@@ -6,19 +6,19 @@ Clockboard
 
 ## Short Description
 
-A clean new tab clock and countdown dashboard.
+A calm new tab clockboard with ordered countdown widgets.
 
 ## Long Description
 
-Clockboard replaces your new tab page with a focused clock dashboard for the current time and the events you are counting down to.
+Clockboard replaces your new tab page with a centered board of time widgets for the current time, date, greeting, and selected countdowns.
 
-It includes a large digital clock, localized date, automatic time-of-day greeting, and a calm countdown display. Use the toolbar popup for quick controls, or open the options page to manage preferences, add countdowns, reset settings, and import or export your configuration.
+Use Options to drag items into the order you want, hide items you do not need, add future countdowns, reset settings, and import or export your configuration. The toolbar popup shows a compact mini version of the same ordered board.
 
 Clockboard follows your system light or dark appearance and browser accent behavior. It does not include analytics, telemetry, remote assets, search changes, host permissions, or external network calls.
 
 ## Permission Rationale
 
-- `storage`: saves clock preferences, countdowns, and the active countdown selection. Sync storage is used when available, with local storage fallback.
+- `storage`: saves clock preferences, Clockboard item order/visibility, and countdowns. Sync storage is used when available, with local storage fallback.
 
 ## Screenshot Plan
 
@@ -34,7 +34,7 @@ Expected outputs:
 - `artifacts/screenshots/popup.png`
 - `artifacts/screenshots/options.png`
 
-Review screenshots before submission to confirm text fits, system colors render correctly, and no browser test state should be cleared.
+Review screenshots before submission to confirm text fits, system colors render correctly, the new tab is a single ordered list, and no browser test state should be cleared.
 
 ## Release TODO
 

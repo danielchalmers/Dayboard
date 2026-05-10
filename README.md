@@ -1,31 +1,31 @@
 # Clockboard
 
-Clockboard is a desktop browser extension that replaces the new tab page with a clean clock and countdown dashboard. It targets latest stable Chromium-family browsers with Manifest V3.
+Clockboard is a Chromium desktop extension that replaces the new tab page with a calm, user-ordered board of time widgets.
 
 ## Features
 
-- Large digital clock with seconds enabled by default.
-- Localized date and automatic morning, afternoon, and evening greeting.
-- Up to 20 saved future countdowns with smart units.
-- Popup for quick countdown visibility and active countdown controls.
-- Options page for clock preferences, countdown editing, reset, JSON export, and JSON import.
-- System light/dark and accent color behavior with no theme picker.
+- Centered Clockboard list on the new tab page.
+- Uniform soft panels for current time, date/greeting, and selected countdowns.
+- Drag-and-drop ordering and visibility controls in Options.
+- Up to 20 saved future countdowns, automatically added to the board.
+- Compact popup mini-list that mirrors the ordered board.
+- Locale-aware clock with seconds enabled by default and 12/24-hour override.
+- System light/dark and system accent behavior with no theme picker.
 - Browser sync storage with local fallback notice.
-- No analytics, telemetry, remote assets, host permissions, or external network calls.
+- No analytics, telemetry, remote assets, external network calls, or host permissions.
 
 ## Requirements
 
 - Node 24 and npm 10 or newer.
-- Latest stable Chrome, Edge, Brave, or Opera for manual extension testing.
-- Playwright browsers for local browser tests: `npx playwright install chromium`.
-
-The current local workspace may run some scripts on Node 22, but CI and the project target Node 24.
+- Latest stable Chrome, Edge, Brave, or Opera for manual testing.
+- Playwright Chromium for browser tests: `npx playwright install chromium`.
 
 ## Development
 
 ```bash
 npm install
 npm run dev
+npm run format:check
 npm run lint
 npm run typecheck
 npm run test:unit
@@ -33,31 +33,22 @@ npm run test:e2e
 npm run package
 ```
 
-`npm run package` builds the Chromium output, then writes a store-ready archive and SHA-256 checksum to `artifacts/`.
+`npm run package` builds the Chromium output, then writes the extension zip and SHA-256 checksum to `artifacts/`.
 
 ## Browser Loading
 
-Chromium-family browsers:
-
 1. Run `npm run build:chromium`.
-2. Open the browser extension manager.
+2. Open a Chromium-family browser extension manager.
 3. Enable developer mode.
-4. Load unpacked extension from `dist/chromium`.
+4. Load the unpacked extension from `dist/chromium`.
 
 ## VS Code
 
-The workspace includes recommended extensions, editor defaults, npm tasks, and launch profiles.
-
-- `Debug Chromium extension` builds `dist/chromium` and launches Playwright's Chrome for Testing with that unpacked extension.
+The workspace includes recommended extensions, editor defaults, npm tasks, and a Chromium extension launch profile.
 
 ## Release
 
-Before submitting `0.1.0`:
-
-- Add final support contact details.
-- Confirm whether the store requires a public homepage or privacy-policy URL beyond the store listing fields.
-- Review `docs/store-listing.md`, `docs/privacy.md`, and `docs/release-checklist.md`.
-- Run `npm run package` and submit the relevant zip from `artifacts/`.
+Before submitting `0.1.0`, run the full validation pipeline, review `docs/release-checklist.md`, and confirm the store listing and privacy text in `docs/`.
 
 ## License
 

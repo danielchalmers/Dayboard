@@ -1,34 +1,31 @@
-# Agent Guide
+# AGENTS.md - Clockboard
 
-## Project Intent
+Keep this file short and repo-specific. Use it as a routing layer for agents, not as a second copy of repository config.
 
-Clockboard is a minimal, release-oriented browser extension. Keep changes focused, typed, and easy to review. Prefer small feature-slice commits with detailed narrative messages.
+## Source-Of-Truth Files
 
-## Commands
+- Product overview and development workflow: `README.md`
+- Manifest generation and permissions: `scripts/extension-manifest.mjs`
+- Package scripts and engines: `package.json`
+- Build/package pipeline: `vite.config.ts`, `scripts/package-extension.mjs`
+- Shared settings, storage, and time logic: `src/lib/`
+- New tab, popup, and options UI: `src/ui/`
+- CI expectations: `.github/workflows/ci.yml`
+- Release notes and store material: `docs/`
 
-- Install: `npm install`
-- Format check: `npm run format:check`
-- Lint: `npm run lint`
-- Typecheck: `npm run typecheck`
-- Unit tests: `npm run test:unit`
-- Browser tests: `npm run test:e2e`
-- Package: `npm run package`
+## Agent Workflow
 
-Use Node 24 when possible. If local Node is older, note any engine warnings in the final report.
+1. Read the relevant source-of-truth files first.
+2. Keep changes focused, typed, and easy to review.
+3. Prefer the shared logic in `src/lib/` over duplicating storage, settings, or time behavior in UI components.
+4. Validate with the npm scripts in `package.json`.
+5. If local Node is older than 24, note any engine warnings in the final report.
 
-## Architecture
+## Extension Reminders
 
-- Entry HTML files live at the repo root for Vite extension output paths.
-- Svelte entrypoints live in `src/entries/`.
-- Shared storage, settings, and time logic lives in `src/lib/`.
-- Svelte UI components live in `src/ui/`.
-- Extension assets and locales live in `src/extension/`.
-- Build/package scripts live in `scripts/`.
-
-## Constraints
-
+- Manifest V3 must stay Chromium-focused for v1.
 - Do not add analytics, telemetry, host permissions, or remote assets.
-- Keep storage compatible with `chrome.storage.sync`; preserve local fallback behavior.
+- Keep settings compatible with `chrome.storage.sync` and preserve local fallback behavior.
 - Keep countdowns future-only and capped at 20 unless the product plan changes.
-- Do not commit generated `dist/`, `artifacts/`, reports, or browser profiles.
+- Do not commit generated `dist/`, `artifacts/`, coverage, reports, test results, or browser profiles.
 - If manifest fields change, update manifest tests and release docs in the same slice.

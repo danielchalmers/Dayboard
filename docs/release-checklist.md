@@ -9,6 +9,7 @@
 - Run `npm run typecheck`.
 - Run `npm run test:unit`.
 - Run `npm run test:e2e`.
+- Run `npm run screenshots`.
 - Run `npm run package`.
 
 ## Store Artifacts
@@ -22,6 +23,8 @@
 - Add final support contact.
 - Confirm store privacy URL/homepage requirements.
 - Review generated manifest in `dist/chromium/manifest.json`.
+- Confirm the new tab uses one centered ordered list, not a split layout.
+- Confirm Options drag ordering and visibility changes persist after reload.
 - Load the unpacked output manually before submission.
 
 ## Versioning
