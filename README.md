@@ -1,4 +1,4 @@
-# Clockboard
+# Clockboard [![Privacy Policy](https://img.shields.io/badge/privacy-policy-blue.svg)](PRIVACY_POLICY.md) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Clockboard is a Chromium desktop extension that replaces the new tab page with a calm, user-ordered board of time widgets.
 
@@ -37,7 +37,7 @@ npm run package
 
 ## Browser Loading
 
-1. Run `npm run build:chromium`.
+1. Run `npm run build`.
 2. Open a Chromium-family browser extension manager.
 3. Enable developer mode.
 4. Load the unpacked extension from `dist/chromium`.
@@ -48,7 +48,7 @@ The workspace includes recommended extensions, editor defaults, npm tasks, and a
 
 ## Release
 
-Before submitting `0.1.0`, run the full validation pipeline, review `docs/release-checklist.md`, and confirm the store listing and privacy text in `docs/`.
+Before submitting `0.1.0`, run `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run package`. Review `dist/chromium/manifest.json`, load the unpacked extension manually, and confirm target-store support contact, homepage, and privacy URL requirements.
 
 ## License
 

@@ -13,19 +13,16 @@
   "scripts": {
     "clean": "rimraf dist artifacts coverage playwright-report test-results",
     "dev": "vite --host 127.0.0.1",
-    "build": "npm run build:chromium",
-    "build:chromium": "vite build --mode chromium",
+    "build": "vite build --mode chromium",
     "icons": "node scripts/generate-icons.mjs",
-    "package": "npm run build && node scripts/package-extension.mjs",
-    "package:chromium": "npm run build:chromium && node scripts/package-extension.mjs chromium",
+    "package": "npm run clean && npm run build && node scripts/package-extension.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test",
-    "screenshots": "playwright test tests/e2e/screenshots.spec.ts --project=chromium"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "svelte": "^5.39.0"

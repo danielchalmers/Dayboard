@@ -11,7 +11,7 @@ Keep this file short and repo-specific. Use it as a routing layer for agents, no
 - Shared settings, storage, and time logic: `src/lib/`
 - New tab, popup, and options UI: `src/ui/`
 - CI expectations: `.github/workflows/ci.yml`
-- Release notes and store material: `docs/`
+- Privacy policy: `PRIVACY_POLICY.md`
 
 ## Agent Workflow
 
@@ -28,4 +28,4 @@ Keep this file short and repo-specific. Use it as a routing layer for agents, no
 - Keep settings compatible with `chrome.storage.sync` and preserve local fallback behavior.
 - Keep countdowns future-only and capped at 20 unless the product plan changes.
 - Do not commit generated `dist/`, `artifacts/`, coverage, reports, test results, or browser profiles.
-- If manifest fields change, update manifest tests and release docs in the same slice.
+- If manifest fields change, update manifest tests and README/privacy text in the same slice.

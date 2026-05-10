@@ -50,9 +50,6 @@ jobs:
       - name: Browser smoke tests
         run: npm run test:e2e
 
-      - name: Capture screenshots
-        run: npm run screenshots
-
       - name: Package extensions
         run: npm run package
 
@@ -63,10 +60,3 @@ jobs:
           path: |
             artifacts/*.zip
             artifacts/*.sha256
-
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v7
-        with:
-          name: clockboard-screenshots
-          path: artifacts/screenshots/
-          if-no-files-found: warn
