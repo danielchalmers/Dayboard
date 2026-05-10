@@ -2,13 +2,8 @@
   import { onMount } from 'svelte';
 
   import { getChromeRuntime } from '../lib/browser';
-  import { getActiveCountdown } from '../lib/time';
-  import CountdownView from './CountdownView.svelte';
-  import {
-    initializeSettings,
-    updateSettings,
-    settingsState
-  } from './settingsStore';
+  import ClockboardList from './ClockboardList.svelte';
+  import { initializeSettings, settingsState } from './settingsStore';
 
   let now = new Date();
 
@@ -30,10 +25,6 @@
   }
 
   $: settings = $settingsState.settings;
-  $: activeCountdown = getActiveCountdown(
-    settings.countdowns,
-    settings.activeCountdownId
-  );
 </script>
 
 <main class="popup-shell">
@@ -42,47 +33,7 @@
     <button type="button" on:click={openOptions}>Options</button>
   </header>
 
-  <CountdownView
-    countdown={settings.clock.showCountdown ? activeCountdown : null}
-    {now}
-    compact
-  />
-
-  <label class="switch-row">
-    <input
-      type="checkbox"
-      checked={settings.clock.showCountdown}
-      on:change={(event) =>
-        updateSettings((current) => ({
-          ...current,
-          clock: {
-            ...current.clock,
-            showCountdown: event.currentTarget.checked
-          },
-          updatedAt: new Date().toISOString()
-        }))}
-    />
-    Show countdown on new tab
-  </label>
-
-  {#if settings.countdowns.length > 0}
-    <label class="field-row">
-      <span>Active countdown</span>
-      <select
-        value={settings.activeCountdownId ?? ''}
-        on:change={(event) =>
-          updateSettings((current) => ({
-            ...current,
-            activeCountdownId: event.currentTarget.value || null,
-            updatedAt: new Date().toISOString()
-          }))}
-      >
-        {#each settings.countdowns as countdown}
-          <option value={countdown.id}>{countdown.name}</option>
-        {/each}
-      </select>
-    </label>
-  {/if}
+  <ClockboardList {settings} {now} compact limit={4} />
 
   {#if $settingsState.status.fallbackReason}
     <p class="notice">
