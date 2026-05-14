@@ -5,15 +5,62 @@
       "label": "Plasmo: Chrome dev",
       "type": "npm",
       "script": "dev",
-      "problemMatcher": [],
-      "isBackground": true
+      "args": [
+        "--",
+        "--serve-port=1012",
+        "--hmr-port=1815"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "plasmo",
+        "pattern": {
+          "regexp": "^(?!.*)(.*):(\\d+):(.*)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Starting the extension development server.*",
+          "endsPattern": ".*Extension re-packaged.*"
+        }
+      }
     },
     {
       "label": "Plasmo: Edge dev",
       "type": "npm",
       "script": "dev:edge",
-      "problemMatcher": [],
-      "isBackground": true
+      "args": [
+        "--",
+        "--serve-port=1013",
+        "--hmr-port=1817"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "plasmo",
+        "pattern": {
+          "regexp": "^(?!.*)(.*):(\\d+):(.*)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Starting the extension development server.*",
+          "endsPattern": ".*Extension re-packaged.*"
+        }
+      }
+    },
+    {
+      "label": "Install Chrome for Testing",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "chromium"
+      ],
+      "problemMatcher": []
     },
     {
       "label": "Verify",

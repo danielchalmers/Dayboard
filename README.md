@@ -32,6 +32,25 @@ npm run dev:edge
 
 and load `build/edge-mv3-dev`.
 
+## VS Code Debugging
+
+Use the Run and Debug view or press F5, then choose `Debug Chrome extension` or `Debug Edge extension`.
+
+The debug configurations use standard VS Code browser launch settings:
+
+- `preLaunchTask` starts the matching Plasmo dev task.
+- The Plasmo task waits for the `Extension re-packaged` message before VS Code launches the browser.
+- The browser launches with an isolated profile under `.vscode/`.
+- `--disable-extensions-except` and `--load-extension` point at the generated Plasmo dev bundle.
+
+For Chrome, the launch config targets Chrome for Testing from Playwright because current Chrome-branded stable builds no longer support loading unpacked extensions with `--load-extension`. Install it once from VS Code by running the `Install Chrome for Testing` task, or from a terminal:
+
+```sh
+npx playwright install chromium
+```
+
+If Playwright updates its browser revision, update `runtimeExecutable` in `.vscode/launch.json` to the new `chrome.exe` under `%LOCALAPPDATA%\ms-playwright\chromium-*/chrome-win64/`.
+
 ## Verification
 
 ```sh

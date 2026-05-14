@@ -5,21 +5,37 @@
       "name": "Debug Chrome extension",
       "type": "chrome",
       "request": "launch",
+      "runtimeExecutable": "${env:LOCALAPPDATA}\\ms-playwright\\chromium-1223\\chrome-win64\\chrome.exe",
+      "preLaunchTask": "Plasmo: Chrome dev",
+      "userDataDir": "${workspaceFolder}\\.vscode\\chrome-debug-profile",
+      "webRoot": "${workspaceFolder}",
       "runtimeArgs": [
         "--disable-extensions-except=${workspaceFolder}/build/chrome-mv3-dev",
-        "--load-extension=${workspaceFolder}/build/chrome-mv3-dev"
+        "--load-extension=${workspaceFolder}/build/chrome-mv3-dev",
+        "--no-first-run",
+        "--no-default-browser-check"
       ],
-      "url": "chrome://newtab"
+      "url": "chrome://newtab",
+      "sourceMaps": true,
+      "timeout": 30000
     },
     {
       "name": "Debug Edge extension",
       "type": "msedge",
       "request": "launch",
+      "runtimeExecutable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "preLaunchTask": "Plasmo: Edge dev",
+      "userDataDir": "${workspaceFolder}\\.vscode\\edge-debug-profile",
+      "webRoot": "${workspaceFolder}",
       "runtimeArgs": [
         "--disable-extensions-except=${workspaceFolder}/build/edge-mv3-dev",
-        "--load-extension=${workspaceFolder}/build/edge-mv3-dev"
+        "--load-extension=${workspaceFolder}/build/edge-mv3-dev",
+        "--no-first-run",
+        "--no-default-browser-check"
       ],
-      "url": "edge://newtab"
+      "url": "edge://newtab",
+      "sourceMaps": true,
+      "timeout": 30000
     }
   ]
 }

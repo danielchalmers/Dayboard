@@ -11,3 +11,5 @@ test-results/
 .env
 .env.*
 !.env.example
+.vscode/chrome-debug-profile/
+.vscode/edge-debug-profile/
