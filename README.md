@@ -1,62 +1,44 @@
-# Clockboard
+# 🕰️ Clockboard
 
-A polished new tab page for the times that matter.
+[![Chrome Web Store](https://img.shields.io/badge/chrome%20web%20store-coming%20soon-blue.svg)](#)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build Status](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml/badge.svg)](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml)
 
-Clockboard keeps live clocks and countdowns in one quiet vertical list. It follows the system theme, uses the system accent color, and chooses sensible time formatting automatically.
+See the times that matter in a calm, polished new tab page.
 
-## Highlights
+## 📖 Usage
 
-- Live clocks in any IANA time zone.
-- Natural countdowns like `5 days, 3 hours from now`.
-- New tab, popup, and options pages.
-- System light/dark mode and accent color.
-- MV3 builds for Chrome and Microsoft Edge.
-- No UI framework. No Tailwind. No analytics.
+### Adding Clocks
 
-## Develop
+1. Open a new tab or click the Clockboard icon.
+2. Click **Edit board**.
+3. Click **New clock**.
+4. Name it and choose a time zone.
+5. Save by leaving the page — Clockboard updates automatically.
 
-```sh
-npm install
-npm run dev
-```
+### Adding Countdowns
 
-Load `build/chrome-mv3-dev` as an unpacked extension. For Edge:
+Tracking a trip, launch, deadline, or moment you are waiting for?
 
-```sh
-npm run dev:edge
-```
+1. Open **Edit board**.
+2. Click **New countdown**.
+3. Name the moment.
+4. Pick the date, time, and time zone.
+5. Return to your new tab to see natural text like `5 days, 3 hours from now`.
 
-Load `build/edge-mv3-dev`.
+### Keeping It Personal
 
-## Debug In VS Code
+Clockboard uses your system theme, system highlight color, and system time format. You can rename the board, reorder items, hide clock dates, or remove anything you no longer need.
 
-Press F5 and choose `Debug Chrome extension` or `Debug Edge extension`.
+## 🙏 Credits
 
-Chrome debugging uses Chrome for Testing because Chrome stable no longer supports unpacked extensions through `--load-extension`. Install it once:
-
-```sh
-npx playwright install chromium
-```
-
-The launch config starts Plasmo, waits for the dev bundle, opens an isolated browser profile, and loads the extension.
-
-## Verify
-
-```sh
-npm run verify
-npm run build:edge
-npm run e2e
-```
-
-## Package
-
-```sh
-npm run package
-npm run package:edge
-```
-
-Store-ready zips are written to `build/`.
-
-## Privacy
-
-Clockboard only requests `storage`. It does not collect analytics, call external services, or send clock data anywhere.
+- Plasmo — MIT
+- React — MIT
+- @plasmohq/storage — MIT
+- Playwright (@playwright/test) — Apache-2.0
+- Testing Library (@testing-library/react, @testing-library/jest-dom) — MIT
+- TypeScript — Apache-2.0
+- Vitest — MIT
+- jsdom — MIT
+- http-server — MIT
+- @types/chrome, @types/node, @types/react, @types/react-dom — MIT
