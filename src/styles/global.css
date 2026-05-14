@@ -1,6 +1,6 @@
 :root {
   color-scheme: light dark;
-  accent-color: AccentColor;
+  accent-color: Highlight;
   --bg: Canvas;
   --text: CanvasText;
   --muted: color-mix(in srgb, CanvasText 58%, Canvas 42%);
@@ -9,10 +9,10 @@
   --line-strong: color-mix(in srgb, CanvasText 22%, Canvas 78%);
   --surface: color-mix(in srgb, Canvas 94%, CanvasText 6%);
   --surface-strong: color-mix(in srgb, Canvas 88%, CanvasText 12%);
-  --accent: AccentColor;
-  --accent-text: AccentColorText;
+  --accent: Highlight;
+  --accent-text: HighlightText;
   --danger: #b3261e;
-  --focus: 0 0 0 3px color-mix(in srgb, AccentColor 28%, transparent);
+  --focus: 0 0 0 3px color-mix(in srgb, Highlight 28%, transparent);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -83,8 +83,8 @@ a {
 }
 
 .page-header h1 {
-  font-size: clamp(2.4rem, 7vw, 5.4rem);
-  font-weight: 760;
+  font-size: clamp(2.3rem, 6vw, 4.7rem);
+  font-weight: 720;
   letter-spacing: 0;
   line-height: 0.94;
   margin: 0;
@@ -121,7 +121,7 @@ a {
   align-items: center;
   border-radius: 8px;
   display: inline-flex;
-  font-weight: 760;
+  font-weight: 700;
   justify-content: center;
   min-block-size: 40px;
   padding: 0 14px;
@@ -164,10 +164,6 @@ a {
   inline-size: 40px;
 }
 
-.board-list {
-  border-block-start: 1px solid var(--line);
-}
-
 .board-list--compact {
   border-block-start: 0;
 }
@@ -178,8 +174,8 @@ a {
   display: grid;
   gap: 20px;
   grid-template-columns: minmax(0, 1fr) auto;
-  min-block-size: 112px;
-  padding: 22px 0;
+  min-block-size: 108px;
+  padding: 20px 0;
 }
 
 .board-row--compact {
@@ -214,7 +210,7 @@ a {
 
 .board-row h2 {
   font-size: clamp(1.15rem, 2.2vw, 1.55rem);
-  font-weight: 760;
+  font-weight: 700;
   line-height: 1.15;
   margin: 0;
   overflow-wrap: anywhere;
@@ -228,9 +224,9 @@ a {
 }
 
 .board-row__value {
-  font-size: clamp(2rem, 5.5vw, 4.2rem);
+  font-size: clamp(2rem, 5vw, 3.8rem);
   font-variant-numeric: tabular-nums;
-  font-weight: 780;
+  font-weight: 720;
   line-height: 0.98;
   margin: 0;
   max-inline-size: 24rem;
@@ -240,8 +236,8 @@ a {
 
 .board-row__value--countdown {
   color: var(--accent);
-  font-size: clamp(1.45rem, 3.5vw, 2.9rem);
-  max-inline-size: 30rem;
+  font-size: clamp(1.35rem, 2.4vw, 2.1rem);
+  max-inline-size: 34rem;
 }
 
 .board-row--compact .board-row__value {
@@ -270,7 +266,7 @@ a {
 .editor-card h2,
 .empty-state h2 {
   font-size: 1.15rem;
-  font-weight: 760;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -301,7 +297,7 @@ label {
 label span {
   color: var(--muted);
   font-size: 0.86rem;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 input,

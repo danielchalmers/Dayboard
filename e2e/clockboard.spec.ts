@@ -20,3 +20,13 @@ test("options page exposes board editing controls", async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByLabel("Title")).toHaveValue("Clockboard")
 })
+
+test("popup page renders the glance list", async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 520 })
+  await page.goto("/popup.html")
+
+  await expect(page.getByRole("heading", { name: "Now and next" })).toBeVisible()
+  await expect(page.getByText("Local time")).toBeVisible()
+  await expect(page.getByText("Tomorrow morning")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible()
+})
