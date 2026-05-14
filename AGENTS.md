@@ -76,6 +76,8 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Release artifacts should be named:
   - `clockboard-chrome-${version}.zip`
   - `clockboard-edge-${version}.zip`
+- Prefer descriptive, sentence-style commit subjects without conventional-commit prefixes.
+- Commit bodies should explain the reasoning behind the change.
 
 ## Style Rules
 
