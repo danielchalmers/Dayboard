@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Derive release version from tag
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Tag must match vX.Y.Z (e.g. v1.2.3)." >&2
+            exit 1
+          fi
+
+          echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Patch package and manifest version
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises'
+
+          const packagePath = 'package.json'
+          const packageJson = JSON.parse(await readFile(packagePath, 'utf8'))
+
+          packageJson.version = process.env.RELEASE_VERSION
+          packageJson.manifest.version = process.env.RELEASE_VERSION
+
+          await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`)
+          EOF
+
+      - name: Build Chrome extension
+        run: npm run build
+
+      - name: Build Edge extension
+        run: npm run build:edge
+
+      - name: Package Chrome extension
+        run: npm run package
+
+      - name: Package Edge extension
+        run: npm run package:edge
+
+      - name: Name release artifacts
+        run: |
+          cp build/chrome-mv3-prod.zip "clockboard-chrome-${RELEASE_VERSION}.zip"
+          cp build/edge-mv3-prod.zip "clockboard-edge-${RELEASE_VERSION}.zip"
+
+      - name: Attach release artifacts
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          tag: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          artifacts: |
+            clockboard-chrome-${{ env.RELEASE_VERSION }}.zip
+            clockboard-edge-${{ env.RELEASE_VERSION }}.zip
+          allowUpdates: true
+          replacesArtifacts: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
