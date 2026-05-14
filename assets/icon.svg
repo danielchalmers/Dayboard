@@ -1,16 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
   <title id="title">Clockboard icon</title>
-  <desc id="desc">A rounded clock face with a board grid and hands.</desc>
+  <desc id="desc">A blue and purple gradient clock face with clear hands.</desc>
   <defs>
-    <linearGradient id="clockboardAccent" x1="22" x2="106" y1="16" y2="112" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0f9f8f"/>
-      <stop offset="1" stop-color="#f2b84b"/>
+    <linearGradient id="clockboardFace" x1="26" x2="102" y1="24" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0ea5e9"/>
+      <stop offset="0.52" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#7c3aed"/>
     </linearGradient>
+    <filter id="clockboardShadow" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.28"/>
+    </filter>
   </defs>
-  <rect width="128" height="128" rx="28" fill="#111827"/>
-  <circle cx="64" cy="64" r="46" fill="url(#clockboardAccent)"/>
-  <circle cx="64" cy="64" r="37" fill="#f8fafc"/>
-  <path fill="#111827" d="M61 34h6v31l21 13-3 5-24-14z"/>
-  <circle cx="64" cy="64" r="5" fill="#111827"/>
-  <path stroke="#111827" stroke-linecap="round" stroke-width="5" d="M43 94h42M43 82h16m10 0h16"/>
+  <circle cx="64" cy="64" r="55" fill="#0f172a" filter="url(#clockboardShadow)"/>
+  <circle cx="64" cy="64" r="49" fill="#f8fafc"/>
+  <circle cx="64" cy="64" r="43" fill="url(#clockboardFace)"/>
+  <path fill="#f8fafc" d="M60 32h8v34l22 13-5 8-25-16z"/>
+  <circle cx="64" cy="64" r="6" fill="#f8fafc"/>
 </svg>

@@ -1,7 +1,7 @@
 {
   "name": "clockboard",
   "displayName": "Clockboard",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Live digital clocks and countdowns for the browser new tab page.",
   "author": "Clockboard contributors",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "manifest_version": 3,
     "name": "Clockboard",
     "short_name": "Clockboard",
-    "version": "0.1.0",
+    "version": "0.0.0",
     "description": "Live digital clocks and countdowns for your new tab page.",
     "minimum_chrome_version": "116",
     "permissions": [

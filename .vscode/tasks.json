@@ -52,14 +52,13 @@
       }
     },
     {
-      "label": "Install Chrome for Testing",
-      "type": "shell",
-      "command": "npx",
-      "args": [
-        "playwright",
-        "install",
-        "chromium"
-      ],
+      "label": "Build",
+      "type": "npm",
+      "script": "build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
       "problemMatcher": []
     },
     {
