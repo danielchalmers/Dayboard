@@ -14,7 +14,6 @@
   <circle cx="64" cy="64" r="55" fill="#0f172a" filter="url(#clockboardShadow)"/>
   <circle cx="64" cy="64" r="49" fill="#f8fafc"/>
   <circle cx="64" cy="64" r="43" fill="url(#clockboardFace)"/>
-  <path fill="#f8fafc" d="M60 33h8v33l24 14-4 7-28-16z"/>
+  <path fill="#f8fafc" d="M60 32h8v34l22 13-5 8-25-16z"/>
   <circle cx="64" cy="64" r="6" fill="#f8fafc"/>
-  <path stroke="#dbeafe" stroke-linecap="round" stroke-width="5" d="M42 93h44M42 82h18m12 0h14"/>
 </svg>
