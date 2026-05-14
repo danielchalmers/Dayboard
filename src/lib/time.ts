@@ -1,4 +1,4 @@
-import type { ClockItem, CountdownItem } from "./types"
+import type { ClockItem, ClockPrecision, CountdownItem } from "./types"
 
 export interface CountdownParts {
   status: "future" | "due" | "past"
@@ -76,11 +76,16 @@ export const zonedDateTimeToUtcMs = (
   return guess
 }
 
-export const formatClockTime = (date: Date, item: ClockItem): string =>
+export const formatClockTime = (
+  date: Date,
+  item: ClockItem,
+  precision: ClockPrecision = "minutes"
+): string =>
   new Intl.DateTimeFormat(undefined, {
     timeZone: item.timeZone,
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    second: precision === "seconds" ? "2-digit" : undefined
   }).format(date)
 
 export const formatClockDate = (date: Date, timeZone: string): string =>

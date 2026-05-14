@@ -11,22 +11,21 @@ test("new tab page renders the default board", async ({ page }) => {
 test("options page exposes board editing controls", async ({ page }) => {
   await page.goto("/options.html")
 
-  await expect(
-    page.getByRole("heading", { name: "Design your board" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible()
   await expect(page.getByRole("button", { name: "New clock" })).toBeVisible()
   await expect(
     page.getByRole("button", { name: "New countdown" })
   ).toBeVisible()
-  await expect(page.getByLabel("Title")).toHaveValue("Clockboard")
+  await expect(page.getByLabel("Board title")).toHaveValue("Clockboard")
+  await expect(page.getByText("Layout")).toBeVisible()
 })
 
 test("popup page renders the glance list", async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 520 })
   await page.goto("/popup.html")
 
-  await expect(page.getByRole("heading", { name: "Now and next" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "At a glance" })).toBeVisible()
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Customize" })).toBeVisible()
 })

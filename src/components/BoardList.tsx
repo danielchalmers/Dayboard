@@ -13,14 +13,23 @@ export const BoardList = ({ items, now, settings, compact }: BoardListProps) => 
     return (
       <div className="empty-state">
         <h2>Your board is ready</h2>
-        <p>Add a clock or countdown and it will appear here.</p>
+        <p>Add a clock or countdown to compose the first view.</p>
       </div>
     )
   }
 
+  const className = [
+    "board-list",
+    compact ? "board-list--compact" : null,
+    compact ? null : `board-list--${settings.layout}`,
+    compact ? null : `board-list--${settings.density}`
+  ]
+    .filter(Boolean)
+    .join(" ")
+
   return (
     <section
-      className={compact ? "board-list board-list--compact" : "board-list"}
+      className={className}
       aria-label="Clockboard items">
       {items.map((item) => (
         <BoardRow

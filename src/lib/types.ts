@@ -1,4 +1,8 @@
 export type ItemKind = "clock" | "countdown"
+export type BoardLayout = "focus" | "grid" | "compact"
+export type BoardDensity = "comfortable" | "condensed"
+export type BoardDetailLevel = "minimal" | "balanced" | "rich"
+export type ClockPrecision = "minutes" | "seconds"
 
 export interface BoardItemBase {
   id: string
@@ -23,10 +27,14 @@ export type BoardItem = ClockItem | CountdownItem
 export interface ClockboardSettings {
   boardTitle: string
   showDate: boolean
+  layout: BoardLayout
+  density: BoardDensity
+  detailLevel: BoardDetailLevel
+  clockPrecision: ClockPrecision
 }
 
 export interface ClockboardState {
-  version: 1
+  version: 2
   settings: ClockboardSettings
   items: BoardItem[]
 }
@@ -36,7 +44,11 @@ export const DEFAULT_TIME_ZONE =
 
 export const DEFAULT_SETTINGS: ClockboardSettings = {
   boardTitle: "Clockboard",
-  showDate: true
+  showDate: true,
+  layout: "focus",
+  density: "comfortable",
+  detailLevel: "balanced",
+  clockPrecision: "minutes"
 }
 
 export const createDefaultItems = (now = new Date()): BoardItem[] => {
@@ -67,7 +79,7 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
 }
 
 export const createDefaultState = (now = new Date()): ClockboardState => ({
-  version: 1,
+  version: 2,
   settings: DEFAULT_SETTINGS,
   items: createDefaultItems(now)
 })

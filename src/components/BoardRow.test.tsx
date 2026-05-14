@@ -6,7 +6,11 @@ import type { BoardItem, ClockboardSettings } from "~/lib/types"
 
 const settings: ClockboardSettings = {
   boardTitle: "Clockboard",
-  showDate: true
+  showDate: true,
+  layout: "focus",
+  density: "comfortable",
+  detailLevel: "balanced",
+  clockPrecision: "minutes"
 }
 
 describe("BoardRow", () => {

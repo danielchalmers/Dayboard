@@ -28,7 +28,7 @@ export default function PopupPage() {
         <header className="popup-header">
           <div>
             <p className="eyebrow">Clockboard</p>
-            <h1>Now and next</h1>
+            <h1>At a glance</h1>
           </div>
         </header>
 
@@ -47,7 +47,7 @@ export default function PopupPage() {
                 Open
               </button>
               <button className="primary-button" onClick={openOptions} type="button">
-                Edit
+                Customize
               </button>
             </div>
           </>

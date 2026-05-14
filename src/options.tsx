@@ -43,8 +43,11 @@ export default function OptionsPage() {
     return <ErrorView message={error || "Unable to load Clockboard"} />
   }
 
-  const updateSettings = (settings: ClockboardSettings) => {
-    void setSettings(settings)
+  const updateSettings = (changes: Partial<ClockboardSettings>) => {
+    void setSettings({
+      ...state.settings,
+      ...changes
+    })
   }
 
   const addItem = (kind: "clock" | "countdown") => {
@@ -84,46 +87,117 @@ export default function OptionsPage() {
           </button>
         </>
       }
-      subtitle="Keep the moments you care about close, without fussing over display settings."
-      title="Design your board">
+      subtitle="Tune the board once, then let the new tab stay quiet and useful."
+      title="Studio">
       <section className="settings-panel" aria-labelledby="settings-heading">
-        <h2 id="settings-heading">Board</h2>
-        <div className="form-grid">
+        <div className="section-heading">
+          <p className="eyebrow">Appearance</p>
+          <h2 id="settings-heading">Board system</h2>
+        </div>
+
+        <div className="form-grid form-grid--wide">
           <label>
-            <span>Title</span>
+            <span>Board title</span>
             <input
               onChange={(event) =>
-                updateSettings({
-                  ...state.settings,
-                  boardTitle: event.currentTarget.value
-                })
+                updateSettings({ boardTitle: event.currentTarget.value })
               }
               type="text"
               value={state.settings.boardTitle}
             />
           </label>
-          <label className="checkbox-label">
+
+          <label>
+            <span>Detail level</span>
+            <select
+              onChange={(event) =>
+                updateSettings({
+                  detailLevel: event.currentTarget
+                    .value as ClockboardSettings["detailLevel"]
+                })
+              }
+              value={state.settings.detailLevel}>
+              <option value="minimal">Minimal</option>
+              <option value="balanced">Balanced</option>
+              <option value="rich">Rich</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="control-group" aria-label="Board layout">
+          <span>Layout</span>
+          <div className="segmented-control">
+            {(["focus", "grid", "compact"] as const).map((layout) => (
+              <label key={layout}>
+                <input
+                  checked={state.settings.layout === layout}
+                  name="layout"
+                  onChange={() => updateSettings({ layout })}
+                  type="radio"
+                />
+                <span>{layout}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="control-grid">
+          <label className="switch-label">
             <input
               checked={state.settings.showDate}
               onChange={(event) =>
-                updateSettings({
-                  ...state.settings,
-                  showDate: event.currentTarget.checked
-                })
+                updateSettings({ showDate: event.currentTarget.checked })
               }
               type="checkbox"
             />
-            <span>Show dates under clocks</span>
+            <span>Show clock dates</span>
+          </label>
+
+          <label>
+            <span>Density</span>
+            <select
+              onChange={(event) =>
+                updateSettings({
+                  density: event.currentTarget
+                    .value as ClockboardSettings["density"]
+                })
+              }
+              value={state.settings.density}>
+              <option value="comfortable">Comfortable</option>
+              <option value="condensed">Condensed</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Clock precision</span>
+            <select
+              onChange={(event) =>
+                updateSettings({
+                  clockPrecision: event.currentTarget
+                    .value as ClockboardSettings["clockPrecision"]
+                })
+              }
+              value={state.settings.clockPrecision}>
+              <option value="minutes">Minutes</option>
+              <option value="seconds">Seconds</option>
+            </select>
           </label>
         </div>
       </section>
 
       <section className="settings-panel" aria-labelledby="preview-heading">
-        <h2 id="preview-heading">Preview</h2>
+        <div className="section-heading">
+          <p className="eyebrow">Live</p>
+          <h2 id="preview-heading">Preview</h2>
+        </div>
         <BoardList items={previewItems} now={now} settings={state.settings} />
       </section>
 
       <section className="editor-list" aria-label="Board item editors">
+        <div className="section-heading">
+          <p className="eyebrow">Content</p>
+          <h2>Items</h2>
+        </div>
         {state.items.map((item, index) => (
           <ItemEditor
             canMoveDown={index < state.items.length - 1}

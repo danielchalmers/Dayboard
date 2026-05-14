@@ -18,8 +18,10 @@ Clockboard is a Plasmo, TypeScript, and React MV3 extension for Chrome and Micro
 ## Product Direction
 
 - Keep the UI sleek, quiet, and scan-friendly.
-- Prefer automatic behavior over per-item display knobs.
-- Use system theme colors and `AccentColor`; avoid custom decorative palettes.
+- Aim for a premium, polished, modern product surface without ornamental clutter.
+- Prefer board-level customization over per-item display knobs.
+- Use system theme colors and `AccentColor`; avoid custom decorative palettes or gradients.
+- Keep controls crisp, tactile, and responsive across new tab, options, and popup surfaces.
 - Clocks use the user's system time format.
 - Countdowns use natural language, not raw unit toggles.
 

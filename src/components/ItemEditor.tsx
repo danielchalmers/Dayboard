@@ -33,7 +33,7 @@ export const ItemEditor = ({
     <article className="editor-card">
       <div className="editor-card__header">
         <div>
-          <p className="eyebrow">{item.kind}</p>
+          <span className="editor-card__badge">{item.kind}</span>
           <h2>{item.title}</h2>
         </div>
         <div className="button-row">
@@ -43,7 +43,7 @@ export const ItemEditor = ({
             disabled={!canMoveUp}
             onClick={() => onMove(item.id, -1)}
             type="button">
-            ↑
+            Up
           </button>
           <button
             aria-label={`Move ${item.title} down`}
@@ -51,13 +51,13 @@ export const ItemEditor = ({
             disabled={!canMoveDown}
             onClick={() => onMove(item.id, 1)}
             type="button">
-            ↓
+            Down
           </button>
           <button
             className="danger-button"
             onClick={() => onDelete(item.id)}
             type="button">
-            Delete
+            Remove
           </button>
         </div>
       </div>
@@ -86,7 +86,7 @@ export const ItemEditor = ({
 
         {item.kind === "clock" ? (
           <p className="form-note">
-            Clockboard uses your system clock format automatically.
+            Time format follows your browser and operating system.
           </p>
         ) : (
           <label>

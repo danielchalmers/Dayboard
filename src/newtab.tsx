@@ -24,9 +24,9 @@ export default function NewTabPage() {
 
   return (
     <main className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Today</p>
+      <header className="page-header page-header--home">
+        <div className="page-header__content">
+          <p className="eyebrow">Now</p>
           <h1>{state.settings.boardTitle}</h1>
           <p className="page-header__subtitle">
             {new Intl.DateTimeFormat(undefined, {
@@ -39,7 +39,7 @@ export default function NewTabPage() {
         </div>
         <div className="page-header__actions">
           <button className="secondary-button" onClick={openOptions} type="button">
-            Edit board
+            Customize
           </button>
         </div>
       </header>

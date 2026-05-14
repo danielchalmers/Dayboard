@@ -4,7 +4,11 @@ import {
   createDefaultState,
   DEFAULT_SETTINGS,
   DEFAULT_TIME_ZONE,
+  type BoardDensity,
   type BoardItem,
+  type BoardLayout,
+  type BoardDetailLevel,
+  type ClockPrecision,
   type ClockboardSettings,
   type ClockboardState
 } from "./types"
@@ -51,6 +55,12 @@ const asString = (value: unknown, fallback: string): string =>
 const asBoolean = (value: unknown, fallback: boolean): boolean =>
   typeof value === "boolean" ? value : fallback
 
+const asChoice = <T extends string>(
+  value: unknown,
+  choices: readonly T[],
+  fallback: T
+): T => (choices.includes(value as T) ? (value as T) : fallback)
+
 const sanitizeSettings = (value: unknown): ClockboardSettings => {
   if (!isRecord(value)) {
     return DEFAULT_SETTINGS
@@ -58,7 +68,27 @@ const sanitizeSettings = (value: unknown): ClockboardSettings => {
 
   return {
     boardTitle: asString(value.boardTitle, DEFAULT_SETTINGS.boardTitle),
-    showDate: asBoolean(value.showDate, DEFAULT_SETTINGS.showDate)
+    showDate: asBoolean(value.showDate, DEFAULT_SETTINGS.showDate),
+    layout: asChoice<BoardLayout>(
+      value.layout,
+      ["focus", "grid", "compact"],
+      DEFAULT_SETTINGS.layout
+    ),
+    density: asChoice<BoardDensity>(
+      value.density,
+      ["comfortable", "condensed"],
+      DEFAULT_SETTINGS.density
+    ),
+    detailLevel: asChoice<BoardDetailLevel>(
+      value.detailLevel,
+      ["minimal", "balanced", "rich"],
+      DEFAULT_SETTINGS.detailLevel
+    ),
+    clockPrecision: asChoice<ClockPrecision>(
+      value.clockPrecision,
+      ["minutes", "seconds"],
+      DEFAULT_SETTINGS.clockPrecision
+    )
   }
 }
 
@@ -105,7 +135,7 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
     .filter((item): item is BoardItem => item !== null)
 
   return {
-    version: 1,
+    version: 2,
     settings: sanitizeSettings(value.settings),
     items: items.length > 0 ? items : createDefaultState().items
   }
