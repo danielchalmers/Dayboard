@@ -61,7 +61,11 @@ export const zonedDateTimeToUtcMs = (
     return Number.NaN
   }
 
-  const [, year, month, day, hour, minute] = match.map(Number)
+  const year = Number(match[1]!)
+  const month = Number(match[2]!)
+  const day = Number(match[3]!)
+  const hour = Number(match[4]!)
+  const minute = Number(match[5]!)
   const localAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0)
   let guess = localAsUtc
 

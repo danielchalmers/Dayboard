@@ -14,6 +14,7 @@
       "@testing-library/jest-dom"
     ],
     "strict": true,
+    "jsx": "react-jsx",
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },

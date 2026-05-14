@@ -34,6 +34,7 @@
     "@types/node": "^22.15.18",
     "@types/react": "^18.3.20",
     "@types/react-dom": "^18.3.6",
+    "http-server": "^14.1.1",
     "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3"
@@ -59,10 +60,10 @@
       "open_in_tab": true
     },
     "icons": {
-      "16": "assets/icon.svg",
-      "32": "assets/icon.svg",
-      "48": "assets/icon.svg",
-      "128": "assets/icon.svg"
+      "16": "../assets/icon16.png",
+      "32": "../assets/icon32.png",
+      "48": "../assets/icon48.png",
+      "128": "../assets/icon128.png"
     }
   }
 }

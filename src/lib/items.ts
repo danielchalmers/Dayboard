@@ -3,7 +3,6 @@ import {
   DEFAULT_TIME_ZONE,
   toDateTimeInputValue,
   type BoardItem,
-  type ClockFormat,
   type ItemKind
 } from "./types"
 
@@ -13,7 +12,7 @@ export const createBoardItem = (
   now = new Date()
 ): BoardItem => {
   const timestamp = now.toISOString()
-  const color = DEFAULT_COLORS[existingCount % DEFAULT_COLORS.length]
+  const color = DEFAULT_COLORS[existingCount % DEFAULT_COLORS.length]!
 
   if (kind === "clock") {
     return {
@@ -44,32 +43,3 @@ export const createBoardItem = (
     updatedAt: timestamp
   }
 }
-
-export const updateBoardItem = (
-  item: BoardItem,
-  changes: Partial<BoardItem>
-): BoardItem => {
-  const updatedAt = new Date().toISOString()
-
-  if (item.kind === "clock") {
-    return {
-      ...item,
-      ...changes,
-      kind: "clock",
-      format: normalizeClockFormat(changes.format, item.format),
-      updatedAt
-    }
-  }
-
-  return {
-    ...item,
-    ...changes,
-    kind: "countdown",
-    updatedAt
-  }
-}
-
-const normalizeClockFormat = (
-  value: unknown,
-  fallback: ClockFormat
-): ClockFormat => (value === "24h" || value === "12h" ? value : fallback)

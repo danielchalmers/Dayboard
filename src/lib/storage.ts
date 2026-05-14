@@ -16,6 +16,33 @@ const storage = new Storage({
   area: "local"
 })
 
+const hasExtensionStorage = (): boolean =>
+  typeof chrome !== "undefined" && Boolean(chrome.storage?.local)
+
+const readFallbackStorage = (): unknown => {
+  if (typeof localStorage === "undefined") {
+    return undefined
+  }
+
+  const rawValue = localStorage.getItem(STORAGE_KEY)
+
+  if (!rawValue) {
+    return undefined
+  }
+
+  try {
+    return JSON.parse(rawValue)
+  } catch {
+    return undefined
+  }
+}
+
+const writeFallbackStorage = (state: ClockboardState): void => {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
@@ -47,7 +74,7 @@ const sanitizeItem = (value: unknown, index: number): BoardItem | null => {
     id: asString(value.id, crypto.randomUUID()),
     title: asString(value.title, "Untitled"),
     timeZone: asString(value.timeZone, DEFAULT_TIME_ZONE),
-    color: asString(value.color, DEFAULT_COLORS[index % DEFAULT_COLORS.length]),
+    color: asString(value.color, DEFAULT_COLORS[index % DEFAULT_COLORS.length]!),
     createdAt: asString(value.createdAt, now),
     updatedAt: asString(value.updatedAt, now)
   }
@@ -91,14 +118,22 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
 }
 
 export const readClockboardState = async (): Promise<ClockboardState> => {
-  const value = await storage.get<unknown>(STORAGE_KEY)
+  const value = hasExtensionStorage()
+    ? await storage.get<unknown>(STORAGE_KEY)
+    : readFallbackStorage()
+
   return migrateClockboardState(value)
 }
 
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {
-  await storage.set(STORAGE_KEY, state)
+  if (hasExtensionStorage()) {
+    await storage.set(STORAGE_KEY, state)
+    return
+  }
+
+  writeFallbackStorage(state)
 }
 
 export const updateClockboardState = async (

@@ -20,6 +20,10 @@ const moveItem = (items: BoardItem[], id: string, direction: -1 | 1) => {
 
   const nextItems = [...items]
   const [item] = nextItems.splice(index, 1)
+  if (!item) {
+    return items
+  }
+
   nextItems.splice(nextIndex, 0, item)
   return nextItems
 }
