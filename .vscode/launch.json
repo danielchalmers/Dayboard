@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Chrome extension",
+      "type": "chrome",
+      "request": "launch",
+      "runtimeArgs": [
+        "--disable-extensions-except=${workspaceFolder}/build/chrome-mv3-dev",
+        "--load-extension=${workspaceFolder}/build/chrome-mv3-dev"
+      ],
+      "url": "chrome://newtab"
+    },
+    {
+      "name": "Debug Edge extension",
+      "type": "msedge",
+      "request": "launch",
+      "runtimeArgs": [
+        "--disable-extensions-except=${workspaceFolder}/build/edge-mv3-dev",
+        "--load-extension=${workspaceFolder}/build/edge-mv3-dev"
+      ],
+      "url": "edge://newtab"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Plasmo: Chrome dev",
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Plasmo: Edge dev",
+      "type": "npm",
+      "script": "dev:edge",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Verify",
+      "type": "npm",
+      "script": "verify",
+      "problemMatcher": "$tsc"
+    }
+  ]
+}
