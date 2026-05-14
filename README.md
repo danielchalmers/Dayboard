@@ -1,78 +1,62 @@
 # Clockboard
 
-Clockboard is a Manifest V3 Chrome and Microsoft Edge extension that replaces the new tab page with a configurable board of live digital clocks and countdowns. It is built with Plasmo, TypeScript, and React without Tailwind or a component library.
+A polished new tab page for the times that matter.
 
-## Features
+Clockboard keeps live clocks and countdowns in one quiet vertical list. It follows the system theme, uses the system accent color, and chooses sensible time formatting automatically.
 
-- New tab dashboard with live clocks and countdowns.
-- Popup summary for checking upcoming items quickly.
-- Full options page for editing board items and display preferences.
-- Browser storage sync through the MV3 `storage` permission.
-- System color scheme support and browser accent color integration where available.
-- Chrome and Edge build targets.
+## Highlights
 
-## Requirements
+- Live clocks in any IANA time zone.
+- Natural countdowns like `5 days, 3 hours from now`.
+- New tab, popup, and options pages.
+- System light/dark mode and accent color.
+- MV3 builds for Chrome and Microsoft Edge.
+- No UI framework. No Tailwind. No analytics.
 
-- Node.js 22 or newer.
-- npm 11 or newer.
-- Chrome or Microsoft Edge for local extension testing.
-
-## Development
+## Develop
 
 ```sh
 npm install
 npm run dev
 ```
 
-Load `build/chrome-mv3-dev` as an unpacked extension in Chrome. For Edge, run:
+Load `build/chrome-mv3-dev` as an unpacked extension. For Edge:
 
 ```sh
 npm run dev:edge
 ```
 
-and load `build/edge-mv3-dev`.
+Load `build/edge-mv3-dev`.
 
-## VS Code Debugging
+## Debug In VS Code
 
-Use the Run and Debug view or press F5, then choose `Debug Chrome extension` or `Debug Edge extension`.
+Press F5 and choose `Debug Chrome extension` or `Debug Edge extension`.
 
-The debug configurations use standard VS Code browser launch settings:
-
-- `preLaunchTask` starts the matching Plasmo dev task.
-- The Plasmo task waits for the `Extension re-packaged` message before VS Code launches the browser.
-- The browser launches with an isolated profile under `.vscode/`.
-- `--disable-extensions-except` and `--load-extension` point at the generated Plasmo dev bundle.
-
-For Chrome, the launch config targets Chrome for Testing from Playwright because current Chrome-branded stable builds no longer support loading unpacked extensions with `--load-extension`. Install it once from VS Code by running the `Install Chrome for Testing` task, or from a terminal:
+Chrome debugging uses Chrome for Testing because Chrome stable no longer supports unpacked extensions through `--load-extension`. Install it once:
 
 ```sh
 npx playwright install chromium
 ```
 
-If Playwright updates its browser revision, update `runtimeExecutable` in `.vscode/launch.json` to the new `chrome.exe` under `%LOCALAPPDATA%\ms-playwright\chromium-*/chrome-win64/`.
+The launch config starts Plasmo, waits for the dev bundle, opens an isolated browser profile, and loads the extension.
 
-## Verification
+## Verify
 
 ```sh
-npm run typecheck
-npm test
-npm run build
+npm run verify
+npm run build:edge
 npm run e2e
 ```
 
-`npm run verify` runs type checking, unit tests, and the Chrome production build.
-
-## Packaging
+## Package
 
 ```sh
 npm run package
 npm run package:edge
 ```
 
-The packaged extension artifacts are written under `build/`.
+Store-ready zips are written to `build/`.
 
-## Publishing Notes
+## Privacy
 
-- Review the generated production manifest in `build/chrome-mv3-prod/manifest.json`.
-- Verify all screenshots, descriptions, and privacy disclosures before store submission.
-- Clockboard only requests `storage`; it does not collect analytics or make network requests.
+Clockboard only requests `storage`. It does not collect analytics, call external services, or send clock data anywhere.

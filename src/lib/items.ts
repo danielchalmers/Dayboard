@@ -1,5 +1,4 @@
 import {
-  DEFAULT_COLORS,
   DEFAULT_TIME_ZONE,
   toDateTimeInputValue,
   type BoardItem,
@@ -8,11 +7,9 @@ import {
 
 export const createBoardItem = (
   kind: ItemKind,
-  existingCount: number,
   now = new Date()
 ): BoardItem => {
   const timestamp = now.toISOString()
-  const color = DEFAULT_COLORS[existingCount % DEFAULT_COLORS.length]!
 
   if (kind === "clock") {
     return {
@@ -20,9 +17,6 @@ export const createBoardItem = (
       kind: "clock",
       title: "New clock",
       timeZone: DEFAULT_TIME_ZONE,
-      color,
-      format: "12h",
-      showSeconds: true,
       createdAt: timestamp,
       updatedAt: timestamp
     }
@@ -36,9 +30,7 @@ export const createBoardItem = (
     kind: "countdown",
     title: "New countdown",
     timeZone: DEFAULT_TIME_ZONE,
-    color,
     targetDateTime: toDateTimeInputValue(target),
-    showSeconds: true,
     createdAt: timestamp,
     updatedAt: timestamp
   }

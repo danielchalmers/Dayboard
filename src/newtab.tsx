@@ -1,4 +1,4 @@
-import { BoardGrid } from "~/components/BoardGrid"
+import { BoardList } from "~/components/BoardList"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
@@ -26,7 +26,7 @@ export default function NewTabPage() {
     <main className="page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">New tab</p>
+          <p className="eyebrow">Today</p>
           <h1>{state.settings.boardTitle}</h1>
           <p className="page-header__subtitle">
             {new Intl.DateTimeFormat(undefined, {
@@ -39,11 +39,11 @@ export default function NewTabPage() {
         </div>
         <div className="page-header__actions">
           <button className="secondary-button" onClick={openOptions} type="button">
-            Options
+            Edit board
           </button>
         </div>
       </header>
-      <BoardGrid items={state.items} now={now} settings={state.settings} />
+      <BoardList items={state.items} now={now} settings={state.settings} />
     </main>
   )
 }

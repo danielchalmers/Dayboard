@@ -2,7 +2,7 @@
 
 ## Project
 
-Clockboard is a Plasmo, TypeScript, and React MV3 browser extension for Chrome and Microsoft Edge. It provides live digital clocks and countdowns on the browser new tab page, plus a popup and options page.
+Clockboard is a Plasmo, TypeScript, and React MV3 extension for Chrome and Microsoft Edge. It turns the new tab page into a calm vertical list of live clocks and natural-language countdowns.
 
 ## Commands
 
@@ -15,6 +15,14 @@ Clockboard is a Plasmo, TypeScript, and React MV3 browser extension for Chrome a
 - `npm run e2e`: run Playwright tests.
 - `npm run verify`: run typecheck, unit tests, and Chrome build.
 
+## Product Direction
+
+- Keep the UI sleek, quiet, and scan-friendly.
+- Prefer automatic behavior over per-item display knobs.
+- Use system theme colors and `AccentColor`; avoid custom decorative palettes.
+- Clocks use the user's system time format.
+- Countdowns use natural language, not raw unit toggles.
+
 ## Conventions
 
 - Use React function components and TypeScript.
@@ -23,5 +31,6 @@ Clockboard is a Plasmo, TypeScript, and React MV3 browser extension for Chrome a
 - Keep reusable React components under `src/components`.
 - Keep styling in plain CSS files under `src/styles`.
 - Prefer small, testable helpers for time calculations and storage migration.
+- Keep user-facing copy concise and warm without being wordy.
 - Keep extension permissions minimal.
 - Preserve support for both Chrome and Edge MV3 builds.

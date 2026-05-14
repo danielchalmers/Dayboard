@@ -1,36 +1,27 @@
 export type ItemKind = "clock" | "countdown"
 
-export type ClockFormat = "12h" | "24h"
-
-export type BoardDensity = "comfortable" | "compact"
-
 export interface BoardItemBase {
   id: string
   kind: ItemKind
   title: string
   timeZone: string
-  color: string
   createdAt: string
   updatedAt: string
 }
 
 export interface ClockItem extends BoardItemBase {
   kind: "clock"
-  format: ClockFormat
-  showSeconds: boolean
 }
 
 export interface CountdownItem extends BoardItemBase {
   kind: "countdown"
   targetDateTime: string
-  showSeconds: boolean
 }
 
 export type BoardItem = ClockItem | CountdownItem
 
 export interface ClockboardSettings {
   boardTitle: string
-  density: BoardDensity
   showDate: boolean
 }
 
@@ -43,18 +34,8 @@ export interface ClockboardState {
 export const DEFAULT_TIME_ZONE =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
-export const DEFAULT_COLORS = [
-  "#0f9f8f",
-  "#f2b84b",
-  "#d95763",
-  "#4f7cac",
-  "#7b6dd6",
-  "#477a47"
-]
-
 export const DEFAULT_SETTINGS: ClockboardSettings = {
   boardTitle: "Clockboard",
-  density: "comfortable",
   showDate: true
 }
 
@@ -70,9 +51,6 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
       kind: "clock",
       title: "Local time",
       timeZone: DEFAULT_TIME_ZONE,
-      color: DEFAULT_COLORS[0]!,
-      format: "12h",
-      showSeconds: true,
       createdAt,
       updatedAt: createdAt
     },
@@ -81,9 +59,7 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
       kind: "countdown",
       title: "Tomorrow morning",
       timeZone: DEFAULT_TIME_ZONE,
-      color: DEFAULT_COLORS[1]!,
       targetDateTime: toDateTimeInputValue(tomorrow),
-      showSeconds: false,
       createdAt,
       updatedAt: createdAt
     }

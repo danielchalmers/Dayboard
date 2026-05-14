@@ -1,4 +1,4 @@
-import { BoardGrid } from "~/components/BoardGrid"
+import { BoardList } from "~/components/BoardList"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
@@ -28,7 +28,7 @@ export default function PopupPage() {
         <header className="popup-header">
           <div>
             <p className="eyebrow">Clockboard</p>
-            <h1>At a glance</h1>
+            <h1>Now and next</h1>
           </div>
         </header>
 
@@ -36,7 +36,7 @@ export default function PopupPage() {
         {error ? <ErrorView message={error} /> : null}
         {state ? (
           <>
-            <BoardGrid
+            <BoardList
               compact
               items={state.items.slice(0, 3)}
               now={now}
@@ -44,10 +44,10 @@ export default function PopupPage() {
             />
             <div className="popup-actions">
               <button className="secondary-button" onClick={openNewTab} type="button">
-                New tab
+                Open
               </button>
               <button className="primary-button" onClick={openOptions} type="button">
-                Options
+                Edit
               </button>
             </div>
           </>

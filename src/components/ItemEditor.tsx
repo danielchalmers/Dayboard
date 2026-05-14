@@ -1,5 +1,5 @@
 import { getTimeZoneOptions } from "~/lib/time"
-import { DEFAULT_COLORS, type BoardItem } from "~/lib/types"
+import type { BoardItem } from "~/lib/types"
 
 interface ItemEditorProps {
   item: BoardItem
@@ -64,7 +64,7 @@ export const ItemEditor = ({
 
       <div className="form-grid">
         <label>
-          <span>Title</span>
+          <span>Name</span>
           <input
             onChange={(event) => update({ title: event.currentTarget.value })}
             type="text"
@@ -84,66 +84,21 @@ export const ItemEditor = ({
           />
         </label>
 
-        <label>
-          <span>Color</span>
-          <select
-            onChange={(event) => update({ color: event.currentTarget.value })}
-            value={item.color}>
-            {DEFAULT_COLORS.map((color) => (
-              <option key={color} value={color}>
-                {color}
-              </option>
-            ))}
-          </select>
-        </label>
-
         {item.kind === "clock" ? (
-          <>
-            <label>
-              <span>Format</span>
-              <select
-                onChange={(event) =>
-                  update({ format: event.currentTarget.value as "12h" | "24h" })
-                }
-                value={item.format}>
-                <option value="12h">12 hour</option>
-                <option value="24h">24 hour</option>
-              </select>
-            </label>
-            <label className="checkbox-label">
-              <input
-                checked={item.showSeconds}
-                onChange={(event) =>
-                  update({ showSeconds: event.currentTarget.checked })
-                }
-                type="checkbox"
-              />
-              <span>Show seconds</span>
-            </label>
-          </>
+          <p className="form-note">
+            Clockboard uses your system clock format automatically.
+          </p>
         ) : (
-          <>
-            <label>
-              <span>Target date and time</span>
-              <input
-                onChange={(event) =>
-                  update({ targetDateTime: event.currentTarget.value })
-                }
-                type="datetime-local"
-                value={item.targetDateTime}
-              />
-            </label>
-            <label className="checkbox-label">
-              <input
-                checked={item.showSeconds}
-                onChange={(event) =>
-                  update({ showSeconds: event.currentTarget.checked })
-                }
-                type="checkbox"
-              />
-              <span>Show seconds</span>
-            </label>
-          </>
+          <label>
+            <span>When</span>
+            <input
+              onChange={(event) =>
+                update({ targetDateTime: event.currentTarget.value })
+              }
+              type="datetime-local"
+              value={item.targetDateTime}
+            />
+          </label>
         )}
       </div>
       <datalist id="clockboard-time-zones">

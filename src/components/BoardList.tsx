@@ -1,33 +1,29 @@
-import { BoardTile } from "~/components/BoardTile"
+import { BoardRow } from "~/components/BoardRow"
 import type { BoardItem, ClockboardSettings } from "~/lib/types"
 
-interface BoardGridProps {
+interface BoardListProps {
   items: BoardItem[]
   now: Date
   settings: ClockboardSettings
   compact?: boolean
 }
 
-export const BoardGrid = ({ items, now, settings, compact }: BoardGridProps) => {
+export const BoardList = ({ items, now, settings, compact }: BoardListProps) => {
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <h2>No clocks yet</h2>
-        <p>Open options to add a clock or countdown to your board.</p>
+        <h2>Your board is ready</h2>
+        <p>Add a clock or countdown and it will appear here.</p>
       </div>
     )
   }
 
   return (
     <section
-      className={
-        settings.density === "compact" || compact
-          ? "board-grid board-grid--compact"
-          : "board-grid"
-      }
+      className={compact ? "board-list board-list--compact" : "board-list"}
       aria-label="Clockboard items">
       {items.map((item) => (
-        <BoardTile
+        <BoardRow
           compact={compact}
           item={item}
           key={item.id}

@@ -2,7 +2,6 @@ import { Storage } from "@plasmohq/storage"
 
 import {
   createDefaultState,
-  DEFAULT_COLORS,
   DEFAULT_SETTINGS,
   DEFAULT_TIME_ZONE,
   type BoardItem,
@@ -59,12 +58,11 @@ const sanitizeSettings = (value: unknown): ClockboardSettings => {
 
   return {
     boardTitle: asString(value.boardTitle, DEFAULT_SETTINGS.boardTitle),
-    density: value.density === "compact" ? "compact" : "comfortable",
     showDate: asBoolean(value.showDate, DEFAULT_SETTINGS.showDate)
   }
 }
 
-const sanitizeItem = (value: unknown, index: number): BoardItem | null => {
+const sanitizeItem = (value: unknown): BoardItem | null => {
   if (!isRecord(value)) {
     return null
   }
@@ -74,7 +72,6 @@ const sanitizeItem = (value: unknown, index: number): BoardItem | null => {
     id: asString(value.id, crypto.randomUUID()),
     title: asString(value.title, "Untitled"),
     timeZone: asString(value.timeZone, DEFAULT_TIME_ZONE),
-    color: asString(value.color, DEFAULT_COLORS[index % DEFAULT_COLORS.length]!),
     createdAt: asString(value.createdAt, now),
     updatedAt: asString(value.updatedAt, now)
   }
@@ -82,9 +79,7 @@ const sanitizeItem = (value: unknown, index: number): BoardItem | null => {
   if (value.kind === "clock") {
     return {
       ...base,
-      kind: "clock",
-      format: value.format === "24h" ? "24h" : "12h",
-      showSeconds: asBoolean(value.showSeconds, true)
+      kind: "clock"
     }
   }
 
@@ -92,8 +87,7 @@ const sanitizeItem = (value: unknown, index: number): BoardItem | null => {
     return {
       ...base,
       kind: "countdown",
-      targetDateTime: asString(value.targetDateTime, "2026-01-01T00:00"),
-      showSeconds: asBoolean(value.showSeconds, false)
+      targetDateTime: asString(value.targetDateTime, "2026-01-01T00:00")
     }
   }
 
@@ -107,7 +101,7 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
 
   const rawItems = Array.isArray(value.items) ? value.items : []
   const items = rawItems
-    .map((item, index) => sanitizeItem(item, index))
+    .map((item) => sanitizeItem(item))
     .filter((item): item is BoardItem => item !== null)
 
   return {

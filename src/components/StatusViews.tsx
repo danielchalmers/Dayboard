@@ -1,6 +1,6 @@
 export const LoadingView = () => (
   <div className="status-view" role="status">
-    Loading Clockboard
+    Opening Clockboard
   </div>
 )
 

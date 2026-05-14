@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  formatCountdownLabel,
+  formatRelativeCountdown,
   getCountdownParts,
   zonedDateTimeToUtcMs
 } from "./time"
@@ -12,9 +12,7 @@ const countdownItem = (targetDateTime: string): CountdownItem => ({
   kind: "countdown",
   title: "Launch",
   timeZone: "UTC",
-  color: "#0f9f8f",
   targetDateTime,
-  showSeconds: true,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
 })
@@ -45,27 +43,30 @@ describe("getCountdownParts", () => {
     expect(parts.hours).toBe(3)
     expect(parts.minutes).toBe(4)
     expect(parts.seconds).toBe(0)
-    expect(parts.label).toBe("1d 03h 04m 00s")
+    expect(parts.label).toBe("1 day, 3 hours from now")
   })
 
-  it("marks past targets as due", () => {
+  it("marks just-passed targets as due", () => {
     const parts = getCountdownParts(
       countdownItem("2026-01-01T00:00"),
-      new Date("2026-01-01T00:01:00.000Z")
+      new Date("2026-01-01T00:00:30.000Z")
     )
 
     expect(parts.status).toBe("due")
-    expect(parts.label).toBe("0d 00h 00m 00s")
+    expect(parts.label).toBe("just now")
   })
 })
 
-describe("formatCountdownLabel", () => {
-  it("omits seconds when configured", () => {
-    expect(
-      formatCountdownLabel(
-        { days: 2, hours: 5, minutes: 9, seconds: 30 },
-        false
-      )
-    ).toBe("2d 05h 09m")
+describe("formatRelativeCountdown", () => {
+  it("uses the two most useful units", () => {
+    expect(formatRelativeCountdown(2 * 86_400_000 + 5 * 3_600_000 + 9 * 60_000)).toBe(
+      "2 days, 5 hours from now"
+    )
+  })
+
+  it("describes past targets without configuration", () => {
+    expect(formatRelativeCountdown(-(3 * 3_600_000 + 12 * 60_000))).toBe(
+      "3 hours, 12 minutes ago"
+    )
   })
 })

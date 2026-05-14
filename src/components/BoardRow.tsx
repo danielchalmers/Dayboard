@@ -1,0 +1,66 @@
+import {
+  formatClockDate,
+  formatClockTime,
+  formatCountdownTarget,
+  formatTimeZoneName,
+  getCountdownParts
+} from "~/lib/time"
+import type { BoardItem, ClockboardSettings } from "~/lib/types"
+
+interface BoardRowProps {
+  item: BoardItem
+  now: Date
+  settings: ClockboardSettings
+  compact?: boolean
+}
+
+export const BoardRow = ({
+  item,
+  now,
+  settings,
+  compact = false
+}: BoardRowProps) => {
+  if (item.kind === "clock") {
+    return (
+      <article className={compact ? "board-row board-row--compact" : "board-row"}>
+        <div className="board-row__identity">
+          <span className="board-row__mark" aria-hidden="true" />
+          <div>
+            <p className="board-row__kind">Clock</p>
+            <h2>{item.title}</h2>
+            <p className="board-row__detail">
+              {item.timeZone} · {formatTimeZoneName(now, item.timeZone)}
+              {settings.showDate
+                ? ` · ${formatClockDate(now, item.timeZone)}`
+                : ""}
+            </p>
+          </div>
+        </div>
+        <p className="board-row__value" aria-label={`${item.title} time`}>
+          {formatClockTime(now, item)}
+        </p>
+      </article>
+    )
+  }
+
+  const countdown = getCountdownParts(item, now)
+
+  return (
+    <article className={compact ? "board-row board-row--compact" : "board-row"}>
+      <div className="board-row__identity">
+        <span className="board-row__mark" aria-hidden="true" />
+        <div>
+          <p className="board-row__kind">Countdown</p>
+          <h2>{item.title}</h2>
+          <p className="board-row__detail">
+            {formatCountdownTarget(item)} · {item.timeZone} ·{" "}
+            {formatTimeZoneName(now, item.timeZone)}
+          </p>
+        </div>
+      </div>
+      <p className="board-row__value board-row__value--countdown">
+        {countdown.status === "due" ? "right now" : countdown.label}
+      </p>
+    </article>
+  )
+}

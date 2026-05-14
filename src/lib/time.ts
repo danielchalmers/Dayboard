@@ -1,7 +1,7 @@
 import type { ClockItem, CountdownItem } from "./types"
 
 export interface CountdownParts {
-  status: "future" | "due"
+  status: "future" | "due" | "past"
   totalMs: number
   days: number
   hours: number
@@ -80,9 +80,7 @@ export const formatClockTime = (date: Date, item: ClockItem): string =>
   new Intl.DateTimeFormat(undefined, {
     timeZone: item.timeZone,
     hour: "numeric",
-    minute: "2-digit",
-    second: item.showSeconds ? "2-digit" : undefined,
-    hour12: item.format === "12h"
+    minute: "2-digit"
   }).format(date)
 
 export const formatClockDate = (date: Date, timeZone: string): string =>
@@ -117,29 +115,53 @@ export const getCountdownParts = (
   const seconds = totalSeconds % 60
 
   return {
-    status: totalMs > 0 ? "future" : "due",
+    status: getCountdownStatus(totalMs),
     totalMs,
     days,
     hours,
     minutes,
     seconds,
-    label: formatCountdownLabel({ days, hours, minutes, seconds }, item.showSeconds)
+    label: formatRelativeCountdown(totalMs)
   }
 }
 
-export const formatCountdownLabel = (
-  parts: Pick<CountdownParts, "days" | "hours" | "minutes" | "seconds">,
-  showSeconds: boolean
-): string => {
-  const dayLabel = `${parts.days}d`
-  const hourLabel = `${String(parts.hours).padStart(2, "0")}h`
-  const minuteLabel = `${String(parts.minutes).padStart(2, "0")}m`
-  const secondLabel = `${String(parts.seconds).padStart(2, "0")}s`
+export const formatRelativeCountdown = (totalMs: number): string => {
+  if (Math.abs(totalMs) < 60_000) {
+    return totalMs >= 0 ? "less than a minute from now" : "just now"
+  }
 
-  return showSeconds
-    ? `${dayLabel} ${hourLabel} ${minuteLabel} ${secondLabel}`
-    : `${dayLabel} ${hourLabel} ${minuteLabel}`
+  const suffix = totalMs >= 0 ? "from now" : "ago"
+  const absoluteMinutes = Math.floor(Math.abs(totalMs) / 60_000)
+  const days = Math.floor(absoluteMinutes / 1_440)
+  const hours = Math.floor((absoluteMinutes % 1_440) / 60)
+  const minutes = absoluteMinutes % 60
+  const parts: string[] = []
+
+  if (days > 0) {
+    parts.push(pluralize(days, "day"))
+  }
+
+  if (hours > 0 && parts.length < 2) {
+    parts.push(pluralize(hours, "hour"))
+  }
+
+  if (minutes > 0 && parts.length < 2) {
+    parts.push(pluralize(minutes, "minute"))
+  }
+
+  return `${parts.join(", ")} ${suffix}`
 }
+
+const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
+  if (Math.abs(totalMs) < 60_000) {
+    return "due"
+  }
+
+  return totalMs > 0 ? "future" : "past"
+}
+
+const pluralize = (value: number, unit: string): string =>
+  `${value} ${unit}${value === 1 ? "" : "s"}`
 
 export const formatCountdownTarget = (item: CountdownItem): string => {
   const utcMs = zonedDateTimeToUtcMs(item.targetDateTime, item.timeZone)

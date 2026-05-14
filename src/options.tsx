@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 
-import { BoardGrid } from "~/components/BoardGrid"
+import { BoardList } from "~/components/BoardList"
 import { ItemEditor } from "~/components/ItemEditor"
 import { PageShell } from "~/components/PageShell"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
@@ -48,7 +48,7 @@ export default function OptionsPage() {
   }
 
   const addItem = (kind: "clock" | "countdown") => {
-    void setItems([...state.items, createBoardItem(kind, state.items.length)])
+    void setItems([...state.items, createBoardItem(kind)])
   }
 
   const updateItem = (item: BoardItem) => {
@@ -74,23 +74,23 @@ export default function OptionsPage() {
             className="secondary-button"
             onClick={() => addItem("clock")}
             type="button">
-            Add clock
+            New clock
           </button>
           <button
             className="primary-button"
             onClick={() => addItem("countdown")}
             type="button">
-            Add countdown
+            New countdown
           </button>
         </>
       }
-      subtitle="Edit the clocks and countdowns that appear on your new tab page."
-      title="Options">
+      subtitle="Keep the moments you care about close, without fussing over display settings."
+      title="Design your board">
       <section className="settings-panel" aria-labelledby="settings-heading">
-        <h2 id="settings-heading">Board settings</h2>
+        <h2 id="settings-heading">Board</h2>
         <div className="form-grid">
           <label>
-            <span>Board title</span>
+            <span>Title</span>
             <input
               onChange={(event) =>
                 updateSettings({
@@ -101,23 +101,6 @@ export default function OptionsPage() {
               type="text"
               value={state.settings.boardTitle}
             />
-          </label>
-          <label>
-            <span>Density</span>
-            <select
-              onChange={(event) =>
-                updateSettings({
-                  ...state.settings,
-                  density:
-                    event.currentTarget.value === "compact"
-                      ? "compact"
-                      : "comfortable"
-                })
-              }
-              value={state.settings.density}>
-              <option value="comfortable">Comfortable</option>
-              <option value="compact">Compact</option>
-            </select>
           </label>
           <label className="checkbox-label">
             <input
@@ -130,14 +113,14 @@ export default function OptionsPage() {
               }
               type="checkbox"
             />
-            <span>Show dates on clock tiles</span>
+            <span>Show dates under clocks</span>
           </label>
         </div>
       </section>
 
       <section className="settings-panel" aria-labelledby="preview-heading">
         <h2 id="preview-heading">Preview</h2>
-        <BoardGrid items={previewItems} now={now} settings={state.settings} />
+        <BoardList items={previewItems} now={now} settings={state.settings} />
       </section>
 
       <section className="editor-list" aria-label="Board item editors">

@@ -11,10 +11,12 @@ test("new tab page renders the default board", async ({ page }) => {
 test("options page exposes board editing controls", async ({ page }) => {
   await page.goto("/options.html")
 
-  await expect(page.getByRole("heading", { name: "Options" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Add countdown" })
+    page.getByRole("heading", { name: "Design your board" })
   ).toBeVisible()
-  await expect(page.getByLabel("Board title")).toHaveValue("Clockboard")
+  await expect(page.getByRole("button", { name: "New clock" })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "New countdown" })
+  ).toBeVisible()
+  await expect(page.getByLabel("Title")).toHaveValue("Clockboard")
 })
