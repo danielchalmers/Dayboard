@@ -240,6 +240,29 @@ a {
   max-inline-size: 34rem;
 }
 
+.board-row__side {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.board-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: end;
+}
+
+.board-row__actions .secondary-button,
+.board-row__actions .danger-button,
+.board-row__actions .icon-button {
+  min-block-size: 36px;
+}
+
+.board-row__actions .icon-button {
+  inline-size: 36px;
+}
+
 .board-row--compact .board-row__value {
   font-size: 1.9rem;
   max-inline-size: none;
@@ -347,32 +370,55 @@ select:hover {
   color: var(--danger);
 }
 
-.popup-body {
-  inline-size: 390px;
-  min-block-size: 430px;
+.modal-backdrop {
+  background: color-mix(in srgb, CanvasText 18%, transparent);
+  inset: 0;
+  padding: 24px;
+  position: fixed;
+  z-index: 10;
 }
 
-.popup-page {
-  padding: 18px;
+.modal-dialog {
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px color-mix(in srgb, CanvasText 20%, transparent);
+  inline-size: min(100%, 640px);
+  margin: 0 auto;
+  max-block-size: calc(100vh - 48px);
+  overflow: auto;
+  padding: 24px;
 }
 
-.popup-header {
-  border-block-end: 1px solid var(--line);
-  margin-block-end: 6px;
-  padding-block-end: 16px;
+.modal-dialog--narrow {
+  inline-size: min(100%, 480px);
 }
 
-.popup-header h1 {
-  font-size: 1.45rem;
-  line-height: 1;
+.modal-dialog__header {
+  margin-block-end: 18px;
+}
+
+.modal-dialog__title {
+  font-size: 1.35rem;
+  line-height: 1.1;
   margin: 0;
 }
 
-.popup-actions {
+.modal-dialog__subtitle {
+  color: var(--muted);
+  margin: 10px 0 0;
+}
+
+.dialog-form {
   display: grid;
+  gap: 18px;
+}
+
+.modal-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  grid-template-columns: 1fr 1fr;
-  margin-block-start: 16px;
+  justify-content: end;
 }
 
 @media (max-width: 720px) {
@@ -407,5 +453,21 @@ select:hover {
   .board-row__value {
     max-inline-size: none;
     text-align: start;
+  }
+
+  .board-row__side,
+  .board-row__actions,
+  .modal-dialog__actions {
+    justify-items: start;
+    justify-content: start;
+  }
+
+  .modal-backdrop {
+    padding: 12px;
+  }
+
+  .modal-dialog {
+    max-block-size: calc(100vh - 24px);
+    padding: 20px;
   }
 }

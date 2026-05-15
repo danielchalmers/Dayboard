@@ -8,12 +8,11 @@ Live clocks and countdowns on your new tab page.
 
 ## 📖 Usage
 
-1. Open a new tab or click the Clockboard icon.
-2. Click **Edit board**.
-3. Click **New clock** or **New countdown**.
-4. Enter a name and time zone.
-5. For countdowns, choose the target date and time.
-6. Return to your new tab page.
+1. Open a new tab.
+2. Click **Add clock** or **Add countdown**.
+3. Enter a name and time zone.
+4. For countdowns, choose the target date and time.
+5. Use **Edit**, **Delete**, and arrow controls directly on the page to keep the list tidy.
 
 ## 🙏 Credits
 

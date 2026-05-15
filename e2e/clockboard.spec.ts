@@ -1,32 +1,73 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
-test("new tab page renders the default board", async ({ page }) => {
+const openFreshNewTab = async (page: Page) => {
   await page.goto("/newtab.html")
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+}
+
+test("new tab page renders the default board and editing controls", async ({
+  page
+}) => {
+  await openFreshNewTab(page)
 
   await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Edit Local time" })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Move Tomorrow morning up" })
+  ).toBeVisible()
+
+  const titles = page.locator(".board-row h2")
+  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
+  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 })
 
-test("options page exposes board editing controls", async ({ page }) => {
-  await page.goto("/options.html")
+test("add clock flow works from the new tab page", async ({ page }) => {
+  await openFreshNewTab(page)
 
-  await expect(
-    page.getByRole("heading", { name: "Design your board" })
-  ).toBeVisible()
-  await expect(page.getByRole("button", { name: "New clock" })).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: "New countdown" })
-  ).toBeVisible()
-  await expect(page.getByLabel("Title")).toHaveValue("Clockboard")
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+  await page.getByLabel("Name").fill("Paris")
+  await page.getByLabel("Time zone").fill("Europe/Paris")
+  await page.getByRole("button", { name: "Save clock" }).click()
+
+  await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible()
 })
 
-test("popup page renders the glance list", async ({ page }) => {
-  await page.setViewportSize({ width: 430, height: 520 })
-  await page.goto("/popup.html")
+test("add countdown flow works from the new tab page", async ({ page }) => {
+  await openFreshNewTab(page)
 
-  await expect(page.getByRole("heading", { name: "Now and next" })).toBeVisible()
-  await expect(page.getByText("Local time")).toBeVisible()
-  await expect(page.getByText("Tomorrow morning")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
+  await page.getByLabel("Name").fill("Launch")
+  await page.getByLabel("Time zone").fill("UTC")
+  await page.getByLabel("When").fill("2026-01-02T09:00")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  await expect(page.getByRole("heading", { name: "Launch" })).toBeVisible()
+})
+
+test("edit dialog opens for an existing item", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  await page.getByRole("button", { name: "Edit Local time" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit Local time" })).toBeVisible()
+  await expect(page.getByLabel("Name")).toHaveValue("Local time")
+})
+
+test("delete flow removes an existing item", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
+  await expect(
+    page.getByRole("dialog", { name: "Delete Tomorrow morning?" })
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Delete item" }).click()
+
+  await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
 })

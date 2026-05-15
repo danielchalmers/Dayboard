@@ -33,6 +33,28 @@ describe("BoardRow", () => {
     expect(screen.getByLabelText("UTC time")).toHaveTextContent(/12:30/)
   })
 
+  it("renders row actions when provided", () => {
+    const item: BoardItem = {
+      id: "local",
+      kind: "clock",
+      title: "Local time",
+      timeZone: "UTC",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    }
+
+    render(
+      <BoardRow
+        actions={<button type="button">Edit</button>}
+        item={item}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        settings={settings}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument()
+  })
+
   it("renders a due countdown in plain language", () => {
     const item: BoardItem = {
       id: "deadline",

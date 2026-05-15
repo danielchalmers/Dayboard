@@ -2,7 +2,7 @@
 
 ## Project
 
-Clockboard is a Plasmo, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm vertical list of live clocks and natural-language countdowns, with matching popup and options pages.
+Clockboard is a Plasmo, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm vertical list of live clocks and natural-language countdowns, with editing kept on the new tab page itself.
 
 The product should feel polished, quiet, and useful at a glance. Favor clarity and automatic behavior over configuration-heavy UI.
 
@@ -21,14 +21,12 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 
 - Plasmo entry files live in `src/`:
   - `src/newtab.tsx`
-  - `src/popup.tsx`
-  - `src/options.tsx`
 - Shared time, storage, and item logic lives in `src/lib`.
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
 - Do not add Tailwind or a UI component library.
 - The Plasmo manifest override lives in `package.json`, not a root `manifest.json`.
-- Preserve `manifest.action.default_popup`; removing it prevents Plasmo from emitting the popup bundle.
+- Keep the extension new-tab-only for this phase; do not reintroduce popup or options manifest entries.
 - Keep checked-in local versions at `0.0.0` in both `package.json.version` and `package.json.manifest.version`.
 - Keep support for both Chrome and Edge MV3 builds.
 
@@ -57,12 +55,11 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 
 - For domain or UI behavior changes, update Vitest coverage.
 - For page-level behavior changes, update Playwright coverage.
-- The popup must have smoke coverage because a manifest override previously caused it not to be emitted.
 - Before handoff after frontend work, run:
   - `npm run verify`
   - `npm run build:edge`
   - `npm run e2e`
-- For visual revamps, inspect built-page screenshots at desktop, mobile, options, and popup sizes.
+- For visual revamps, inspect built-page screenshots at desktop and mobile new-tab sizes.
 
 ## CI And Release
 
@@ -84,7 +81,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Use React function components and TypeScript.
 - Prefer small, testable helpers for time calculations and storage migration.
 - Avoid broad abstractions unless they remove real duplication.
-- Keep layout stable at popup, mobile, and desktop widths.
+- Keep layout stable at mobile and desktop widths.
 - Use semantic controls and accessible labels.
 - Keep buttons and form controls native-feeling, crisp, and restrained.
 - Do not introduce analytics, network calls, or broad extension permissions.
