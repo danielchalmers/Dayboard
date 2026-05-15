@@ -6,20 +6,20 @@ import { ItemDialog } from "~/components/ItemDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
-import { createBoardItem, moveBoardItem } from "~/lib/items"
-import type { BoardItem } from "~/lib/types"
+import { createWidget, moveWidget } from "~/lib/widgets"
+import type { Widget } from "~/lib/types"
 import "~/styles/global.css"
 
 interface EditorState {
   mode: "add" | "edit"
-  item: BoardItem
+  item: Widget
 }
 
 export default function NewTabPage() {
   const now = useNow()
-  const { state, isLoading, error, setItems } = useClockboardState()
+  const { state, isLoading, error, setWidgets } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
-  const [itemPendingDelete, setItemPendingDelete] = useState<BoardItem | null>(null)
+  const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
 
   if (isLoading) {
     return <LoadingView />
@@ -29,22 +29,22 @@ export default function NewTabPage() {
     return <ErrorView message={error || "Unable to load Clockboard"} />
   }
 
-  const saveItem = (item: BoardItem) => {
-    const nextItems =
+  const saveItem = (item: Widget) => {
+    const nextWidgets =
       editorState?.mode === "edit"
-        ? state.items.map((current) => (current.id === item.id ? item : current))
-        : [...state.items, item]
+        ? state.widgets.map((current) => (current.id === item.id ? item : current))
+        : [...state.widgets, item]
 
-    void setItems(nextItems)
+    void setWidgets(nextWidgets)
     setEditorState(null)
   }
 
   const reorderItem = (id: string, direction: -1 | 1) => {
-    void setItems(moveBoardItem(state.items, id, direction))
+    void setWidgets(moveWidget(state.widgets, id, direction))
   }
 
-  const deleteItem = (item: BoardItem) => {
-    void setItems(state.items.filter((current) => current.id !== item.id))
+  const deleteItem = (item: Widget) => {
+    void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
   }
 
@@ -54,7 +54,7 @@ export default function NewTabPage() {
         <header className="page-header">
           <div>
             <p className="eyebrow">Today</p>
-            <h1>{state.settings.boardTitle}</h1>
+            <h1>Clockboard</h1>
             <p className="page-header__subtitle">
               {new Intl.DateTimeFormat(undefined, {
                 weekday: "long",
@@ -70,7 +70,7 @@ export default function NewTabPage() {
               onClick={() =>
                 setEditorState({
                   mode: "add",
-                  item: createBoardItem("clock")
+                  item: createWidget("clock")
                 })
               }
               type="button">
@@ -81,7 +81,7 @@ export default function NewTabPage() {
               onClick={() =>
                 setEditorState({
                   mode: "add",
-                  item: createBoardItem("countdown")
+                  item: createWidget("countdown")
                 })
               }
               type="button">
@@ -90,7 +90,7 @@ export default function NewTabPage() {
           </div>
         </header>
         <BoardList
-          items={state.items}
+          items={state.widgets}
           now={now}
           renderItemActions={(item, index) => (
             <>
@@ -105,7 +105,7 @@ export default function NewTabPage() {
               <button
                 aria-label={`Move ${item.title} down`}
                 className="icon-button"
-                disabled={index === state.items.length - 1}
+                disabled={index === state.widgets.length - 1}
                 onClick={() => reorderItem(item.id, 1)}
                 type="button">
                 ↓
@@ -126,7 +126,6 @@ export default function NewTabPage() {
               </button>
             </>
           )}
-          settings={state.settings}
         />
       </main>
       <ItemDialog

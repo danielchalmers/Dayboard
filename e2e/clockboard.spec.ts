@@ -6,7 +6,7 @@ const openFreshNewTab = async (page: Page) => {
   await page.reload()
 }
 
-test("new tab page renders the default board and editing controls", async ({
+test("new tab page renders the default widgets and editing controls", async ({
   page
 }) => {
   await openFreshNewTab(page)
@@ -39,35 +39,43 @@ test("add clock flow works from the new tab page", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible()
 })
 
-test("add countdown flow works from the new tab page", async ({ page }) => {
+test("add and edit countdown works without a time-zone field", async ({ page }) => {
   await openFreshNewTab(page)
 
   await page.getByRole("button", { name: "Add countdown" }).click()
   await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
+  await expect(page.getByLabel("Time zone")).toHaveCount(0)
   await page.getByLabel("Name").fill("Launch")
-  await page.getByLabel("Time zone").fill("UTC")
   await page.getByLabel("When").fill("2026-01-02T09:00")
   await page.getByRole("button", { name: "Save countdown" }).click()
 
   await expect(page.getByRole("heading", { name: "Launch" })).toBeVisible()
+  await page.getByRole("button", { name: "Edit Launch" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit Launch" })).toBeVisible()
+  await expect(page.getByLabel("Time zone")).toHaveCount(0)
+  await page.getByLabel("Name").fill("Launch day")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  await expect(page.getByRole("heading", { name: "Launch day" })).toBeVisible()
 })
 
-test("edit dialog opens for an existing item", async ({ page }) => {
+test("edit dialog opens for an existing clock", async ({ page }) => {
   await openFreshNewTab(page)
 
   await page.getByRole("button", { name: "Edit Local time" }).click()
   await expect(page.getByRole("dialog", { name: "Edit Local time" })).toBeVisible()
   await expect(page.getByLabel("Name")).toHaveValue("Local time")
+  await expect(page.getByLabel("Time zone")).toBeVisible()
 })
 
-test("delete flow removes an existing item", async ({ page }) => {
+test("delete flow removes an existing widget", async ({ page }) => {
   await openFreshNewTab(page)
 
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
   await expect(
     page.getByRole("dialog", { name: "Delete Tomorrow morning?" })
   ).toBeVisible()
-  await page.getByRole("button", { name: "Delete item" }).click()
+  await page.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
 })

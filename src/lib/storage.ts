@@ -1,12 +1,15 @@
 import { Storage } from "@plasmohq/storage"
 
+import { zonedDateTimeToUtcMs } from "./time"
 import {
   createDefaultState,
-  DEFAULT_SETTINGS,
   DEFAULT_TIME_ZONE,
-  type BoardItem,
-  type ClockboardSettings,
-  type ClockboardState
+  DEFAULT_WIDGET_PLACEMENT,
+  type ClockboardState,
+  type ClockWidget,
+  type CountdownWidget,
+  type Widget,
+  type WidgetPlacement
 } from "./types"
 
 export const STORAGE_KEY = "clockboard-state"
@@ -48,50 +51,145 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const asString = (value: unknown, fallback: string): string =>
   typeof value === "string" && value.trim().length > 0 ? value : fallback
 
-const asBoolean = (value: unknown, fallback: boolean): boolean =>
-  typeof value === "boolean" ? value : fallback
+const asPlacement = (
+  value: unknown,
+  fallback: WidgetPlacement = DEFAULT_WIDGET_PLACEMENT
+): WidgetPlacement => (value === "main" || value === "more" ? value : fallback)
 
-const sanitizeSettings = (value: unknown): ClockboardSettings => {
-  if (!isRecord(value)) {
-    return DEFAULT_SETTINGS
+const sanitizeIsoInstant = (value: unknown, fallback: string): string => {
+  if (typeof value !== "string") {
+    return fallback
   }
 
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? fallback : date.toISOString()
+}
+
+const sanitizeWidgetBase = (value: Record<string, unknown>) => {
+  const now = new Date().toISOString()
+
   return {
-    boardTitle: asString(value.boardTitle, DEFAULT_SETTINGS.boardTitle),
-    showDate: asBoolean(value.showDate, DEFAULT_SETTINGS.showDate)
+    id: asString(value.id, crypto.randomUUID()),
+    title: asString(value.title, "Untitled"),
+    placement: asPlacement(value.placement),
+    createdAt: asString(value.createdAt, now),
+    updatedAt: asString(value.updatedAt, now)
   }
 }
 
-const sanitizeItem = (value: unknown): BoardItem | null => {
+const sanitizeClockWidget = (value: unknown): ClockWidget | null => {
   if (!isRecord(value)) {
     return null
   }
 
-  const now = new Date().toISOString()
+  const settings = isRecord(value.settings) ? value.settings : {}
+
+  return {
+    ...sanitizeWidgetBase(value),
+    kind: "clock",
+    settings: {
+      timeZone: asString(settings.timeZone, DEFAULT_TIME_ZONE)
+    }
+  }
+}
+
+const sanitizeCountdownWidget = (value: unknown): CountdownWidget | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  const settings = isRecord(value.settings) ? value.settings : {}
+  const fallbackTargetAt = createDefaultState().widgets.find(
+    (widget): widget is CountdownWidget => widget.kind === "countdown"
+  )!.settings.targetAt
+
+  return {
+    ...sanitizeWidgetBase(value),
+    kind: "countdown",
+    settings: {
+      targetAt: sanitizeIsoInstant(settings.targetAt, fallbackTargetAt)
+    }
+  }
+}
+
+const sanitizeWidget = (value: unknown): Widget | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  if (value.kind === "clock") {
+    return sanitizeClockWidget(value)
+  }
+
+  if (value.kind === "countdown") {
+    return sanitizeCountdownWidget(value)
+  }
+
+  return null
+}
+
+const migrateLegacyItem = (value: unknown): Widget | null => {
+  if (!isRecord(value)) {
+    return null
+  }
+
   const base = {
-    id: asString(value.id, crypto.randomUUID()),
-    title: asString(value.title, "Untitled"),
-    timeZone: asString(value.timeZone, DEFAULT_TIME_ZONE),
-    createdAt: asString(value.createdAt, now),
-    updatedAt: asString(value.updatedAt, now)
+    ...sanitizeWidgetBase(value),
+    placement: DEFAULT_WIDGET_PLACEMENT
   }
 
   if (value.kind === "clock") {
     return {
       ...base,
-      kind: "clock"
+      kind: "clock",
+      settings: {
+        timeZone: asString(value.timeZone, DEFAULT_TIME_ZONE)
+      }
     }
   }
 
   if (value.kind === "countdown") {
+    const timeZone = asString(value.timeZone, DEFAULT_TIME_ZONE)
+    const targetUtcMs = zonedDateTimeToUtcMs(
+      asString(value.targetDateTime, ""),
+      timeZone
+    )
+    const fallbackTargetAt = createDefaultState().widgets.find(
+      (widget): widget is CountdownWidget => widget.kind === "countdown"
+    )!.settings.targetAt
+
     return {
       ...base,
       kind: "countdown",
-      targetDateTime: asString(value.targetDateTime, "2026-01-01T00:00")
+      settings: {
+        targetAt: Number.isNaN(targetUtcMs)
+          ? fallbackTargetAt
+          : new Date(targetUtcMs).toISOString()
+      }
     }
   }
 
   return null
+}
+
+const sanitizeWidgets = (value: unknown): Widget[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((widget) => sanitizeWidget(widget))
+    .filter((widget): widget is Widget => widget !== null)
+}
+
+const migrateLegacyItems = (value: unknown): Widget[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => migrateLegacyItem(item))
+    .filter((widget): widget is Widget => widget !== null)
 }
 
 export const migrateClockboardState = (value: unknown): ClockboardState => {
@@ -99,15 +197,14 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
     return createDefaultState()
   }
 
-  const rawItems = Array.isArray(value.items) ? value.items : []
-  const items = rawItems
-    .map((item) => sanitizeItem(item))
-    .filter((item): item is BoardItem => item !== null)
+  const widgets =
+    value.version === 2 || Array.isArray(value.widgets)
+      ? sanitizeWidgets(value.widgets)
+      : migrateLegacyItems(value.items)
 
   return {
-    version: 1,
-    settings: sanitizeSettings(value.settings),
-    items: items.length > 0 ? items : createDefaultState().items
+    version: 2,
+    widgets: widgets.length > 0 ? widgets : createDefaultState().widgets
   }
 }
 

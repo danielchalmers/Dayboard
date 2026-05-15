@@ -1,12 +1,12 @@
 import { useEffect } from "react"
 
-import type { BoardItem } from "~/lib/types"
+import type { Widget } from "~/lib/types"
 
 interface DeleteDialogProps {
   isOpen: boolean
-  item: BoardItem | null
+  item: Widget | null
   onCancel: () => void
-  onConfirm: (item: BoardItem) => void
+  onConfirm: (item: Widget) => void
 }
 
 export const DeleteDialog = ({
@@ -44,7 +44,7 @@ export const DeleteDialog = ({
         role="dialog">
         <div className="modal-dialog__header">
           <div>
-            <p className="eyebrow">Delete item</p>
+            <p className="eyebrow">Delete widget</p>
             <h2 className="modal-dialog__title" id="delete-dialog-title">
               Delete {item.title}?
             </h2>
@@ -62,7 +62,7 @@ export const DeleteDialog = ({
             className="danger-button"
             onClick={() => onConfirm(item)}
             type="button">
-            Delete item
+            Delete widget
           </button>
         </div>
       </section>

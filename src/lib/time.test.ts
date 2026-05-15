@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  dateTimeInputValueToIsoInstant,
   formatRelativeCountdown,
   getCountdownParts,
+  isoInstantToDateTimeInputValue,
   zonedDateTimeToUtcMs
 } from "./time"
-import type { CountdownItem } from "./types"
+import type { CountdownWidget } from "./types"
 
-const countdownItem = (targetDateTime: string): CountdownItem => ({
+const countdownWidget = (targetAt: string): CountdownWidget => ({
   id: "launch",
   kind: "countdown",
   title: "Launch",
-  timeZone: "UTC",
-  targetDateTime,
+  placement: "main",
+  settings: {
+    targetAt
+  },
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
 })
@@ -31,10 +35,24 @@ describe("zonedDateTimeToUtcMs", () => {
   })
 })
 
+describe("datetime-local countdown conversions", () => {
+  it("converts a local input value into an ISO instant", () => {
+    expect(dateTimeInputValueToIsoInstant("2026-01-02T03:04")).toBe(
+      new Date(2026, 0, 2, 3, 4, 0, 0).toISOString()
+    )
+  })
+
+  it("converts an ISO instant into a datetime-local value", () => {
+    expect(
+      isoInstantToDateTimeInputValue(new Date(2026, 0, 2, 3, 4, 0, 0).toISOString())
+    ).toBe("2026-01-02T03:04")
+  })
+})
+
 describe("getCountdownParts", () => {
   it("returns remaining time parts for a future target", () => {
     const parts = getCountdownParts(
-      countdownItem("2026-01-02T03:04"),
+      countdownWidget("2026-01-02T03:04:00.000Z"),
       new Date("2026-01-01T00:00:00.000Z")
     )
 
@@ -48,7 +66,7 @@ describe("getCountdownParts", () => {
 
   it("marks just-passed targets as due", () => {
     const parts = getCountdownParts(
-      countdownItem("2026-01-01T00:00"),
+      countdownWidget("2026-01-01T00:00:00.000Z"),
       new Date("2026-01-01T00:00:30.000Z")
     )
 

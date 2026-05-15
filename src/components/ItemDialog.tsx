@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { getTimeZoneOptions } from "~/lib/time"
-import type { BoardItem } from "~/lib/types"
+import {
+  dateTimeInputValueToIsoInstant,
+  getTimeZoneOptions,
+  isoInstantToDateTimeInputValue
+} from "~/lib/time"
+import type { Widget } from "~/lib/types"
+import { widgetRegistry } from "~/lib/widgets"
 
 interface ItemDialogProps {
   isOpen: boolean
-  item: BoardItem | null
+  item: Widget | null
   mode: "add" | "edit"
   onClose: () => void
-  onSave: (item: BoardItem) => void
+  onSave: (item: Widget) => void
 }
 
 const timeZones = getTimeZoneOptions()
@@ -20,7 +25,7 @@ export const ItemDialog = ({
   onClose,
   onSave
 }: ItemDialogProps) => {
-  const [draft, setDraft] = useState<BoardItem | null>(item)
+  const [draft, setDraft] = useState<Widget | null>(item)
 
   useEffect(() => {
     setDraft(item)
@@ -47,10 +52,10 @@ export const ItemDialog = ({
       return ""
     }
 
+    const widgetDefinition = widgetRegistry[draft.kind]
+
     return mode === "add"
-      ? draft.kind === "clock"
-        ? "Add clock"
-        : "Add countdown"
+      ? `Add ${widgetDefinition.kind}`
       : `Edit ${draft.title}`
   }, [draft, mode])
 
@@ -58,24 +63,42 @@ export const ItemDialog = ({
     return null
   }
 
-  const update = (changes: Partial<BoardItem>) => {
+  const widgetDefinition = widgetRegistry[draft.kind]
+
+  const submitLabel =
+    mode === "add" ? `Save ${widgetDefinition.kind}` : "Save changes"
+
+  const updateTitle = (title: string) => {
+    setDraft((current) => (current ? { ...current, title } : current))
+  }
+
+  const updateTimeZone = (timeZone: string) => {
     setDraft((current) =>
-      current
-        ? ({
+      current?.kind === "clock"
+        ? {
             ...current,
-            ...changes,
-            kind: current.kind
-          } as BoardItem)
+            settings: {
+              timeZone
+            }
+          }
         : current
     )
   }
 
-  const submitLabel =
-    mode === "add"
-      ? draft.kind === "clock"
-        ? "Save clock"
-        : "Save countdown"
-      : "Save changes"
+  const updateTargetAt = (value: string) => {
+    const targetAt = dateTimeInputValueToIsoInstant(value)
+
+    setDraft((current) =>
+      current?.kind === "countdown" && targetAt
+        ? {
+            ...current,
+            settings: {
+              targetAt
+            }
+          }
+        : current
+    )
+  }
 
   return (
     <div className="modal-backdrop">
@@ -86,7 +109,7 @@ export const ItemDialog = ({
         role="dialog">
         <div className="modal-dialog__header">
           <div>
-            <p className="eyebrow">{draft.kind}</p>
+            <p className="eyebrow">{widgetDefinition.kindLabel}</p>
             <h2 className="modal-dialog__title" id="item-dialog-title">
               {title}
             </h2>
@@ -106,34 +129,34 @@ export const ItemDialog = ({
             <label>
               <span>Name</span>
               <input
-                onChange={(event) => update({ title: event.currentTarget.value })}
+                onChange={(event) => updateTitle(event.currentTarget.value)}
                 required
                 type="text"
                 value={draft.title}
               />
             </label>
 
-            <label>
-              <span>Time zone</span>
-              <input
-                list="clockboard-time-zones"
-                onChange={(event) => update({ timeZone: event.currentTarget.value })}
-                required
-                type="text"
-                value={draft.timeZone}
-              />
-            </label>
+            {draft.kind === "clock" ? (
+              <label>
+                <span>Time zone</span>
+                <input
+                  list="clockboard-time-zones"
+                  onChange={(event) => updateTimeZone(event.currentTarget.value)}
+                  required
+                  type="text"
+                  value={draft.settings.timeZone}
+                />
+              </label>
+            ) : null}
 
             {draft.kind === "countdown" ? (
               <label>
-                <span>When</span>
+                <span>{widgetDefinition.editor.targetLabel}</span>
                 <input
-                  onChange={(event) =>
-                    update({ targetDateTime: event.currentTarget.value })
-                  }
+                  onChange={(event) => updateTargetAt(event.currentTarget.value)}
                   required
                   type="datetime-local"
-                  value={draft.targetDateTime}
+                  value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
                 />
               </label>
             ) : (
