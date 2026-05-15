@@ -20,10 +20,30 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Reorder Tomorrow morning" })
+  ).toBeVisible()
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+})
+
+test("reordering changes the visible order and persists after reload", async ({
+  page
+}) => {
+  await openFreshNewTab(page)
+
+  const titles = page.locator(".board-row h2")
+  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  await expect(
+    page.getByRole("button", { name: "Reorder Tomorrow morning" })
+  ).toBeVisible()
   await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
+
+  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+
+  await page.reload()
+
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 })
 
@@ -78,4 +98,27 @@ test("delete flow removes an existing widget", async ({ page }) => {
   await page.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
+})
+
+test("edit and delete controls still work after reordering", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
+
+  const titles = page.locator(".board-row h2")
+  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+
+  await page.getByRole("button", { name: "Edit Tomorrow morning" }).click()
+  await expect(
+    page.getByRole("dialog", { name: "Edit Tomorrow morning" })
+  ).toBeVisible()
+  await page.getByLabel("Name").fill("Morning plans")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  await expect(page.getByRole("heading", { name: "Morning plans" })).toBeVisible()
+
+  await page.getByRole("button", { name: "Delete Morning plans" }).click()
+  await page.getByRole("button", { name: "Delete widget" }).click()
+
+  await expect(page.getByText("Morning plans")).toHaveCount(0)
 })

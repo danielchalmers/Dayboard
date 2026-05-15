@@ -78,25 +78,52 @@ export const createWidget = <K extends WidgetKind>(
   now = new Date()
 ): Extract<Widget, { kind: K }> => widgetRegistry[kind].createDefault(now)
 
+export const moveWidgetToIndex = (
+  widgets: Widget[],
+  fromIndex: number,
+  toIndex: number
+): Widget[] => {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= widgets.length ||
+    toIndex >= widgets.length
+  ) {
+    return widgets
+  }
+
+  const nextWidgets = [...widgets]
+  const [widget] = nextWidgets.splice(fromIndex, 1)
+
+  if (!widget) {
+    return widgets
+  }
+
+  nextWidgets.splice(toIndex, 0, widget)
+  return nextWidgets
+}
+
 export const moveWidget = (
   widgets: Widget[],
   id: string,
   direction: -1 | 1
 ): Widget[] => {
   const index = widgets.findIndex((widget) => widget.id === id)
-  const nextIndex = index + direction
+  return moveWidgetToIndex(widgets, index, index + direction)
+}
 
-  if (index < 0 || nextIndex < 0 || nextIndex >= widgets.length) {
+export const reorderWidgets = (
+  widgets: Widget[],
+  activeId: string,
+  overId: string
+): Widget[] => {
+  if (activeId === overId) {
     return widgets
   }
 
-  const nextWidgets = [...widgets]
-  const [widget] = nextWidgets.splice(index, 1)
+  const fromIndex = widgets.findIndex((widget) => widget.id === activeId)
+  const toIndex = widgets.findIndex((widget) => widget.id === overId)
 
-  if (!widget) {
-    return widgets
-  }
-
-  nextWidgets.splice(nextIndex, 0, widget)
-  return nextWidgets
+  return moveWidgetToIndex(widgets, fromIndex, toIndex)
 }

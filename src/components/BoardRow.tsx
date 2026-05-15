@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { forwardRef, type CSSProperties, type ReactNode } from "react"
 
 import {
   formatClockDate,
@@ -15,17 +15,24 @@ interface BoardRowProps {
   now: Date
   compact?: boolean
   actions?: ReactNode
+  className?: string
+  style?: CSSProperties
 }
 
-export const BoardRow = ({
-  item,
-  now,
-  compact = false,
-  actions
-}: BoardRowProps) => {
+export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
+  { item, now, compact = false, actions, className, style },
+  ref
+) {
+  const rowClassName = [
+    compact ? "board-row board-row--compact" : "board-row",
+    className
+  ]
+    .filter(Boolean)
+    .join(" ")
+
   if (item.kind === "clock") {
     return (
-      <article className={compact ? "board-row board-row--compact" : "board-row"}>
+      <article className={rowClassName} ref={ref} style={style}>
         <div className="board-row__identity">
           <span className="board-row__mark" aria-hidden="true" />
           <div>
@@ -50,7 +57,7 @@ export const BoardRow = ({
   const countdown = getCountdownParts(item, now)
 
   return (
-    <article className={compact ? "board-row board-row--compact" : "board-row"}>
+    <article className={rowClassName} ref={ref} style={style}>
       <div className="board-row__identity">
         <span className="board-row__mark" aria-hidden="true" />
         <div>
@@ -67,4 +74,4 @@ export const BoardRow = ({
       </div>
     </article>
   )
-}
+})
