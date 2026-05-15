@@ -135,6 +135,7 @@ test("edit and delete controls still work for widgets in Main and More", async (
   await expect(page.getByRole("dialog", { name: "Edit Local time" })).toBeVisible()
   await expect(page.getByLabel("Name")).toHaveValue("Local time")
   await expect(page.getByLabel("Time zone")).toBeVisible()
+  await page.getByRole("button", { name: "Cancel" }).click()
 
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
   await expect(
