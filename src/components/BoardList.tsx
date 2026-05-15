@@ -1,20 +1,18 @@
 import type { ReactNode } from "react"
 
 import { BoardRow } from "~/components/BoardRow"
-import type { BoardItem, ClockboardSettings } from "~/lib/types"
+import type { Widget } from "~/lib/types"
 
 interface BoardListProps {
-  items: BoardItem[]
+  items: Widget[]
   now: Date
-  settings: ClockboardSettings
   compact?: boolean
-  renderItemActions?: (item: BoardItem, index: number) => ReactNode
+  renderItemActions?: (item: Widget, index: number) => ReactNode
 }
 
 export const BoardList = ({
   items,
   now,
-  settings,
   compact,
   renderItemActions
 }: BoardListProps) => {
@@ -30,7 +28,7 @@ export const BoardList = ({
   return (
     <section
       className={compact ? "board-list board-list--compact" : "board-list"}
-      aria-label="Clockboard items">
+      aria-label="Clockboard widgets">
       {items.map((item, index) => (
         <BoardRow
           actions={renderItemActions?.(item, index)}
@@ -38,7 +36,6 @@ export const BoardList = ({
           item={item}
           key={item.id}
           now={now}
-          settings={settings}
         />
       ))}
     </section>

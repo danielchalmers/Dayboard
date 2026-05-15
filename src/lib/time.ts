@@ -1,4 +1,4 @@
-import type { ClockItem, CountdownItem } from "./types"
+import { toDateTimeInputValue, type ClockWidget, type CountdownWidget } from "./types"
 
 export interface CountdownParts {
   status: "future" | "due" | "past"
@@ -76,9 +76,39 @@ export const zonedDateTimeToUtcMs = (
   return guess
 }
 
-export const formatClockTime = (date: Date, item: ClockItem): string =>
+export const dateTimeInputValueToIsoInstant = (
+  localDateTime: string
+): string | null => {
+  const match = localDateTime.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
+  )
+
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1]!)
+  const month = Number(match[2]!)
+  const day = Number(match[3]!)
+  const hour = Number(match[4]!)
+  const minute = Number(match[5]!)
+
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString()
+}
+
+export const isoInstantToDateTimeInputValue = (instant: string): string => {
+  const date = new Date(instant)
+
+  if (Number.isNaN(date.getTime())) {
+    return ""
+  }
+
+  return toDateTimeInputValue(date)
+}
+
+export const formatClockTime = (date: Date, widget: ClockWidget): string =>
   new Intl.DateTimeFormat(undefined, {
-    timeZone: item.timeZone,
+    timeZone: widget.settings.timeZone,
     hour: "numeric",
     minute: "2-digit"
   }).format(date)
@@ -102,12 +132,12 @@ export const formatTimeZoneName = (date: Date, timeZone: string): string => {
 }
 
 export const getCountdownParts = (
-  item: CountdownItem,
+  widget: CountdownWidget,
   now = new Date()
 ): CountdownParts => {
-  const targetUtcMs = zonedDateTimeToUtcMs(item.targetDateTime, item.timeZone)
-  const totalMs = targetUtcMs - now.getTime()
-  const remainingMs = Math.max(0, totalMs)
+  const targetMs = new Date(widget.settings.targetAt).getTime()
+  const totalMs = targetMs - now.getTime()
+  const remainingMs = Math.max(0, Number.isNaN(totalMs) ? 0 : totalMs)
   const totalSeconds = Math.floor(remainingMs / 1000)
   const days = Math.floor(totalSeconds / 86_400)
   const hours = Math.floor((totalSeconds % 86_400) / 3_600)
@@ -126,8 +156,10 @@ export const getCountdownParts = (
 }
 
 export const formatRelativeCountdown = (totalMs: number): string => {
-  if (Math.abs(totalMs) < 60_000) {
-    return totalMs >= 0 ? "less than a minute from now" : "just now"
+  if (Number.isNaN(totalMs) || Math.abs(totalMs) < 60_000) {
+    return totalMs >= 0 || Number.isNaN(totalMs)
+      ? "less than a minute from now"
+      : "just now"
   }
 
   const suffix = totalMs >= 0 ? "from now" : "ago"
@@ -153,7 +185,7 @@ export const formatRelativeCountdown = (totalMs: number): string => {
 }
 
 const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
-  if (Math.abs(totalMs) < 60_000) {
+  if (Number.isNaN(totalMs) || Math.abs(totalMs) < 60_000) {
     return "due"
   }
 
@@ -163,21 +195,20 @@ const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
 const pluralize = (value: number, unit: string): string =>
   `${value} ${unit}${value === 1 ? "" : "s"}`
 
-export const formatCountdownTarget = (item: CountdownItem): string => {
-  const utcMs = zonedDateTimeToUtcMs(item.targetDateTime, item.timeZone)
+export const formatCountdownTarget = (widget: CountdownWidget): string => {
+  const target = new Date(widget.settings.targetAt)
 
-  if (Number.isNaN(utcMs)) {
+  if (Number.isNaN(target.getTime())) {
     return "Invalid target"
   }
 
   return new Intl.DateTimeFormat(undefined, {
-    timeZone: item.timeZone,
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit"
-  }).format(new Date(utcMs))
+  }).format(target)
 }
 
 export const getTimeZoneOptions = (): string[] => {

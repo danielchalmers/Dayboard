@@ -1,45 +1,43 @@
-export type ItemKind = "clock" | "countdown"
+export type WidgetKind = "clock" | "countdown"
 
-export interface BoardItemBase {
+export type WidgetPlacement = "main" | "more"
+
+export interface WidgetBase {
   id: string
-  kind: ItemKind
+  kind: WidgetKind
   title: string
-  timeZone: string
+  placement: WidgetPlacement
   createdAt: string
   updatedAt: string
 }
 
-export interface ClockItem extends BoardItemBase {
+export interface ClockWidget extends WidgetBase {
   kind: "clock"
+  settings: {
+    timeZone: string
+  }
 }
 
-export interface CountdownItem extends BoardItemBase {
+export interface CountdownWidget extends WidgetBase {
   kind: "countdown"
-  targetDateTime: string
+  settings: {
+    targetAt: string
+  }
 }
 
-export type BoardItem = ClockItem | CountdownItem
-
-export interface ClockboardSettings {
-  boardTitle: string
-  showDate: boolean
-}
+export type Widget = ClockWidget | CountdownWidget
 
 export interface ClockboardState {
-  version: 1
-  settings: ClockboardSettings
-  items: BoardItem[]
+  version: 2
+  widgets: Widget[]
 }
 
 export const DEFAULT_TIME_ZONE =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
-export const DEFAULT_SETTINGS: ClockboardSettings = {
-  boardTitle: "Clockboard",
-  showDate: true
-}
+export const DEFAULT_WIDGET_PLACEMENT: WidgetPlacement = "main"
 
-export const createDefaultItems = (now = new Date()): BoardItem[] => {
+export const createDefaultWidgets = (now = new Date()): Widget[] => {
   const createdAt = now.toISOString()
   const tomorrow = new Date(now)
   tomorrow.setDate(now.getDate() + 1)
@@ -50,7 +48,10 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
       id: "home-clock",
       kind: "clock",
       title: "Local time",
-      timeZone: DEFAULT_TIME_ZONE,
+      placement: DEFAULT_WIDGET_PLACEMENT,
+      settings: {
+        timeZone: DEFAULT_TIME_ZONE
+      },
       createdAt,
       updatedAt: createdAt
     },
@@ -58,8 +59,10 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
       id: "tomorrow-countdown",
       kind: "countdown",
       title: "Tomorrow morning",
-      timeZone: DEFAULT_TIME_ZONE,
-      targetDateTime: toDateTimeInputValue(tomorrow),
+      placement: DEFAULT_WIDGET_PLACEMENT,
+      settings: {
+        targetAt: tomorrow.toISOString()
+      },
       createdAt,
       updatedAt: createdAt
     }
@@ -67,9 +70,8 @@ export const createDefaultItems = (now = new Date()): BoardItem[] => {
 }
 
 export const createDefaultState = (now = new Date()): ClockboardState => ({
-  version: 1,
-  settings: DEFAULT_SETTINGS,
-  items: createDefaultItems(now)
+  version: 2,
+  widgets: createDefaultWidgets(now)
 })
 
 export const toDateTimeInputValue = (date: Date): string => {

@@ -4,14 +4,13 @@ import {
   readClockboardState,
   writeClockboardState
 } from "~/lib/storage"
-import type { BoardItem, ClockboardSettings, ClockboardState } from "~/lib/types"
+import type { ClockboardState, Widget } from "~/lib/types"
 
 interface UseClockboardStateResult {
   state: ClockboardState | null
   isLoading: boolean
   error: string | null
-  setSettings: (settings: ClockboardSettings) => Promise<void>
-  setItems: (items: BoardItem[]) => Promise<void>
+  setWidgets: (widgets: Widget[]) => Promise<void>
   saveState: (nextState: ClockboardState) => Promise<void>
   reload: () => Promise<void>
 }
@@ -43,24 +42,13 @@ export const useClockboardState = (): UseClockboardStateResult => {
     await writeClockboardState(nextState)
   }, [])
 
-  const setSettings = useCallback(
-    async (settings: ClockboardSettings) => {
+  const setWidgets = useCallback(
+    async (widgets: Widget[]) => {
       if (!state) {
         return
       }
 
-      await saveState({ ...state, settings })
-    },
-    [saveState, state]
-  )
-
-  const setItems = useCallback(
-    async (items: BoardItem[]) => {
-      if (!state) {
-        return
-      }
-
-      await saveState({ ...state, items })
+      await saveState({ ...state, widgets })
     },
     [saveState, state]
   )
@@ -69,8 +57,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
     state,
     isLoading,
     error,
-    setSettings,
-    setItems,
+    setWidgets,
     saveState,
     reload
   }
