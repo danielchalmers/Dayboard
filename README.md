@@ -6,6 +6,12 @@
 
 Live clocks and countdowns on your new tab page.
 
+## 🛠️ Development
+
+- Use Node.js `24.15.0` LTS for local installs, builds, and VS Code debugging.
+- `nvm use`, `volta install node@24.15.0 npm@11.12.1`, and GitHub Actions all read the same pinned toolchain.
+- The npm scripts fail fast if you run them with a different Node version so local builds stay aligned with CI.
+
 ## 📖 Usage
 
 1. Open a new tab.

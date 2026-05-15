@@ -7,16 +7,31 @@
   "license": "MIT",
   "private": true,
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": "24.15.0",
+    "npm": "11.12.1"
+  },
   "scripts": {
+    "node:check": "node -e \"const expected = 'v24.15.0'; if (process.version !== expected) { console.error(`Clockboard requires Node ${expected}; found ${process.version}.`); process.exit(1) }\"",
+    "predev": "npm run node:check",
     "dev": "plasmo dev",
+    "predev:edge": "npm run node:check",
     "dev:edge": "plasmo dev --target=edge-mv3",
+    "prebuild": "npm run node:check",
     "build": "plasmo build",
+    "prebuild:edge": "npm run node:check",
     "build:edge": "plasmo build --target=edge-mv3",
+    "prepackage": "npm run node:check",
     "package": "plasmo package",
+    "prepackage:edge": "npm run node:check",
     "package:edge": "plasmo package --target=edge-mv3",
+    "pretypecheck": "npm run node:check",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run node:check",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pree2e": "npm run node:check",
     "e2e": "playwright test",
     "verify": "npm run typecheck && npm run test && npm run build"
   },
@@ -42,6 +57,10 @@
     "svgo": "^3.3.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3"
+  },
+  "volta": {
+    "node": "24.15.0",
+    "npm": "11.12.1"
   },
   "manifest": {
     "manifest_version": 3,
