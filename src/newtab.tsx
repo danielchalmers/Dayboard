@@ -6,7 +6,7 @@ import { ItemDialog } from "~/components/ItemDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
-import { createWidget, moveWidget } from "~/lib/widgets"
+import { createWidget, moveWidget, reorderWidgets } from "~/lib/widgets"
 import type { Widget } from "~/lib/types"
 import "~/styles/global.css"
 
@@ -41,6 +41,10 @@ export default function NewTabPage() {
 
   const reorderItem = (id: string, direction: -1 | 1) => {
     void setWidgets(moveWidget(state.widgets, id, direction))
+  }
+
+  const reorderList = (activeId: string, overId: string) => {
+    void setWidgets(reorderWidgets(state.widgets, activeId, overId))
   }
 
   const deleteItem = (item: Widget) => {
@@ -92,6 +96,7 @@ export default function NewTabPage() {
         <BoardList
           items={state.widgets}
           now={now}
+          onReorder={reorderList}
           renderItemActions={(item, index) => (
             <>
               <button
