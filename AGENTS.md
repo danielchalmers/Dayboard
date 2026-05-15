@@ -14,13 +14,11 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Clocks use the user's system time format through `Intl.DateTimeFormat`.
 - Countdowns use natural language such as `5 days, 3 hours from now`.
 - User-facing copy should be concise, warm, and not overly explanatory.
-- The README follows a store-listing style: badge header, brief value statement, usage, credits.
 - Keep permissions minimal. Clockboard should only need `storage`.
 
 ## Architecture
 
-- Plasmo entry files live in `src/`:
-  - `src/newtab.tsx`
+- Plasmo entry files live in `src/`.
 - Shared time, storage, and item logic lives in `src/lib`.
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
@@ -48,7 +46,6 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - F5 uses `.vscode/launch.json` and `.vscode/tasks.json`.
 - The launch configs should run the matching Plasmo dev task before launching the browser.
 - Chrome debugging uses Chrome for Testing from Playwright because Chrome-branded stable builds may ignore `--load-extension`.
-- Edge debugging uses the local Edge executable.
 - Keep debug browser profiles ignored under `.vscode/`.
 
 ## Testing Expectations
@@ -70,16 +67,13 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Release patches both `package.json.version` and `package.json.manifest.version`.
 - Do not manually bump checked-in version numbers for releases; the release workflow stamps them from the tag.
 - Release builds and packages both browser targets.
-- Release artifacts should be named:
-  - `clockboard-chrome-${version}.zip`
-  - `clockboard-edge-${version}.zip`
 - Prefer descriptive, sentence-style commit subjects without conventional-commit prefixes.
 - Commit bodies should explain the reasoning behind the change.
 
 ## Style Rules
 
 - Use React function components and TypeScript.
-- Prefer small, testable helpers for time calculations and storage migration.
+- Prefer small, testable helpers.
 - Avoid broad abstractions unless they remove real duplication.
 - Keep layout stable at mobile and desktop widths.
 - Use semantic controls and accessible labels.
