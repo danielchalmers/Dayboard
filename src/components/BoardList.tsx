@@ -36,15 +36,9 @@ const usePrefersReducedMotion = () => {
     const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches)
 
     updatePreference()
+    mediaQuery.addEventListener("change", updatePreference)
 
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", updatePreference)
-
-      return () => mediaQuery.removeEventListener("change", updatePreference)
-    }
-
-    mediaQuery.addListener(updatePreference)
-    return () => mediaQuery.removeListener(updatePreference)
+    return () => mediaQuery.removeEventListener("change", updatePreference)
   }, [])
 
   return prefersReducedMotion
