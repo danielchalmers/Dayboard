@@ -13,7 +13,7 @@
     "npm": "11.12.1"
   },
   "scripts": {
-    "node:check": "node -e \"const expected = 'v24.15.0'; if (process.version !== expected) { console.error(`Clockboard requires Node ${expected}; found ${process.version}.`); process.exit(1) }\"",
+    "node:check": "node -e \"const expected = 'v24.15.0'; if (process.version !== expected) { console.error('Clockboard requires Node ' + expected + '; found ' + process.version + '.'); process.exit(1) }\"",
     "predev": "npm run node:check",
     "dev": "plasmo dev",
     "predev:edge": "npm run node:check",
