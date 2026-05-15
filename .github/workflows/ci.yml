@@ -110,7 +110,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm cit
+        run: npm ci
 
       - name: Browser smoke tests
         run: npm run e2e

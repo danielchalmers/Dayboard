@@ -35,3 +35,26 @@ export const createBoardItem = (
     updatedAt: timestamp
   }
 }
+
+export const moveBoardItem = (
+  items: BoardItem[],
+  id: string,
+  direction: -1 | 1
+): BoardItem[] => {
+  const index = items.findIndex((item) => item.id === id)
+  const nextIndex = index + direction
+
+  if (index < 0 || nextIndex < 0 || nextIndex >= items.length) {
+    return items
+  }
+
+  const nextItems = [...items]
+  const [item] = nextItems.splice(index, 1)
+
+  if (!item) {
+    return items
+  }
+
+  nextItems.splice(nextIndex, 0, item)
+  return nextItems
+}

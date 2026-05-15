@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+
 import {
   formatClockDate,
   formatClockTime,
@@ -12,13 +14,15 @@ interface BoardRowProps {
   now: Date
   settings: ClockboardSettings
   compact?: boolean
+  actions?: ReactNode
 }
 
 export const BoardRow = ({
   item,
   now,
   settings,
-  compact = false
+  compact = false,
+  actions
 }: BoardRowProps) => {
   if (item.kind === "clock") {
     return (
@@ -36,9 +40,12 @@ export const BoardRow = ({
             </p>
           </div>
         </div>
-        <p className="board-row__value" aria-label={`${item.title} time`}>
-          {formatClockTime(now, item)}
-        </p>
+        <div className="board-row__side">
+          <p className="board-row__value" aria-label={`${item.title} time`}>
+            {formatClockTime(now, item)}
+          </p>
+          {actions ? <div className="board-row__actions">{actions}</div> : null}
+        </div>
       </article>
     )
   }
@@ -58,9 +65,12 @@ export const BoardRow = ({
           </p>
         </div>
       </div>
-      <p className="board-row__value board-row__value--countdown">
-        {countdown.status === "due" ? "right now" : countdown.label}
-      </p>
+      <div className="board-row__side">
+        <p className="board-row__value board-row__value--countdown">
+          {countdown.status === "due" ? "right now" : countdown.label}
+        </p>
+        {actions ? <div className="board-row__actions">{actions}</div> : null}
+      </div>
     </article>
   )
 }
