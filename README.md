@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build Status](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml/badge.svg)](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml)
 
-Live clocks and countdowns on your new tab page.
+Live clocks and natural-language countdowns on your new tab page.
 
 ## 📖 Usage
 
@@ -12,7 +12,8 @@ Live clocks and countdowns on your new tab page.
 2. Click **Add clock** or **Add countdown**.
 3. Enter a name and time zone.
 4. For countdowns, choose the target date and time.
-5. Use **Edit**, **Delete**, and arrow controls directly on the page to keep the list tidy.
+5. Watch countdowns update in natural language right on the page.
+6. Use **Edit**, **Delete**, placement, and arrow controls directly on the page to keep the list tidy.
 
 ## 🙏 Credits
 

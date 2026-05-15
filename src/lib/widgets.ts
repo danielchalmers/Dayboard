@@ -78,6 +78,16 @@ export const createWidget = <K extends WidgetKind>(
   now = new Date()
 ): Extract<Widget, { kind: K }> => widgetRegistry[kind].createDefault(now)
 
+export const getWidgetsByPlacement = (
+  widgets: Widget[],
+  placement: Widget["placement"]
+): Widget[] => widgets.filter((widget) => widget.placement === placement)
+
+const combineWidgetsByPlacement = (
+  mainWidgets: Widget[],
+  moreWidgets: Widget[]
+): Widget[] => [...mainWidgets, ...moreWidgets]
+
 export const moveWidgetToIndex = (
   widgets: Widget[],
   fromIndex: number,
@@ -126,4 +136,49 @@ export const reorderWidgets = (
   const toIndex = widgets.findIndex((widget) => widget.id === overId)
 
   return moveWidgetToIndex(widgets, fromIndex, toIndex)
+}
+
+export const moveWidgetToPlacement = (
+  widgets: Widget[],
+  id: string,
+  placement: Widget["placement"]
+): Widget[] => {
+  const widget = widgets.find((current) => current.id === id)
+
+  if (!widget || widget.placement === placement) {
+    return widgets
+  }
+
+  const mainWidgets = getWidgetsByPlacement(widgets, "main").filter(
+    (current) => current.id !== id
+  )
+  const moreWidgets = getWidgetsByPlacement(widgets, "more").filter(
+    (current) => current.id !== id
+  )
+  const movedWidget = {
+    ...widget,
+    placement
+  }
+
+  return placement === "main"
+    ? combineWidgetsByPlacement([...mainWidgets, movedWidget], moreWidgets)
+    : combineWidgetsByPlacement(mainWidgets, [...moreWidgets, movedWidget])
+}
+
+export const reorderWidgetsInPlacement = (
+  widgets: Widget[],
+  placement: Widget["placement"],
+  activeId: string,
+  overId: string
+): Widget[] => {
+  const scopedWidgets = getWidgetsByPlacement(widgets, placement)
+  const reorderedWidgets = reorderWidgets(scopedWidgets, activeId, overId)
+
+  if (reorderedWidgets === scopedWidgets) {
+    return widgets
+  }
+
+  return placement === "main"
+    ? combineWidgetsByPlacement(reorderedWidgets, getWidgetsByPlacement(widgets, "more"))
+    : combineWidgetsByPlacement(getWidgetsByPlacement(widgets, "main"), reorderedWidgets)
 }

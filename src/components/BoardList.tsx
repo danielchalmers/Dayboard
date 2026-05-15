@@ -23,7 +23,9 @@ import type { Widget } from "~/lib/types"
 interface BoardListProps {
   items: Widget[]
   now: Date
+  ariaLabel?: string
   compact?: boolean
+  emptyState?: ReactNode | null
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
 }
@@ -130,7 +132,9 @@ const SortableBoardRow = ({
 export const BoardList = ({
   items,
   now,
+  ariaLabel = "Clockboard widgets",
   compact,
+  emptyState,
   renderItemActions,
   onReorder
 }: BoardListProps) => {
@@ -148,7 +152,11 @@ export const BoardList = ({
   )
 
   if (items.length === 0) {
-    return (
+    if (emptyState === null) {
+      return null
+    }
+
+    return emptyState ?? (
       <div className="empty-state">
         <h2>Your board is ready</h2>
         <p>Add a clock or countdown and it will appear here.</p>
@@ -186,7 +194,7 @@ export const BoardList = ({
       <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
         <section
           className={compact ? "board-list board-list--compact" : "board-list"}
-          aria-label="Clockboard widgets">
+          aria-label={ariaLabel}>
           {items.map((item, index) => (
             <SortableBoardRow
               activeId={activeId}
