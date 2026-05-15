@@ -96,7 +96,20 @@ const SortableBoardRow = ({
             type="button"
             {...attributes}
             {...listeners}>
-            ⋮⋮
+            <svg
+              aria-hidden="true"
+              className="drag-handle__icon"
+              fill="none"
+              height="18"
+              viewBox="0 0 18 18"
+              width="18">
+              <circle cx="6" cy="4.5" fill="currentColor" r="1.25" />
+              <circle cx="6" cy="9" fill="currentColor" r="1.25" />
+              <circle cx="6" cy="13.5" fill="currentColor" r="1.25" />
+              <circle cx="12" cy="4.5" fill="currentColor" r="1.25" />
+              <circle cx="12" cy="9" fill="currentColor" r="1.25" />
+              <circle cx="12" cy="13.5" fill="currentColor" r="1.25" />
+            </svg>
           </button>
           {actions}
         </>

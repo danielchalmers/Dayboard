@@ -280,6 +280,10 @@ a {
   touch-action: none;
 }
 
+.drag-handle__icon {
+  display: block;
+}
+
 .drag-handle:active,
 .board-row--dragging .drag-handle {
   cursor: grabbing;

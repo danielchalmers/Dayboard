@@ -20,11 +20,12 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Reorder Tomorrow morning" })
+  ).toBeVisible()
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
-  await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
-  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 })
 
 test("reordering changes the visible order and persists after reload", async ({
