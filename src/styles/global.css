@@ -131,6 +131,7 @@ a {
 .menu-button {
   align-items: center;
   border-radius: 8px;
+  cursor: pointer;
   display: inline-flex;
   font-weight: 650;
   justify-content: center;
@@ -138,16 +139,7 @@ a {
   padding: 0 14px;
   transition:
     background-color 140ms ease,
-    border-color 140ms ease,
-    transform 140ms ease;
-}
-
-.primary-button:hover,
-.secondary-button:hover,
-.danger-button:hover,
-.icon-button:hover,
-.menu-button:hover {
-  transform: translateY(-1px);
+    border-color 140ms ease;
 }
 
 .primary-button {
