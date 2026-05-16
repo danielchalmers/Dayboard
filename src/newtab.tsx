@@ -15,6 +15,16 @@ interface EditorState {
   item: Widget
 }
 
+const closeOpenMenus = (eventPath?: EventTarget[]) => {
+  document
+    .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
+    .forEach((menu) => {
+      if (!eventPath || !eventPath.includes(menu)) {
+        menu.removeAttribute("open")
+      }
+    })
+}
+
 export default function NewTabPage() {
   const now = useNow()
   const { state, isLoading, error, setWidgets } = useClockboardState()
@@ -22,20 +32,12 @@ export default function NewTabPage() {
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
 
   useEffect(() => {
-    const closeOpenMenus = (event: PointerEvent) => {
-      const eventPath = event.composedPath()
+    const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
+      closeOpenMenus(event.composedPath())
 
-      document
-        .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
-        .forEach((menu) => {
-          if (!eventPath.includes(menu)) {
-            menu.removeAttribute("open")
-          }
-        })
-    }
-
-    window.addEventListener("pointerdown", closeOpenMenus)
-    return () => window.removeEventListener("pointerdown", closeOpenMenus)
+    window.addEventListener("pointerdown", closeMenusAfterOutsidePointerDown)
+    return () =>
+      window.removeEventListener("pointerdown", closeMenusAfterOutsidePointerDown)
   }, [])
 
   if (isLoading) {
@@ -57,6 +59,7 @@ export default function NewTabPage() {
   }
 
   const reorderItem = (id: string, direction: -1 | 1) => {
+    closeOpenMenus()
     void setWidgets(moveWidget(state.widgets, id, direction))
   }
 
@@ -65,11 +68,13 @@ export default function NewTabPage() {
   }
 
   const deleteItem = (item: Widget) => {
+    closeOpenMenus()
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
   }
 
   const addItem = (kind: Widget["kind"]) => {
+    closeOpenMenus()
     setEditorState({
       mode: "add",
       item: createWidget(kind)
@@ -175,14 +180,20 @@ export default function NewTabPage() {
               <button
                 aria-label={`Edit ${item.title}`}
                 className="menu-button"
-                onClick={() => setEditorState({ mode: "edit", item })}
+                onClick={() => {
+                  closeOpenMenus()
+                  setEditorState({ mode: "edit", item })
+                }}
                 type="button">
                 Edit
               </button>
               <button
                 aria-label={`Delete ${item.title}`}
                 className="menu-button menu-button--danger"
-                onClick={() => setItemPendingDelete(item)}
+                onClick={() => {
+                  closeOpenMenus()
+                  setItemPendingDelete(item)
+                }}
                 type="button">
                 Delete
               </button>
