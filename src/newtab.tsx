@@ -340,6 +340,7 @@ const MoreSection = ({
   return (
     <section className={className} aria-label="More widgets" ref={setNodeRef}>
       <button
+        aria-label={`More widgets (${widgetCount})`}
         aria-expanded={isExpanded}
         className="more-section__toggle"
         onClick={onToggle}
