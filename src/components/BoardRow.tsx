@@ -39,7 +39,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
             <p className="board-row__kind">{widgetRegistry.clock.kindLabel}</p>
             <h2>{item.title}</h2>
             <p className="board-row__detail">
-              {item.settings.timeZone} · {formatTimeZoneName(now, item.settings.timeZone)} ·{" "}
+              {formatTimeZoneName(now, item.settings.timeZone)} ·{" "}
               {formatClockDate(now, item.settings.timeZone)}
             </p>
           </div>
