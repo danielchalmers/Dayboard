@@ -89,7 +89,11 @@ const SortableBoardRow = ({
     <BoardRow
       actions={
         <details className="card-menu">
-          <summary aria-label={`Actions for ${item.title}`} className="icon-button">
+          <summary
+            aria-haspopup="menu"
+            aria-label={`Actions for ${item.title}`}
+            className="icon-button"
+            role="button">
             <svg
               aria-hidden="true"
               fill="none"

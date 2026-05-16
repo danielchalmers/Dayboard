@@ -68,7 +68,11 @@ export default function NewTabPage() {
           </div>
           <div className="page-header__actions">
             <details className="add-menu">
-              <summary aria-label="Add widget" className="icon-button">
+              <summary
+                aria-haspopup="menu"
+                aria-label="Add widget"
+                className="icon-button"
+                role="button">
                 <svg
                   aria-hidden="true"
                   fill="none"
