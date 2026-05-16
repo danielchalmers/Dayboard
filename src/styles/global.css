@@ -9,6 +9,12 @@
   --line-strong: color-mix(in srgb, CanvasText 22%, Canvas 78%);
   --surface: color-mix(in srgb, Canvas 96%, CanvasText 4%);
   --surface-strong: color-mix(in srgb, Canvas 90%, CanvasText 10%);
+  --card-shadow:
+    0 1px 2px color-mix(in srgb, CanvasText 8%, transparent),
+    0 6px 14px color-mix(in srgb, CanvasText 4%, transparent);
+  --card-shadow-raised:
+    0 2px 4px color-mix(in srgb, CanvasText 12%, transparent),
+    0 10px 20px color-mix(in srgb, CanvasText 7%, transparent);
   --shadow: color-mix(in srgb, CanvasText 12%, transparent);
   --accent: Highlight;
   --accent-text: HighlightText;
@@ -237,7 +243,7 @@ details > summary::-webkit-details-marker {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 10px 32px color-mix(in srgb, CanvasText 6%, transparent);
+  box-shadow: var(--card-shadow);
   display: grid;
   gap: 28px;
   grid-template-rows: auto 1fr;
@@ -331,7 +337,7 @@ details > summary::-webkit-details-marker {
 .board-row--dragging {
   background: var(--surface);
   border-color: transparent;
-  box-shadow: 0 18px 36px color-mix(in srgb, CanvasText 18%, transparent);
+  box-shadow: var(--card-shadow-raised);
   opacity: 0.88;
   z-index: 1;
 }
