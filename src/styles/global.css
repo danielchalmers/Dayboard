@@ -15,7 +15,12 @@
   --card-shadow-raised:
     0 2px 4px color-mix(in srgb, CanvasText 12%, transparent),
     0 10px 20px color-mix(in srgb, CanvasText 7%, transparent);
-  --shadow: color-mix(in srgb, CanvasText 12%, transparent);
+  --panel-shadow:
+    0 1px 2px color-mix(in srgb, CanvasText 10%, transparent),
+    0 5px 12px color-mix(in srgb, CanvasText 5%, transparent);
+  --dialog-shadow:
+    0 2px 5px color-mix(in srgb, CanvasText 12%, transparent),
+    0 12px 28px color-mix(in srgb, CanvasText 8%, transparent);
   --accent: AccentColor;
   --accent-text: AccentColorText;
   --danger: #b3261e;
@@ -191,7 +196,7 @@ details > summary::-webkit-details-marker {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 18px 48px var(--shadow);
+  box-shadow: var(--panel-shadow);
   display: grid;
   gap: 6px;
   min-inline-size: 224px;
@@ -495,7 +500,7 @@ select:hover {
   background: var(--bg);
   border: 1px solid var(--line-strong);
   border-radius: 18px;
-  box-shadow: 0 24px 80px color-mix(in srgb, CanvasText 20%, transparent);
+  box-shadow: var(--dialog-shadow);
   inline-size: min(100%, 640px);
   max-block-size: calc(100vh - 48px);
   overflow: auto;
