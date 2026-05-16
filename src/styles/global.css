@@ -433,6 +433,56 @@ select:hover {
   margin: 0;
 }
 
+.type-chooser {
+  display: grid;
+  gap: 10px;
+  margin-block: 18px;
+}
+
+.type-choice {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 16px;
+  text-align: start;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.type-choice:hover {
+  background: color-mix(in srgb, Highlight 10%, Canvas 90%);
+  border-color: Highlight;
+  transform: translateY(-1px);
+}
+
+.type-choice span:first-child {
+  font-weight: 800;
+}
+
+.type-choice span:last-child {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.settings-placeholder {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-block-end: 18px;
+  padding: 16px;
+}
+
+.settings-placeholder p {
+  margin: 0;
+}
+
 .status-view,
 .empty-state {
   color: var(--muted);
@@ -550,6 +600,10 @@ select:hover {
   .danger-button,
   .icon-button,
   .board-row {
+    transition: none;
+  }
+
+  .type-choice {
     transition: none;
   }
 }

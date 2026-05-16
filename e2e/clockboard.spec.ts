@@ -14,8 +14,8 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Settings" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Edit Local time" })).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
@@ -50,7 +50,9 @@ test("reordering changes the visible order and persists after reload", async ({
 test("add clock flow works from the new tab page", async ({ page }) => {
   await openFreshNewTab(page)
 
-  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await expect(page.getByRole("dialog", { name: "Add widget" })).toBeVisible()
+  await page.getByRole("button", { name: "Clock" }).click()
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
   await page.getByLabel("Name").fill("Paris")
   await page.getByLabel("Time zone").fill("Europe/Paris")
@@ -62,7 +64,9 @@ test("add clock flow works from the new tab page", async ({ page }) => {
 test("add and edit countdown works without a time-zone field", async ({ page }) => {
   await openFreshNewTab(page)
 
-  await page.getByRole("button", { name: "Add countdown" }).click()
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await expect(page.getByRole("dialog", { name: "Add widget" })).toBeVisible()
+  await page.getByRole("button", { name: "Countdown" }).click()
   await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
   await expect(page.getByLabel("Time zone")).toHaveCount(0)
   await page.getByLabel("Name").fill("Launch")
@@ -121,4 +125,28 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
   await page.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByText("Morning plans")).toHaveCount(0)
+})
+
+test("settings and More placement are available from the new tab page", async ({
+  page
+}) => {
+  await openFreshNewTab(page)
+
+  await page.getByRole("button", { name: "Settings" }).click()
+  await expect(
+    page.getByRole("dialog", { name: "Clockboard settings" })
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Done" }).click()
+
+  await page.getByRole("button", { name: "Move Tomorrow morning to More" }).click()
+  await expect(page.getByRole("button", { name: "More" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Move Tomorrow morning to Main" })).toBeVisible()
+
+  await page.reload()
+
+  await expect(page.getByRole("button", { name: "More" })).toBeVisible()
+  await page.getByRole("button", { name: "More" }).click()
+  await expect(
+    page.getByRole("button", { name: "Move Tomorrow morning to Main" })
+  ).toBeVisible()
 })

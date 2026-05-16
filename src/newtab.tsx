@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 
+import { AddWidgetDialog } from "~/components/AddWidgetDialog"
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
+import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
@@ -13,7 +15,7 @@ import {
   moveWidgetWithinPlacement,
   reorderWidgetsWithinPlacement
 } from "~/lib/widgets"
-import type { Widget, WidgetPlacement } from "~/lib/types"
+import type { Widget, WidgetKind, WidgetPlacement } from "~/lib/types"
 import "~/styles/global.css"
 
 interface EditorState {
@@ -25,6 +27,8 @@ export default function NewTabPage() {
   const now = useNow()
   const { state, isLoading, error, setWidgets } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
   const [isMoreOpen, setIsMoreOpen] = useState(false)
   const moreWidgetCount =
@@ -73,6 +77,14 @@ export default function NewTabPage() {
     }
   }
 
+  const addWidget = (kind: WidgetKind) => {
+    setIsAddDialogOpen(false)
+    setEditorState({
+      mode: "add",
+      item: createWidget(kind)
+    })
+  }
+
   const deleteItem = (item: Widget) => {
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
@@ -97,25 +109,15 @@ export default function NewTabPage() {
           <div className="page-header__actions">
             <button
               className="secondary-button"
-              onClick={() =>
-                setEditorState({
-                  mode: "add",
-                  item: createWidget("clock")
-                })
-              }
+              onClick={() => setIsSettingsDialogOpen(true)}
               type="button">
-              Add clock
+              Settings
             </button>
             <button
-              className="secondary-button"
-              onClick={() =>
-                setEditorState({
-                  mode: "add",
-                  item: createWidget("countdown")
-                })
-              }
+              className="primary-button"
+              onClick={() => setIsAddDialogOpen(true)}
               type="button">
-              Add countdown
+              Add widget
             </button>
           </div>
         </header>
@@ -177,6 +179,11 @@ export default function NewTabPage() {
           </section>
         ) : null}
       </main>
+      <AddWidgetDialog
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onSelectKind={addWidget}
+      />
       <ItemDialog
         isOpen={Boolean(editorState)}
         item={editorState?.item ?? null}
@@ -189,6 +196,10 @@ export default function NewTabPage() {
         item={itemPendingDelete}
         onCancel={() => setItemPendingDelete(null)}
         onConfirm={deleteItem}
+      />
+      <SettingsDialog
+        isOpen={isSettingsDialogOpen}
+        onClose={() => setIsSettingsDialogOpen(false)}
       />
     </>
   )
