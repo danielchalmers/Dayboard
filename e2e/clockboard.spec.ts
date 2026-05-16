@@ -150,3 +150,36 @@ test("settings and More placement are available from the new tab page", async ({
     page.getByRole("button", { name: "Move Tomorrow morning to Main" })
   ).toBeVisible()
 })
+
+test("dragging exposes More as a placement target", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  await expect(page.getByRole("button", { name: "More" })).toHaveCount(0)
+
+  const dragHandle = page.getByRole("button", {
+    name: "Reorder Tomorrow morning"
+  })
+  const handleBox = await dragHandle.boundingBox()
+
+  expect(handleBox).not.toBeNull()
+
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + 8)
+  await page.mouse.down()
+  await page.mouse.move(handleBox!.x + 24, handleBox!.y + 96, { steps: 8 })
+
+  const moreToggle = page.getByRole("button", { name: "More" })
+  await expect(moreToggle).toBeVisible()
+
+  const moreBox = await moreToggle.boundingBox()
+
+  expect(moreBox).not.toBeNull()
+
+  await page.mouse.move(moreBox!.x + moreBox!.width / 2, moreBox!.y + 12, {
+    steps: 8
+  })
+  await page.mouse.up()
+
+  await expect(
+    page.getByRole("button", { name: "Move Tomorrow morning to Main" })
+  ).toBeVisible()
+})

@@ -1,4 +1,18 @@
-import { useEffect, useState } from "react"
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragCancelEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent
+} from "@dnd-kit/core"
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
+import { useEffect, useState, type ReactNode } from "react"
 
 import { AddWidgetDialog } from "~/components/AddWidgetDialog"
 import { BoardList } from "~/components/BoardList"
@@ -23,6 +37,8 @@ interface EditorState {
   item: Widget
 }
 
+const MORE_DROP_ZONE_ID = "more-drop-zone"
+
 export default function NewTabPage() {
   const now = useNow()
   const { state, isLoading, error, setWidgets } = useClockboardState()
@@ -31,6 +47,17 @@ export default function NewTabPage() {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
   const [isMoreOpen, setIsMoreOpen] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8
+      }
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates
+    })
+  )
   const moreWidgetCount =
     state?.widgets.filter((widget) => widget.placement === "more").length ?? 0
 
@@ -65,10 +92,6 @@ export default function NewTabPage() {
     void setWidgets(moveWidgetWithinPlacement(state.widgets, id, direction))
   }
 
-  const reorderList = (activeId: string, overId: string) => {
-    void setWidgets(reorderWidgetsWithinPlacement(state.widgets, activeId, overId))
-  }
-
   const moveItemToPlacement = (id: string, placement: WidgetPlacement) => {
     void setWidgets(moveWidgetToPlacement(state.widgets, id, placement))
 
@@ -83,6 +106,72 @@ export default function NewTabPage() {
       mode: "add",
       item: createWidget(kind)
     })
+  }
+
+  const getDragTargetPlacement = (
+    overId: string
+  ): WidgetPlacement | undefined => {
+    if (overId === MORE_DROP_ZONE_ID) {
+      return "more"
+    }
+
+    return state.widgets.find((widget) => widget.id === overId)?.placement
+  }
+
+  const moveDragItemToTarget = (activeId: string, overId: string): Widget[] => {
+    const activeWidget = state.widgets.find((widget) => widget.id === activeId)
+    const targetPlacement = getDragTargetPlacement(overId)
+
+    if (!activeWidget || !targetPlacement) {
+      return state.widgets
+    }
+
+    const placedWidgets =
+      activeWidget.placement === targetPlacement
+        ? state.widgets
+        : moveWidgetToPlacement(state.widgets, activeId, targetPlacement)
+
+    if (targetPlacement === "more") {
+      setIsMoreOpen(true)
+    }
+
+    return overId === MORE_DROP_ZONE_ID
+      ? placedWidgets
+      : reorderWidgetsWithinPlacement(placedWidgets, activeId, overId)
+  }
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    setActiveId(String(active.id))
+  }
+
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if (!over) {
+      return
+    }
+
+    const nextWidgets = moveDragItemToTarget(String(active.id), String(over.id))
+
+    if (nextWidgets !== state.widgets) {
+      void setWidgets(nextWidgets)
+    }
+  }
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null)
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const nextWidgets = moveDragItemToTarget(String(active.id), String(over.id))
+
+    if (nextWidgets !== state.widgets) {
+      void setWidgets(nextWidgets)
+    }
+  }
+
+  const handleDragCancel = (_event: DragCancelEvent) => {
+    setActiveId(null)
   }
 
   const deleteItem = (item: Widget) => {
@@ -121,63 +210,69 @@ export default function NewTabPage() {
             </button>
           </div>
         </header>
-        <BoardList
-          emptyDescription={
-            moreWidgets.length > 0
-              ? "Move a widget out of More when you want it at a glance."
-              : undefined
-          }
-          emptyTitle={moreWidgets.length > 0 ? "Main is clear" : undefined}
-          items={mainWidgets}
-          now={now}
-          onReorder={reorderList}
-          renderItemActions={(item, index, items) => (
-            <WidgetActions
-              index={index}
-              item={item}
-              items={items}
-              onDelete={setItemPendingDelete}
-              onEdit={(itemToEdit) =>
-                setEditorState({ mode: "edit", item: itemToEdit })
-              }
-              onMovePlacement={moveItemToPlacement}
-              onReorder={reorderItem}
-            />
-          )}
-        />
-        {moreWidgets.length > 0 ? (
-          <section className="more-section" aria-label="More widgets">
-            <button
-              aria-expanded={isMoreOpen}
-              className="more-section__toggle"
-              onClick={() => setIsMoreOpen((current) => !current)}
-              type="button">
-              <span>More</span>
-              <span className="more-section__count">{moreWidgets.length}</span>
-            </button>
-            {isMoreOpen ? (
-              <BoardList
-                compact
-                items={moreWidgets}
-                now={now}
-                onReorder={reorderList}
-                renderItemActions={(item, index, items) => (
-                  <WidgetActions
-                    index={index}
-                    item={item}
-                    items={items}
-                    onDelete={setItemPendingDelete}
-                    onEdit={(itemToEdit) =>
-                      setEditorState({ mode: "edit", item: itemToEdit })
-                    }
-                    onMovePlacement={moveItemToPlacement}
-                    onReorder={reorderItem}
-                  />
-                )}
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragCancel={handleDragCancel}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+          onDragStart={handleDragStart}
+          sensors={sensors}>
+          <BoardList
+            activeId={activeId}
+            emptyDescription={
+              moreWidgets.length > 0
+                ? "Move a widget out of More when you want it at a glance."
+                : undefined
+            }
+            emptyTitle={moreWidgets.length > 0 ? "Main is clear" : undefined}
+            items={mainWidgets}
+            now={now}
+            renderItemActions={(item, index, items) => (
+              <WidgetActions
+                index={index}
+                item={item}
+                items={items}
+                onDelete={setItemPendingDelete}
+                onEdit={(itemToEdit) =>
+                  setEditorState({ mode: "edit", item: itemToEdit })
+                }
+                onMovePlacement={moveItemToPlacement}
+                onReorder={reorderItem}
               />
-            ) : null}
-          </section>
-        ) : null}
+            )}
+          />
+          {moreWidgets.length > 0 || activeId ? (
+            <MoreSection
+              isDragging={Boolean(activeId)}
+              isOpen={isMoreOpen}
+              widgetCount={moreWidgets.length}
+              onToggle={() => setIsMoreOpen((current) => !current)}>
+              {isMoreOpen || activeId ? (
+                <BoardList
+                  activeId={activeId}
+                  compact
+                  emptyDescription="Drop a widget here to keep it tucked away."
+                  emptyTitle="Drop into More"
+                  items={moreWidgets}
+                  now={now}
+                  renderItemActions={(item, index, items) => (
+                    <WidgetActions
+                      index={index}
+                      item={item}
+                      items={items}
+                      onDelete={setItemPendingDelete}
+                      onEdit={(itemToEdit) =>
+                        setEditorState({ mode: "edit", item: itemToEdit })
+                      }
+                      onMovePlacement={moveItemToPlacement}
+                      onReorder={reorderItem}
+                    />
+                  )}
+                />
+              ) : null}
+            </MoreSection>
+          ) : null}
+        </DndContext>
       </main>
       <AddWidgetDialog
         isOpen={isAddDialogOpen}
@@ -213,6 +308,48 @@ interface WidgetActionsProps {
   onEdit: (item: Widget) => void
   onMovePlacement: (id: string, placement: WidgetPlacement) => void
   onReorder: (id: string, direction: -1 | 1) => void
+}
+
+interface MoreSectionProps {
+  children: ReactNode
+  isDragging: boolean
+  isOpen: boolean
+  widgetCount: number
+  onToggle: () => void
+}
+
+const MoreSection = ({
+  children,
+  isDragging,
+  isOpen,
+  widgetCount,
+  onToggle
+}: MoreSectionProps) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: MORE_DROP_ZONE_ID
+  })
+  const isExpanded = isOpen || isDragging
+  const className = [
+    "more-section",
+    isDragging ? "more-section--dragging" : "",
+    isOver ? "more-section--drop-target" : ""
+  ]
+    .filter(Boolean)
+    .join(" ")
+
+  return (
+    <section className={className} aria-label="More widgets" ref={setNodeRef}>
+      <button
+        aria-expanded={isExpanded}
+        className="more-section__toggle"
+        onClick={onToggle}
+        type="button">
+        <span>More</span>
+        <span className="more-section__count">{widgetCount}</span>
+      </button>
+      {isExpanded ? children : null}
+    </section>
+  )
 }
 
 const WidgetActions = ({

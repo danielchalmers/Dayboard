@@ -1,16 +1,5 @@
 import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent
-} from "@dnd-kit/core"
-import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy
 } from "@dnd-kit/sortable"
@@ -26,8 +15,8 @@ interface BoardListProps {
   compact?: boolean
   emptyDescription?: string
   emptyTitle?: string
+  activeId?: string | null
   renderItemActions?: (item: Widget, index: number, items: Widget[]) => ReactNode
-  onReorder?: (activeId: string, overId: string) => void
 }
 
 const usePrefersReducedMotion = () => {
@@ -137,21 +126,10 @@ export const BoardList = ({
   compact,
   emptyDescription = "Add a clock or countdown and it will appear here.",
   emptyTitle = "Your board is ready",
-  renderItemActions,
-  onReorder
+  activeId = null,
+  renderItemActions
 }: BoardListProps) => {
-  const [activeId, setActiveId] = useState<string | null>(null)
   const prefersReducedMotion = usePrefersReducedMotion()
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8
-      }
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
-  )
 
   if (items.length === 0) {
     return (
@@ -164,50 +142,25 @@ export const BoardList = ({
 
   const itemIds = items.map((item) => item.id)
 
-  const handleDragStart = ({ active }: DragStartEvent) => {
-    setActiveId(String(active.id))
-  }
-
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    setActiveId(null)
-
-    if (!over || active.id === over.id) {
-      return
-    }
-
-    onReorder?.(String(active.id), String(over.id))
-  }
-
-  const handleDragCancel = () => {
-    setActiveId(null)
-  }
-
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEnd}
-      onDragStart={handleDragStart}
-      sensors={sensors}>
-      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-        <section
-          className={compact ? "board-list board-list--compact" : "board-list"}
-          aria-label="Clockboard widgets">
-          {items.map((item, index) => (
-            <SortableBoardRow
-              activeId={activeId}
-              compact={compact}
-              index={index}
-              item={item}
-              items={items}
-              key={item.id}
-              now={now}
-              prefersReducedMotion={prefersReducedMotion}
-              renderItemActions={renderItemActions}
-            />
-          ))}
-        </section>
-      </SortableContext>
-    </DndContext>
+    <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+      <section
+        className={compact ? "board-list board-list--compact" : "board-list"}
+        aria-label="Clockboard widgets">
+        {items.map((item, index) => (
+          <SortableBoardRow
+            activeId={activeId}
+            compact={compact}
+            index={index}
+            item={item}
+            items={items}
+            key={item.id}
+            now={now}
+            prefersReducedMotion={prefersReducedMotion}
+            renderItemActions={renderItemActions}
+          />
+        ))}
+      </section>
+    </SortableContext>
   )
 }

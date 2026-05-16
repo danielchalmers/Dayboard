@@ -171,6 +171,18 @@ a {
 .more-section {
   border-block-start: 1px solid var(--line);
   margin-block-start: 10px;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.more-section--dragging {
+  margin-block-start: 14px;
+}
+
+.more-section--drop-target {
+  background: color-mix(in srgb, Highlight 9%, Canvas 91%);
+  border-block-start-color: Highlight;
 }
 
 .more-section__toggle {
@@ -187,6 +199,10 @@ a {
 }
 
 .more-section__toggle:hover {
+  color: var(--text);
+}
+
+.more-section--dragging .more-section__toggle {
   color: var(--text);
 }
 
@@ -614,7 +630,8 @@ select:hover {
   .danger-button,
   .icon-button,
   .board-row,
-  .board-row__actions {
+  .board-row__actions,
+  .more-section {
     transition: none;
   }
 
