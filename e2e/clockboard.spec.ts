@@ -122,7 +122,6 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
   await page.getByRole("button", { name: "Edit Tomorrow morning" }).click()
   await expect(
     page.getByRole("dialog", { name: "Edit Tomorrow morning" })
@@ -132,7 +131,6 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
 
   await expect(page.getByRole("heading", { name: "Morning plans" })).toBeVisible()
 
-  await page.getByRole("button", { name: "Actions for Morning plans" }).click()
   await page.getByRole("button", { name: "Delete Morning plans" }).click()
   await page.getByRole("button", { name: "Delete widget" }).click()
 
