@@ -461,14 +461,26 @@ select:hover {
   color: var(--muted);
 }
 
+.status-view {
+  border-block-start: 0;
+  display: grid;
+  min-block-size: 100vh;
+  padding: 24px;
+  place-items: center;
+  text-align: center;
+}
+
 .status-view--error {
   color: var(--danger);
 }
 
 .modal-backdrop {
   background: color-mix(in srgb, CanvasText 18%, transparent);
+  display: grid;
   inset: 0;
+  overflow: auto;
   padding: 24px;
+  place-items: center;
   position: fixed;
   z-index: 10;
 }
@@ -479,7 +491,6 @@ select:hover {
   border-radius: 18px;
   box-shadow: 0 24px 80px color-mix(in srgb, CanvasText 20%, transparent);
   inline-size: min(100%, 640px);
-  margin: 0 auto;
   max-block-size: calc(100vh - 48px);
   overflow: auto;
   padding: 24px;
