@@ -1,13 +1,25 @@
 import { describe, expect, it } from "vitest"
 
-import { moveWidget, moveWidgetToIndex, reorderWidgets } from "./widgets"
+import {
+  getWidgetsByPlacement,
+  moveWidget,
+  moveWidgetToIndex,
+  moveWidgetToPlacement,
+  moveWidgetWithinPlacement,
+  reorderWidgets,
+  reorderWidgetsWithinPlacement
+} from "./widgets"
 import type { Widget } from "./types"
 
-const createWidget = (id: string, title: string): Widget => ({
+const createWidget = (
+  id: string,
+  title: string,
+  placement: Widget["placement"] = "main"
+): Widget => ({
   id,
   kind: "clock",
   title,
-  placement: "main",
+  placement,
   settings: {
     timeZone: "UTC"
   },
@@ -51,5 +63,58 @@ describe("moveWidget", () => {
     const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta")]
 
     expect(moveWidget(widgets, "alpha", -1)).toBe(widgets)
+  })
+})
+
+describe("widget placement helpers", () => {
+  it("groups widgets by placement", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta", "more")
+    ]
+
+    expect(getWidgetsByPlacement(widgets, "main").map((widget) => widget.id)).toEqual([
+      "alpha"
+    ])
+    expect(getWidgetsByPlacement(widgets, "more").map((widget) => widget.id)).toEqual([
+      "beta"
+    ])
+  })
+
+  it("moves a widget to the end of the target placement", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta", "more"),
+      createWidget("gamma", "Gamma")
+    ]
+
+    const nextWidgets = moveWidgetToPlacement(widgets, "alpha", "more")
+
+    expect(nextWidgets.map((widget) => `${widget.id}:${widget.placement}`)).toEqual([
+      "gamma:main",
+      "beta:more",
+      "alpha:more"
+    ])
+  })
+
+  it("reorders only within a widget placement", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta", "more"),
+      createWidget("gamma", "Gamma"),
+      createWidget("delta", "Delta", "more")
+    ]
+
+    expect(
+      moveWidgetWithinPlacement(widgets, "gamma", -1).map((widget) => widget.id)
+    ).toEqual(["gamma", "alpha", "beta", "delta"])
+
+    expect(
+      reorderWidgetsWithinPlacement(widgets, "delta", "beta").map(
+        (widget) => widget.id
+      )
+    ).toEqual(["alpha", "gamma", "delta", "beta"])
+
+    expect(reorderWidgetsWithinPlacement(widgets, "alpha", "beta")).toBe(widgets)
   })
 })

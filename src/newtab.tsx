@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
@@ -6,8 +6,14 @@ import { ItemDialog } from "~/components/ItemDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
-import { createWidget, moveWidget, reorderWidgets } from "~/lib/widgets"
-import type { Widget } from "~/lib/types"
+import {
+  createWidget,
+  getWidgetsByPlacement,
+  moveWidgetToPlacement,
+  moveWidgetWithinPlacement,
+  reorderWidgetsWithinPlacement
+} from "~/lib/widgets"
+import type { Widget, WidgetPlacement } from "~/lib/types"
 import "~/styles/global.css"
 
 interface EditorState {
@@ -20,6 +26,15 @@ export default function NewTabPage() {
   const { state, isLoading, error, setWidgets } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
+  const [isMoreOpen, setIsMoreOpen] = useState(false)
+  const moreWidgetCount =
+    state?.widgets.filter((widget) => widget.placement === "more").length ?? 0
+
+  useEffect(() => {
+    if (moreWidgetCount === 0) {
+      setIsMoreOpen(false)
+    }
+  }, [moreWidgetCount])
 
   if (isLoading) {
     return <LoadingView />
@@ -28,6 +43,9 @@ export default function NewTabPage() {
   if (error || !state) {
     return <ErrorView message={error || "Unable to load Clockboard"} />
   }
+
+  const mainWidgets = getWidgetsByPlacement(state.widgets, "main")
+  const moreWidgets = getWidgetsByPlacement(state.widgets, "more")
 
   const saveItem = (item: Widget) => {
     const nextWidgets =
@@ -40,11 +58,19 @@ export default function NewTabPage() {
   }
 
   const reorderItem = (id: string, direction: -1 | 1) => {
-    void setWidgets(moveWidget(state.widgets, id, direction))
+    void setWidgets(moveWidgetWithinPlacement(state.widgets, id, direction))
   }
 
   const reorderList = (activeId: string, overId: string) => {
-    void setWidgets(reorderWidgets(state.widgets, activeId, overId))
+    void setWidgets(reorderWidgetsWithinPlacement(state.widgets, activeId, overId))
+  }
+
+  const moveItemToPlacement = (id: string, placement: WidgetPlacement) => {
+    void setWidgets(moveWidgetToPlacement(state.widgets, id, placement))
+
+    if (placement === "more") {
+      setIsMoreOpen(true)
+    }
   }
 
   const deleteItem = (item: Widget) => {
@@ -94,44 +120,62 @@ export default function NewTabPage() {
           </div>
         </header>
         <BoardList
-          items={state.widgets}
+          emptyDescription={
+            moreWidgets.length > 0
+              ? "Move a widget out of More when you want it at a glance."
+              : undefined
+          }
+          emptyTitle={moreWidgets.length > 0 ? "Main is clear" : undefined}
+          items={mainWidgets}
           now={now}
           onReorder={reorderList}
-          renderItemActions={(item, index) => (
-            <>
-              <button
-                aria-label={`Move ${item.title} up`}
-                className="icon-button"
-                disabled={index === 0}
-                onClick={() => reorderItem(item.id, -1)}
-                type="button">
-                ↑
-              </button>
-              <button
-                aria-label={`Move ${item.title} down`}
-                className="icon-button"
-                disabled={index === state.widgets.length - 1}
-                onClick={() => reorderItem(item.id, 1)}
-                type="button">
-                ↓
-              </button>
-              <button
-                aria-label={`Edit ${item.title}`}
-                className="secondary-button"
-                onClick={() => setEditorState({ mode: "edit", item })}
-                type="button">
-                Edit
-              </button>
-              <button
-                aria-label={`Delete ${item.title}`}
-                className="danger-button"
-                onClick={() => setItemPendingDelete(item)}
-                type="button">
-                Delete
-              </button>
-            </>
+          renderItemActions={(item, index, items) => (
+            <WidgetActions
+              index={index}
+              item={item}
+              items={items}
+              onDelete={setItemPendingDelete}
+              onEdit={(itemToEdit) =>
+                setEditorState({ mode: "edit", item: itemToEdit })
+              }
+              onMovePlacement={moveItemToPlacement}
+              onReorder={reorderItem}
+            />
           )}
         />
+        {moreWidgets.length > 0 ? (
+          <section className="more-section" aria-label="More widgets">
+            <button
+              aria-expanded={isMoreOpen}
+              className="more-section__toggle"
+              onClick={() => setIsMoreOpen((current) => !current)}
+              type="button">
+              <span>More</span>
+              <span className="more-section__count">{moreWidgets.length}</span>
+            </button>
+            {isMoreOpen ? (
+              <BoardList
+                compact
+                items={moreWidgets}
+                now={now}
+                onReorder={reorderList}
+                renderItemActions={(item, index, items) => (
+                  <WidgetActions
+                    index={index}
+                    item={item}
+                    items={items}
+                    onDelete={setItemPendingDelete}
+                    onEdit={(itemToEdit) =>
+                      setEditorState({ mode: "edit", item: itemToEdit })
+                    }
+                    onMovePlacement={moveItemToPlacement}
+                    onReorder={reorderItem}
+                  />
+                )}
+              />
+            ) : null}
+          </section>
+        ) : null}
       </main>
       <ItemDialog
         isOpen={Boolean(editorState)}
@@ -146,6 +190,71 @@ export default function NewTabPage() {
         onCancel={() => setItemPendingDelete(null)}
         onConfirm={deleteItem}
       />
+    </>
+  )
+}
+
+interface WidgetActionsProps {
+  item: Widget
+  index: number
+  items: Widget[]
+  onDelete: (item: Widget) => void
+  onEdit: (item: Widget) => void
+  onMovePlacement: (id: string, placement: WidgetPlacement) => void
+  onReorder: (id: string, direction: -1 | 1) => void
+}
+
+const WidgetActions = ({
+  item,
+  index,
+  items,
+  onDelete,
+  onEdit,
+  onMovePlacement,
+  onReorder
+}: WidgetActionsProps) => {
+  const nextPlacement = item.placement === "main" ? "more" : "main"
+  const nextPlacementLabel = nextPlacement === "main" ? "Main" : "More"
+
+  return (
+    <>
+      <button
+        aria-label={`Move ${item.title} up`}
+        className="icon-button"
+        disabled={index === 0}
+        onClick={() => onReorder(item.id, -1)}
+        type="button">
+        ↑
+      </button>
+      <button
+        aria-label={`Move ${item.title} down`}
+        className="icon-button"
+        disabled={index === items.length - 1}
+        onClick={() => onReorder(item.id, 1)}
+        type="button">
+        ↓
+      </button>
+      <button
+        aria-label={`Move ${item.title} to ${nextPlacementLabel}`}
+        className="secondary-button"
+        onClick={() => onMovePlacement(item.id, nextPlacement)}
+        type="button">
+        {nextPlacementLabel}
+      </button>
+      <button
+        aria-label={`Edit ${item.title}`}
+        className="secondary-button"
+        onClick={() => onEdit(item)}
+        type="button">
+        Edit
+      </button>
+      <button
+        aria-label={`Delete ${item.title}`}
+        className="danger-button"
+        onClick={() => onDelete(item)}
+        type="button">
+        Delete
+      </button>
     </>
   )
 }

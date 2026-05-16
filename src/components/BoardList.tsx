@@ -24,7 +24,9 @@ interface BoardListProps {
   items: Widget[]
   now: Date
   compact?: boolean
-  renderItemActions?: (item: Widget, index: number) => ReactNode
+  emptyDescription?: string
+  emptyTitle?: string
+  renderItemActions?: (item: Widget, index: number, items: Widget[]) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
 }
 
@@ -46,16 +48,18 @@ const usePrefersReducedMotion = () => {
 
 interface SortableBoardRowProps {
   item: Widget
+  items: Widget[]
   index: number
   now: Date
   compact?: boolean
   activeId: string | null
-  renderItemActions?: (item: Widget, index: number) => ReactNode
+  renderItemActions?: (item: Widget, index: number, items: Widget[]) => ReactNode
   prefersReducedMotion: boolean
 }
 
 const SortableBoardRow = ({
   item,
+  items,
   index,
   now,
   compact,
@@ -76,7 +80,7 @@ const SortableBoardRow = ({
     id: item.id
   })
 
-  const actions = renderItemActions?.(item, index)
+  const actions = renderItemActions?.(item, index, items)
   const className = [
     "board-row--sortable",
     isDragging ? "board-row--dragging" : "",
@@ -131,6 +135,8 @@ export const BoardList = ({
   items,
   now,
   compact,
+  emptyDescription = "Add a clock or countdown and it will appear here.",
+  emptyTitle = "Your board is ready",
   renderItemActions,
   onReorder
 }: BoardListProps) => {
@@ -150,8 +156,8 @@ export const BoardList = ({
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <h2>Your board is ready</h2>
-        <p>Add a clock or countdown and it will appear here.</p>
+        <h2>{emptyTitle}</h2>
+        <p>{emptyDescription}</p>
       </div>
     )
   }
@@ -193,6 +199,7 @@ export const BoardList = ({
               compact={compact}
               index={index}
               item={item}
+              items={items}
               key={item.id}
               now={now}
               prefersReducedMotion={prefersReducedMotion}
