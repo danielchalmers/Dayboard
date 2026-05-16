@@ -182,22 +182,25 @@ export default function NewTabPage() {
   return (
     <>
       <main className="page">
-        <header className="page-header">
-          <div>
-            <p className="eyebrow">Today</p>
-            <h1>Clockboard</h1>
-            <p className="page-header__subtitle">
-              {new Intl.DateTimeFormat(undefined, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric"
-              }).format(now)}
-            </p>
+        <header className="app-bar">
+          <div className="app-brand">
+            <span className="app-brand__mark" aria-hidden="true">
+              C
+            </span>
+            <div>
+              <h1>Clockboard</h1>
+              <p className="app-brand__date">
+                {new Intl.DateTimeFormat(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric"
+                }).format(now)}
+              </p>
+            </div>
           </div>
-          <div className="page-header__actions">
+          <div className="app-bar__actions">
             <button
-              className="secondary-button"
+              className="ghost-button"
               onClick={() => setIsSettingsDialogOpen(true)}
               type="button">
               Settings
@@ -210,69 +213,85 @@ export default function NewTabPage() {
             </button>
           </div>
         </header>
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragCancel={handleDragCancel}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
-          onDragStart={handleDragStart}
-          sensors={sensors}>
-          <BoardList
-            activeId={activeId}
-            emptyDescription={
-              moreWidgets.length > 0
-                ? "Move a widget out of More when you want it at a glance."
-                : undefined
-            }
-            emptyTitle={moreWidgets.length > 0 ? "Main is clear" : undefined}
-            items={mainWidgets}
-            now={now}
-            renderItemActions={(item, index, items) => (
-              <WidgetActions
-                index={index}
-                item={item}
-                items={items}
-                onDelete={setItemPendingDelete}
-                onEdit={(itemToEdit) =>
-                  setEditorState({ mode: "edit", item: itemToEdit })
-                }
-                onMovePlacement={moveItemToPlacement}
-                onReorder={reorderItem}
-              />
-            )}
-          />
-          {moreWidgets.length > 0 || activeId ? (
-            <MoreSection
-              isDragging={Boolean(activeId)}
-              isOpen={isMoreOpen}
-              widgetCount={moreWidgets.length}
-              onToggle={() => setIsMoreOpen((current) => !current)}>
-              {isMoreOpen || activeId ? (
-                <BoardList
-                  activeId={activeId}
-                  compact
-                  emptyDescription="Drop a widget here to keep it tucked away."
-                  emptyTitle="Drop into More"
-                  items={moreWidgets}
-                  now={now}
-                  renderItemActions={(item, index, items) => (
-                    <WidgetActions
-                      index={index}
-                      item={item}
-                      items={items}
-                      onDelete={setItemPendingDelete}
-                      onEdit={(itemToEdit) =>
-                        setEditorState({ mode: "edit", item: itemToEdit })
-                      }
-                      onMovePlacement={moveItemToPlacement}
-                      onReorder={reorderItem}
-                    />
-                  )}
+
+        <section className="board-shell" aria-labelledby="board-title">
+          <div className="board-shell__header">
+            <div>
+              <p className="eyebrow">Today</p>
+              <h2 id="board-title">At a glance</h2>
+            </div>
+            <p className="board-shell__date">
+              {new Intl.DateTimeFormat(undefined, {
+                month: "long",
+                day: "numeric",
+                year: "numeric"
+              }).format(now)}
+            </p>
+          </div>
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragCancel={handleDragCancel}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDragStart={handleDragStart}
+            sensors={sensors}>
+            <BoardList
+              activeId={activeId}
+              emptyDescription={
+                moreWidgets.length > 0
+                  ? "Move a widget out of More when you want it at a glance."
+                  : undefined
+              }
+              emptyTitle={moreWidgets.length > 0 ? "Main is clear" : undefined}
+              items={mainWidgets}
+              now={now}
+              renderItemActions={(item, index, items) => (
+                <WidgetActions
+                  index={index}
+                  item={item}
+                  items={items}
+                  onDelete={setItemPendingDelete}
+                  onEdit={(itemToEdit) =>
+                    setEditorState({ mode: "edit", item: itemToEdit })
+                  }
+                  onMovePlacement={moveItemToPlacement}
+                  onReorder={reorderItem}
                 />
-              ) : null}
-            </MoreSection>
-          ) : null}
-        </DndContext>
+              )}
+            />
+            {moreWidgets.length > 0 || activeId ? (
+              <MoreSection
+                isDragging={Boolean(activeId)}
+                isOpen={isMoreOpen}
+                widgetCount={moreWidgets.length}
+                onToggle={() => setIsMoreOpen((current) => !current)}>
+                {isMoreOpen || activeId ? (
+                  <BoardList
+                    activeId={activeId}
+                    compact
+                    emptyDescription="Drop a widget here to keep it tucked away."
+                    emptyTitle="Drop into More"
+                    items={moreWidgets}
+                    now={now}
+                    renderItemActions={(item, index, items) => (
+                      <WidgetActions
+                        index={index}
+                        item={item}
+                        items={items}
+                        onDelete={setItemPendingDelete}
+                        onEdit={(itemToEdit) =>
+                          setEditorState({ mode: "edit", item: itemToEdit })
+                        }
+                        onMovePlacement={moveItemToPlacement}
+                        onReorder={reorderItem}
+                      />
+                    )}
+                  />
+                ) : null}
+              </MoreSection>
+            ) : null}
+          </DndContext>
+        </section>
       </main>
       <AddWidgetDialog
         isOpen={isAddDialogOpen}
