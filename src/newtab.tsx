@@ -52,45 +52,81 @@ export default function NewTabPage() {
     setItemPendingDelete(null)
   }
 
+  const addItem = (kind: Widget["kind"]) => {
+    setEditorState({
+      mode: "add",
+      item: createWidget(kind)
+    })
+  }
+
   return (
     <>
       <main className="page">
         <header className="page-header">
           <div>
-            <p className="eyebrow">Today</p>
             <h1>Clockboard</h1>
-            <p className="page-header__subtitle">
-              {new Intl.DateTimeFormat(undefined, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric"
-              }).format(now)}
-            </p>
           </div>
           <div className="page-header__actions">
-            <button
-              className="secondary-button"
-              onClick={() =>
-                setEditorState({
-                  mode: "add",
-                  item: createWidget("clock")
-                })
-              }
-              type="button">
-              Add clock
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() =>
-                setEditorState({
-                  mode: "add",
-                  item: createWidget("countdown")
-                })
-              }
-              type="button">
-              Add countdown
-            </button>
+            <details className="add-menu">
+              <summary aria-label="Add widget" className="icon-button">
+                <svg
+                  aria-hidden="true"
+                  fill="none"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  width="24">
+                  <path
+                    d="M12 5v14M5 12h14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </summary>
+              <div className="add-menu__panel">
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("clock")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <circle cx="12" cy="12" r="8.25" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M12 7.5v5l3.5 2.1"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                  Add clock
+                </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("countdown")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <path
+                      d="M8 4h8M8 20h8M9 4c0 3.8 1.5 5.6 3 7 1.5-1.4 3-3.2 3-7M9 20c0-3.8 1.5-5.6 3-7 1.5 1.4 3 3.2 3 7"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                  Add countdown
+                </button>
+              </div>
+            </details>
           </div>
         </header>
         <BoardList
@@ -101,30 +137,30 @@ export default function NewTabPage() {
             <>
               <button
                 aria-label={`Move ${item.title} up`}
-                className="icon-button"
+                className="menu-button"
                 disabled={index === 0}
                 onClick={() => reorderItem(item.id, -1)}
                 type="button">
-                ↑
+                Move up
               </button>
               <button
                 aria-label={`Move ${item.title} down`}
-                className="icon-button"
+                className="menu-button"
                 disabled={index === state.widgets.length - 1}
                 onClick={() => reorderItem(item.id, 1)}
                 type="button">
-                ↓
+                Move down
               </button>
               <button
                 aria-label={`Edit ${item.title}`}
-                className="secondary-button"
+                className="menu-button"
                 onClick={() => setEditorState({ mode: "edit", item })}
                 type="button">
                 Edit
               </button>
               <button
                 aria-label={`Delete ${item.title}`}
-                className="danger-button"
+                className="menu-button menu-button--danger"
                 onClick={() => setItemPendingDelete(item)}
                 type="button">
                 Delete
