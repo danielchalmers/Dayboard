@@ -8,7 +8,6 @@ import {
   getCountdownParts
 } from "~/lib/time"
 import type { Widget } from "~/lib/types"
-import { widgetRegistry } from "~/lib/widgets"
 
 interface BoardRowProps {
   item: Widget
@@ -40,7 +39,6 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
       <article className={rowClassName} ref={ref} style={style}>
         <div className="board-row__header">
           <div className="board-row__identity">
-            <p className="board-row__kind">{widgetRegistry.clock.kindLabel}</p>
             <h2>{item.title}</h2>
             <p className="board-row__detail">{detail}</p>
           </div>
@@ -75,7 +73,6 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     <article className={rowClassName} ref={ref} style={style}>
       <div className="board-row__header">
         <div className="board-row__identity">
-          <p className="board-row__kind">{widgetRegistry.countdown.kindLabel}</p>
           <h2>{item.title}</h2>
           <p className="board-row__detail">{formatCountdownTarget(item)}</p>
         </div>

@@ -21,7 +21,6 @@ describe("BoardRow", () => {
     render(<BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />)
 
     expect(screen.getByRole("heading", { name: "UTC" })).toBeInTheDocument()
-    expect(screen.getByText("Clock")).toBeInTheDocument()
     expect(screen.getByLabelText("UTC time")).toHaveTextContent(/12:30/)
     expect(screen.getByText((content, element) =>
       element?.className === "board-row__detail" && content.includes("UTC")

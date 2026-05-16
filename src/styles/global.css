@@ -247,10 +247,10 @@ details > summary::-webkit-details-marker {
   border-radius: 8px;
   box-shadow: 0 10px 32px color-mix(in srgb, CanvasText 6%, transparent);
   display: grid;
-  gap: 34px;
+  gap: 28px;
   grid-template-rows: auto 1fr;
-  min-block-size: 172px;
-  padding: 28px 36px 26px;
+  min-block-size: 184px;
+  padding: 28px 32px 24px;
   transition:
     background-color 140ms ease,
     border-color 140ms ease,
@@ -275,15 +275,6 @@ details > summary::-webkit-details-marker {
   min-inline-size: 0;
 }
 
-.board-row__kind {
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  margin: 0 0 4px;
-  text-transform: uppercase;
-}
-
 .board-row h2 {
   font-size: clamp(1.18rem, 2vw, 1.55rem);
   font-weight: 700;
@@ -306,7 +297,7 @@ details > summary::-webkit-details-marker {
 }
 
 .board-row__value {
-  font-size: clamp(2.45rem, 4.8vw, 4rem);
+  font-size: clamp(2.35rem, 4.2vw, 3.7rem);
   font-variant-numeric: tabular-nums;
   font-weight: 680;
   line-height: 0.98;
@@ -318,7 +309,7 @@ details > summary::-webkit-details-marker {
 
 .board-row__value--countdown {
   color: var(--text);
-  font-size: clamp(1.65rem, 2.7vw, 2.15rem);
+  font-size: clamp(1.6rem, 2.5vw, 2.05rem);
   line-height: 1.12;
 }
 
@@ -554,8 +545,8 @@ select:hover {
   }
 
   .board-row {
-    gap: 28px;
-    min-block-size: 156px;
+    gap: 24px;
+    min-block-size: 168px;
     padding: 24px;
   }
 
