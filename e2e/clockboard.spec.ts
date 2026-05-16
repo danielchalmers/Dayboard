@@ -55,6 +55,24 @@ test("reordering changes the visible order and persists after reload", async ({
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 })
 
+test("dropdowns close when clicking outside them", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
+  await page.getByRole("heading", { name: "Clockboard" }).click()
+  await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
+
+  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
+  await expect(
+    page.getByRole("button", { name: "Move Tomorrow morning up" })
+  ).toBeVisible()
+  await page.getByRole("heading", { name: "Clockboard" }).click()
+  await expect(
+    page.getByRole("button", { name: "Move Tomorrow morning up" })
+  ).not.toBeVisible()
+})
+
 test("add clock flow works from the new tab page", async ({ page }) => {
   await openFreshNewTab(page)
 
@@ -131,6 +149,7 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
 
   await expect(page.getByRole("heading", { name: "Morning plans" })).toBeVisible()
 
+  await page.getByRole("button", { name: "Actions for Morning plans" }).click()
   await page.getByRole("button", { name: "Delete Morning plans" }).click()
   await page.getByRole("button", { name: "Delete widget" }).click()
 

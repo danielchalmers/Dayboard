@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
@@ -20,6 +20,23 @@ export default function NewTabPage() {
   const { state, isLoading, error, setWidgets } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
+
+  useEffect(() => {
+    const closeOpenMenus = (event: PointerEvent) => {
+      const eventPath = event.composedPath()
+
+      document
+        .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
+        .forEach((menu) => {
+          if (!eventPath.includes(menu)) {
+            menu.removeAttribute("open")
+          }
+        })
+    }
+
+    window.addEventListener("pointerdown", closeOpenMenus)
+    return () => window.removeEventListener("pointerdown", closeOpenMenus)
+  }, [])
 
   if (isLoading) {
     return <LoadingView />
