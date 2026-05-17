@@ -2,18 +2,18 @@
 
 ## Project
 
-Clockboard is a Plasmo, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm vertical list of live clocks and natural-language countdowns, with editing kept on the new tab page itself.
+Clockboard is a Plasmo, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm responsive board of live clocks and natural-language countdowns, with editing kept on the new tab page itself.
 
 The product should feel polished, quiet, and useful at a glance. Favor clarity and automatic behavior over configuration-heavy UI.
 
 ## Product Direction
 
-- Keep the primary experience as a flat vertical list, not a grid of cards.
-- Use system theme colors and system highlight/accent behavior. In CSS, prefer `Highlight` and `HighlightText`; `AccentColor` did not resolve reliably in Chromium screenshots.
+- Keep the primary experience as compact individual cards that stack on narrow screens and can flow into two columns on wider screens.
+- Use system theme colors and system accent behavior. Prefer `AccentColor` and `AccentColorText` with `Highlight` and `HighlightText` as fallbacks when Chromium does not expose accent colors.
 - Do not add per-item color, seconds, or 12-hour/24-hour controls.
 - Clocks use the user's system time format through `Intl.DateTimeFormat`.
 - Countdowns use natural language such as `5 days, 3 hours from now`.
-- User-facing copy should be concise, warm, and not overly explanatory.
+- User-facing copy should be concise, warm, and not overly explanatory. Dialog titles should name the action and kind, such as `Edit countdown`, not the item name.
 - Keep permissions minimal. Clockboard should only need `storage`.
 
 ## Architecture
@@ -57,6 +57,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
   - `npm run build:edge`
   - `npm run e2e`
 - For visual revamps, inspect built-page screenshots at desktop and mobile new-tab sizes.
+- Keep a seeded Playwright screenshot story for product-like CI artifacts covering the main board, mobile board, add dialogs, and edit dialogs.
 
 ## CI And Release
 
@@ -77,5 +78,8 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Avoid broad abstractions unless they remove real duplication.
 - Keep layout stable at mobile and desktop widths.
 - Use semantic controls and accessible labels.
-- Keep buttons and form controls native-feeling, crisp, and restrained.
+- Keep buttons and form controls native-feeling, crisp, and restrained. Buttons should use a pointer cursor and should not move on hover.
+- Dropdowns should close when clicking outside them or when selecting an action.
+- Dialogs and message views should open centered in the viewport.
+- Use subtle shadows for cards, dropdowns, and dialogs; avoid broad glow effects.
 - Do not introduce analytics, network calls, or broad extension permissions.
