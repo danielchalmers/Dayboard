@@ -21,8 +21,8 @@
   --dialog-shadow:
     0 2px 5px color-mix(in srgb, CanvasText 12%, transparent),
     0 12px 28px color-mix(in srgb, CanvasText 8%, transparent);
-  --accent: AccentColor;
-  --accent-text: AccentColorText;
+  --accent: Highlight;
+  --accent-text: HighlightText;
   --danger: #b3261e;
   --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
   font-family:
@@ -50,6 +50,13 @@ body {
     ),
     var(--bg);
   color: var(--text);
+}
+
+@supports (color: AccentColor) {
+  :root {
+    --accent: AccentColor;
+    --accent-text: AccentColorText;
+  }
 }
 
 button,
@@ -176,6 +183,15 @@ a {
   border: 1px solid var(--line);
   padding: 0;
   inline-size: 48px;
+}
+
+.add-menu > .icon-button {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  color: var(--accent);
+}
+
+.add-menu > .icon-button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 details > summary {
