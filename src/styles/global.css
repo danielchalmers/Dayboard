@@ -207,7 +207,6 @@ a {
     background-color var(--t-fast),
     border-color var(--t-fast),
     box-shadow var(--t-fast),
-    filter var(--t-fast),
     opacity var(--t-fast);
 }
 
@@ -218,7 +217,7 @@ a {
 }
 
 .primary-button:hover:not(:disabled) {
-  filter: brightness(1.07);
+  box-shadow: inset 0 0 0 999px color-mix(in srgb, black 8%, transparent), var(--shadow-sm);
 }
 
 .secondary-button {
@@ -540,7 +539,7 @@ label {
 
 label span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
