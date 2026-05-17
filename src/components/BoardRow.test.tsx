@@ -5,7 +5,7 @@ import { BoardRow } from "./BoardRow"
 import type { Widget } from "~/lib/types"
 
 describe("BoardRow", () => {
-  it("renders a clock row with its time-zone detail", () => {
+  it("renders a clock card with time and date metadata", () => {
     const item: Widget = {
       id: "utc",
       kind: "clock",
@@ -22,13 +22,10 @@ describe("BoardRow", () => {
 
     expect(screen.getByRole("heading", { name: "UTC" })).toBeInTheDocument()
     expect(screen.getByLabelText("UTC time")).toHaveTextContent(/12:30/)
-    expect(screen.getByText((content, element) =>
-      element?.className === "board-row__detail" && content.includes("UTC")
-    )).toBeInTheDocument()
-    expect(screen.getByText(/Thu, Jan 1, 2026/)).toBeInTheDocument()
+    expect(screen.getByText(/Thu, Jan 1, 2026/).closest(".board-row__meta")).toHaveTextContent("UTC")
   })
 
-  it("renders row actions when provided", () => {
+  it("renders card actions when provided", () => {
     const item: Widget = {
       id: "local",
       kind: "clock",
