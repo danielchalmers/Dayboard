@@ -8,7 +8,6 @@ import {
   getCountdownParts
 } from "~/lib/time"
 import type { Widget } from "~/lib/types"
-import { widgetRegistry } from "~/lib/widgets"
 
 interface BoardRowProps {
   item: Widget
@@ -31,46 +30,59 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     .join(" ")
 
   if (item.kind === "clock") {
+    const detail =
+      item.settings.timeZone === Intl.DateTimeFormat().resolvedOptions().timeZone
+        ? "Your current time zone"
+        : item.settings.timeZone
+
     return (
       <article className={rowClassName} ref={ref} style={style}>
-        <div className="board-row__identity">
-          <span className="board-row__mark" aria-hidden="true" />
-          <div>
-            <p className="board-row__kind">{widgetRegistry.clock.kindLabel}</p>
+        <div className="board-row__header">
+          <div className="board-row__identity">
             <h2>{item.title}</h2>
-            <p className="board-row__detail">
-              {item.settings.timeZone} · {formatTimeZoneName(now, item.settings.timeZone)} ·{" "}
-              {formatClockDate(now, item.settings.timeZone)}
-            </p>
+            <p className="board-row__detail">{detail}</p>
           </div>
+          {actions ? <div className="board-row__actions">{actions}</div> : null}
         </div>
-        <div className="board-row__side">
+        <div className="board-row__body">
           <p className="board-row__value" aria-label={`${item.title} time`}>
             {formatClockTime(now, item)}
           </p>
-          {actions ? <div className="board-row__actions">{actions}</div> : null}
+          <p className="board-row__meta">
+            {formatClockDate(now, item.settings.timeZone)}
+            <span>{formatTimeZoneName(now, item.settings.timeZone)}</span>
+          </p>
         </div>
       </article>
     )
   }
 
   const countdown = getCountdownParts(item, now)
+  const value =
+    countdown.status === "due"
+      ? "right now"
+      : countdown.label.replace(/ (from now|ago)$/, "")
+  const context =
+    countdown.status === "due"
+      ? ""
+      : countdown.label.endsWith("ago")
+        ? "ago"
+        : "from now"
 
   return (
     <article className={rowClassName} ref={ref} style={style}>
-      <div className="board-row__identity">
-        <span className="board-row__mark" aria-hidden="true" />
-        <div>
-          <p className="board-row__kind">{widgetRegistry.countdown.kindLabel}</p>
+      <div className="board-row__header">
+        <div className="board-row__identity">
           <h2>{item.title}</h2>
           <p className="board-row__detail">{formatCountdownTarget(item)}</p>
         </div>
-      </div>
-      <div className="board-row__side">
-        <p className="board-row__value board-row__value--countdown">
-          {countdown.status === "due" ? "right now" : countdown.label}
-        </p>
         {actions ? <div className="board-row__actions">{actions}</div> : null}
+      </div>
+      <div className="board-row__body">
+        <p className="board-row__value board-row__value--countdown">
+          {value}
+        </p>
+        {context ? <p className="board-row__meta">{context}</p> : null}
       </div>
     </article>
   )

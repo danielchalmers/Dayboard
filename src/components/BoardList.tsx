@@ -10,9 +10,9 @@ import {
 } from "@dnd-kit/core"
 import {
   SortableContext,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { useEffect, useState, type ReactNode } from "react"
@@ -88,31 +88,36 @@ const SortableBoardRow = ({
   return (
     <BoardRow
       actions={
-        <>
+        <details className="card-menu">
+          <summary
+            aria-haspopup="menu"
+            aria-label={`Actions for ${item.title}`}
+            className="icon-button"
+            role="button">
+            <svg
+              aria-hidden="true"
+              fill="none"
+              height="20"
+              viewBox="0 0 20 20"
+              width="20">
+              <circle cx="10" cy="4.5" fill="currentColor" r="1.5" />
+              <circle cx="10" cy="10" fill="currentColor" r="1.5" />
+              <circle cx="10" cy="15.5" fill="currentColor" r="1.5" />
+            </svg>
+          </summary>
+          <div className="card-menu__panel">
           <button
             aria-label={`Reorder ${item.title}`}
-            className="icon-button drag-handle"
+            className="menu-button drag-handle"
             ref={setActivatorNodeRef}
             type="button"
             {...attributes}
             {...listeners}>
-            <svg
-              aria-hidden="true"
-              className="drag-handle__icon"
-              fill="none"
-              height="18"
-              viewBox="0 0 18 18"
-              width="18">
-              <circle cx="6" cy="4.5" fill="currentColor" r="1.25" />
-              <circle cx="6" cy="9" fill="currentColor" r="1.25" />
-              <circle cx="6" cy="13.5" fill="currentColor" r="1.25" />
-              <circle cx="12" cy="4.5" fill="currentColor" r="1.25" />
-              <circle cx="12" cy="9" fill="currentColor" r="1.25" />
-              <circle cx="12" cy="13.5" fill="currentColor" r="1.25" />
-            </svg>
+            Drag to reorder
           </button>
-          {actions}
-        </>
+            {actions}
+          </div>
+        </details>
       }
       className={className}
       compact={compact}
@@ -183,7 +188,7 @@ export const BoardList = ({
       onDragEnd={handleDragEnd}
       onDragStart={handleDragStart}
       sensors={sensors}>
-      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+      <SortableContext items={itemIds} strategy={rectSortingStrategy}>
         <section
           className={compact ? "board-list board-list--compact" : "board-list"}
           aria-label="Clockboard widgets">
