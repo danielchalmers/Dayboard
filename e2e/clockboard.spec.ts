@@ -100,7 +100,7 @@ test("add and edit countdown works without a time-zone field", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Launch" })).toBeVisible()
   await page.getByRole("button", { name: "Actions for Launch" }).click()
   await page.getByRole("button", { name: "Edit Launch" }).click()
-  await expect(page.getByRole("dialog", { name: "Edit Launch" })).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await expect(page.getByLabel("Time zone")).toHaveCount(0)
   await page.getByLabel("Name").fill("Launch day")
   await page.getByRole("button", { name: "Save changes" }).click()
@@ -113,7 +113,7 @@ test("edit dialog opens for an existing clock", async ({ page }) => {
 
   await page.getByRole("button", { name: "Actions for Local time" }).click()
   await page.getByRole("button", { name: "Edit Local time" }).click()
-  await expect(page.getByRole("dialog", { name: "Edit Local time" })).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await expect(page.getByLabel("Name")).toHaveValue("Local time")
   await expect(page.getByLabel("Time zone")).toBeVisible()
 })
@@ -124,7 +124,7 @@ test("delete flow removes an existing widget", async ({ page }) => {
   await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
   await expect(
-    page.getByRole("dialog", { name: "Delete Tomorrow morning?" })
+    page.getByRole("dialog", { name: "Delete countdown?" })
   ).toBeVisible()
   await page.getByRole("button", { name: "Delete widget" }).click()
 
@@ -143,7 +143,7 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
   await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
   await page.getByRole("button", { name: "Edit Tomorrow morning" }).click()
   await expect(
-    page.getByRole("dialog", { name: "Edit Tomorrow morning" })
+    page.getByRole("dialog", { name: "Edit countdown" })
   ).toBeVisible()
   await page.getByLabel("Name").fill("Morning plans")
   await page.getByRole("button", { name: "Save changes" }).click()

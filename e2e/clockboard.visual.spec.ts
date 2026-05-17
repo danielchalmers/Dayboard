@@ -189,14 +189,14 @@ test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
 
   await page.getByRole("button", { name: "Actions for New York" }).click()
   await page.getByRole("button", { name: "Edit New York" }).click()
-  await expect(page.getByRole("dialog", { name: "Edit New York" })).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-edit-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await page.getByRole("button", { name: "Actions for Summer vacation" }).click()
   await page.getByRole("button", { name: "Edit Summer vacation" }).click()
   await expect(
-    page.getByRole("dialog", { name: "Edit Summer vacation" })
+    page.getByRole("dialog", { name: "Edit countdown" })
   ).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-edit-countdown-dialog")
 })

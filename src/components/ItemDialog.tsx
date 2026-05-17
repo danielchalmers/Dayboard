@@ -56,7 +56,7 @@ export const ItemDialog = ({
 
     return mode === "add"
       ? `Add ${widgetDefinition.kind}`
-      : `Edit ${draft.title}`
+      : `Edit ${widgetDefinition.kind}`
   }, [draft, mode])
 
   if (!isOpen || !draft) {
@@ -109,7 +109,6 @@ export const ItemDialog = ({
         role="dialog">
         <div className="modal-dialog__header">
           <div>
-            <p className="eyebrow">{widgetDefinition.kindLabel}</p>
             <h2 className="modal-dialog__title" id="item-dialog-title">
               {title}
             </h2>

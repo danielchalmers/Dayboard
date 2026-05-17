@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 
 import type { Widget } from "~/lib/types"
+import { widgetRegistry } from "~/lib/widgets"
 
 interface DeleteDialogProps {
   isOpen: boolean
@@ -35,6 +36,8 @@ export const DeleteDialog = ({
     return null
   }
 
+  const widgetDefinition = widgetRegistry[item.kind]
+
   return (
     <div className="modal-backdrop">
       <section
@@ -44,12 +47,11 @@ export const DeleteDialog = ({
         role="dialog">
         <div className="modal-dialog__header">
           <div>
-            <p className="eyebrow">Delete widget</p>
             <h2 className="modal-dialog__title" id="delete-dialog-title">
-              Delete {item.title}?
+              Delete {widgetDefinition.kind}?
             </h2>
             <p className="modal-dialog__subtitle">
-              This removes the {item.kind} from your board.
+              This removes {item.title} from your board.
             </p>
           </div>
         </div>
