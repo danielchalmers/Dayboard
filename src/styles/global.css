@@ -4,60 +4,55 @@
   color-scheme: light dark;
   accent-color: var(--accent);
 
-  /* Base surfaces */
+  /* Base */
   --bg: Canvas;
   --text: CanvasText;
-  --muted: color-mix(in srgb, CanvasText 56%, Canvas);
-  --quiet: color-mix(in srgb, CanvasText 36%, Canvas);
+  --muted: color-mix(in srgb, CanvasText 54%, Canvas);
+  --quiet: color-mix(in srgb, CanvasText 34%, Canvas);
 
   /* Borders */
   --line: color-mix(in srgb, CanvasText 12%, Canvas);
-  --line-strong: color-mix(in srgb, CanvasText 22%, Canvas);
+  --line-strong: color-mix(in srgb, CanvasText 20%, Canvas);
 
-  /* Elevated surfaces */
-  --surface: color-mix(in srgb, Canvas 97%, CanvasText 3%);
-  --surface-strong: color-mix(in srgb, Canvas 91%, CanvasText 9%);
+  /* Surfaces */
+  --surface: color-mix(in srgb, Canvas 96%, CanvasText 4%);
+  --surface-strong: color-mix(in srgb, Canvas 88%, CanvasText 12%);
 
   /* Accent */
   --accent: Highlight;
   --accent-text: HighlightText;
-  --accent-faint: color-mix(in srgb, var(--accent) 10%, transparent);
-  --accent-subtle: color-mix(in srgb, var(--accent) 18%, transparent);
 
   /* Semantic */
   --danger: #c0392b;
-  --danger-faint: color-mix(in srgb, var(--danger) 10%, transparent);
-  --danger-subtle: color-mix(in srgb, var(--danger) 18%, transparent);
 
-  /* Shadows */
+  /* Shadows — thin, close-contact only; no large spreads */
   --shadow-sm:
-    0 1px 2px color-mix(in srgb, CanvasText 6%, transparent),
-    0 1px 4px color-mix(in srgb, CanvasText 3%, transparent);
+    0 1px 0 color-mix(in srgb, CanvasText 6%, transparent),
+    0 1px 3px color-mix(in srgb, CanvasText 7%, transparent);
   --shadow-card:
-    0 1px 2px color-mix(in srgb, CanvasText 6%, transparent),
-    0 6px 18px color-mix(in srgb, CanvasText 5%, transparent);
+    0 1px 0 color-mix(in srgb, CanvasText 6%, transparent),
+    0 2px 6px color-mix(in srgb, CanvasText 6%, transparent);
   --shadow-card-raised:
-    0 4px 8px color-mix(in srgb, CanvasText 10%, transparent),
-    0 20px 40px color-mix(in srgb, CanvasText 9%, transparent);
+    0 2px 4px color-mix(in srgb, CanvasText 10%, transparent),
+    0 8px 20px color-mix(in srgb, CanvasText 8%, transparent);
   --shadow-panel:
-    0 1px 3px color-mix(in srgb, CanvasText 9%, transparent),
-    0 8px 24px color-mix(in srgb, CanvasText 8%, transparent);
+    0 1px 0 color-mix(in srgb, CanvasText 6%, transparent),
+    0 4px 12px color-mix(in srgb, CanvasText 8%, transparent);
   --shadow-dialog:
-    0 4px 8px color-mix(in srgb, CanvasText 8%, transparent),
-    0 24px 56px color-mix(in srgb, CanvasText 14%, transparent);
+    0 2px 4px color-mix(in srgb, CanvasText 8%, transparent),
+    0 12px 32px color-mix(in srgb, CanvasText 10%, transparent);
 
   /* Focus ring */
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
 
-  /* Border-radius scale */
+  /* Radius */
   --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 22px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   /* Transitions */
   --t-fast: 120ms ease;
-  --t: 180ms ease;
 
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -87,12 +82,7 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--bg);
-  background-image: radial-gradient(
-    ellipse 70% 38% at 50% -4%,
-    color-mix(in srgb, var(--accent) 10%, transparent),
-    transparent
-  );
+  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -129,9 +119,9 @@ a {
 /* ── Page layout ───────────────────────────────────────────────────────── */
 
 .page {
-  inline-size: min(1320px, calc(100% - 96px));
+  inline-size: min(1300px, calc(100% - 96px));
   margin: 0 auto;
-  padding: 56px 0 80px;
+  padding: 60px 0 80px;
 }
 
 .page--narrow {
@@ -145,14 +135,14 @@ a {
   display: flex;
   gap: 20px;
   justify-content: space-between;
-  margin-block-end: 60px;
+  margin-block-end: 56px;
   min-block-size: 48px;
 }
 
 .page-header h1 {
   font-size: clamp(1.9rem, 3.6vw, 2.6rem);
-  font-weight: 760;
-  letter-spacing: -0.03em;
+  font-weight: 740;
+  letter-spacing: -0.025em;
   line-height: 1;
   margin: 0;
 }
@@ -180,9 +170,9 @@ a {
 
 .eyebrow {
   color: var(--accent);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   margin: 0 0 8px;
   text-transform: uppercase;
 }
@@ -217,7 +207,8 @@ a {
 }
 
 .primary-button:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 999px color-mix(in srgb, black 8%, transparent), var(--shadow-sm);
+  box-shadow: inset 0 0 0 999px color-mix(in srgb, black 8%, transparent),
+    var(--shadow-sm);
 }
 
 .secondary-button {
@@ -232,14 +223,14 @@ a {
 }
 
 .danger-button {
-  background: var(--danger-faint);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line));
   color: var(--danger);
 }
 
 .danger-button:hover:not(:disabled) {
-  background: var(--danger-subtle);
-  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  background: var(--surface-strong);
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--line));
 }
 
 .icon-button {
@@ -247,8 +238,8 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
-  inline-size: 40px;
-  min-block-size: 40px;
+  inline-size: 38px;
+  min-block-size: 38px;
   padding: 0;
 }
 
@@ -258,13 +249,7 @@ a {
 }
 
 .add-menu > .icon-button {
-  background: var(--accent-faint);
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
   color: var(--accent);
-}
-
-.add-menu > .icon-button:hover {
-  background: var(--accent-subtle);
 }
 
 /* ── Details / summary menus ───────────────────────────────────────────── */
@@ -284,7 +269,7 @@ details > summary::-webkit-details-marker {
 
 .add-menu__panel,
 .card-menu__panel {
-  background: var(--surface);
+  background: var(--bg);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow-panel);
@@ -321,16 +306,10 @@ details > summary::-webkit-details-marker {
 }
 
 .menu-button:hover:not(:disabled) {
-  background: var(--accent-faint);
-  color: var(--accent);
+  background: var(--surface-strong);
 }
 
 .menu-button--danger {
-  color: var(--danger);
-}
-
-.menu-button--danger:hover:not(:disabled) {
-  background: var(--danger-faint);
   color: var(--danger);
 }
 
@@ -356,8 +335,8 @@ details > summary::-webkit-details-marker {
   display: grid;
   gap: 24px;
   grid-template-rows: auto 1fr;
-  min-block-size: 192px;
-  padding: 26px 28px 22px;
+  min-block-size: 188px;
+  padding: 24px 28px 22px;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast),
@@ -367,7 +346,7 @@ details > summary::-webkit-details-marker {
 
 .board-row--compact {
   gap: 16px;
-  min-block-size: 136px;
+  min-block-size: 132px;
   padding: 20px 22px 18px;
 }
 
@@ -405,11 +384,11 @@ details > summary::-webkit-details-marker {
 }
 
 .board-row__value {
-  font-size: clamp(2.4rem, 4.2vw, 3.8rem);
+  font-size: clamp(2.35rem, 4.2vw, 3.7rem);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   letter-spacing: -0.025em;
-  line-height: 0.95;
+  line-height: 0.97;
   margin: 0;
   max-inline-size: 100%;
   overflow-wrap: anywhere;
@@ -419,8 +398,8 @@ details > summary::-webkit-details-marker {
 .board-row__value--countdown {
   color: var(--text);
   font-size: clamp(1.55rem, 2.4vw, 2rem);
-  font-weight: 660;
-  letter-spacing: -0.02em;
+  font-weight: 640;
+  letter-spacing: -0.015em;
   line-height: 1.15;
 }
 
@@ -451,12 +430,11 @@ details > summary::-webkit-details-marker {
   background: var(--surface);
   border-color: transparent;
   box-shadow: var(--shadow-card-raised);
-  opacity: 0.9;
+  opacity: 0.88;
   z-index: 1;
 }
 
 .board-row--drop-target {
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   border-color: var(--accent);
 }
 
@@ -480,7 +458,8 @@ details > summary::-webkit-details-marker {
 }
 
 .board-row__actions .icon-button:hover {
-  background: color-mix(in srgb, CanvasText 8%, transparent);
+  background: var(--surface-strong);
+  border-color: transparent;
   color: var(--text);
 }
 
@@ -539,23 +518,19 @@ label {
 
 label span {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 input,
 select {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   inline-size: 100%;
   min-block-size: 42px;
   padding: 8px 12px;
-  transition:
-    border-color var(--t-fast),
-    box-shadow var(--t-fast);
+  transition: border-color var(--t-fast);
 }
 
 input:hover,
@@ -579,8 +554,6 @@ select:hover {
   color: var(--text);
   font-size: inherit;
   font-weight: inherit;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .form-note {
@@ -614,9 +587,7 @@ select:hover {
 /* ── Modal ─────────────────────────────────────────────────────────────── */
 
 .modal-backdrop {
-  background: color-mix(in srgb, CanvasText 22%, transparent);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: color-mix(in srgb, CanvasText 20%, transparent);
   display: grid;
   inset: 0;
   overflow: auto;
@@ -646,8 +617,8 @@ select:hover {
 }
 
 .modal-dialog__title {
-  font-size: 1.3rem;
-  font-weight: 740;
+  font-size: 1.25rem;
+  font-weight: 720;
   letter-spacing: -0.02em;
   line-height: 1.1;
   margin: 0;
@@ -695,7 +666,7 @@ select:hover {
 
   .board-row {
     gap: 20px;
-    min-block-size: 172px;
+    min-block-size: 168px;
     padding: 22px 22px 18px;
   }
 
