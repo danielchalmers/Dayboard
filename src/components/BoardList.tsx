@@ -15,7 +15,13 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { useEffect, useState, type ReactNode } from "react"
+import {
+  useEffect,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode
+} from "react"
 
 import { BoardRow } from "~/components/BoardRow"
 import type { Widget } from "~/lib/types"
@@ -50,8 +56,11 @@ interface SortableBoardRowProps {
   now: Date
   compact?: boolean
   activeId: string | null
+  isMenuOpen: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
   prefersReducedMotion: boolean
+  onCloseMenu: () => void
+  onOpenMenu: (id: string) => void
 }
 
 const SortableBoardRow = ({
@@ -60,8 +69,11 @@ const SortableBoardRow = ({
   now,
   compact,
   activeId,
+  isMenuOpen,
   renderItemActions,
-  prefersReducedMotion
+  prefersReducedMotion,
+  onCloseMenu,
+  onOpenMenu
 }: SortableBoardRowProps) => {
   const {
     listeners,
@@ -78,38 +90,64 @@ const SortableBoardRow = ({
   const className = [
     "board-row--sortable",
     "board-row--draggable",
+    isMenuOpen ? "board-row--menu-open" : "",
     isDragging ? "board-row--dragging" : "",
     activeId && activeId !== item.id && isOver ? "board-row--drop-target" : ""
   ]
     .filter(Boolean)
     .join(" ")
 
+  const handleContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!actions) {
+      return
+    }
+
+    event.preventDefault()
+    onOpenMenu(item.id)
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (!actions) {
+      listeners?.onKeyDown?.(event)
+      return
+    }
+
+    if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+      event.preventDefault()
+      onOpenMenu(item.id)
+      return
+    }
+
+    if (event.key === "Escape" && isMenuOpen) {
+      event.preventDefault()
+      onCloseMenu()
+      return
+    }
+
+    listeners?.onKeyDown?.(event)
+  }
+
   return (
     <BoardRow
       actions={
-        <details className="card-menu">
-          <summary
-            aria-haspopup="menu"
-            aria-label={`Actions for ${item.title}`}
-            className="icon-button"
-            role="button">
-            <svg
-              aria-hidden="true"
-              fill="none"
-              height="20"
-              viewBox="0 0 20 20"
-              width="20">
-              <circle cx="10" cy="4.5" fill="currentColor" r="1.5" />
-              <circle cx="10" cy="10" fill="currentColor" r="1.5" />
-              <circle cx="10" cy="15.5" fill="currentColor" r="1.5" />
-            </svg>
-          </summary>
-          <div className="card-menu__panel">
-            {actions}
+        actions && isMenuOpen ? (
+          <div className="card-menu">
+            <div
+              aria-label={`Actions for ${item.title}`}
+              className="card-menu__panel"
+              onClickCapture={onCloseMenu}>
+              {actions}
+            </div>
           </div>
-        </details>
+        ) : null
       }
-      articleProps={listeners}
+      articleProps={{
+        ...listeners,
+        "aria-haspopup": actions ? "menu" : undefined,
+        onContextMenu: handleContextMenu,
+        onKeyDown: handleKeyDown,
+        tabIndex: 0
+      }}
       className={className}
       compact={compact}
       item={item}
@@ -131,6 +169,7 @@ export const BoardList = ({
   onReorder
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const prefersReducedMotion = usePrefersReducedMotion()
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -143,6 +182,36 @@ export const BoardList = ({
     })
   )
 
+  useEffect(() => {
+    if (!openMenuId) {
+      return
+    }
+
+    const closeMenuOnPointerDownOutside = (event: PointerEvent) => {
+      const target = event.target
+
+      if (target instanceof Element && target.closest(".card-menu")) {
+        return
+      }
+
+      setOpenMenuId(null)
+    }
+
+    const closeMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenMenuId(null)
+      }
+    }
+
+    window.addEventListener("pointerdown", closeMenuOnPointerDownOutside)
+    window.addEventListener("keydown", closeMenuOnEscape)
+
+    return () => {
+      window.removeEventListener("pointerdown", closeMenuOnPointerDownOutside)
+      window.removeEventListener("keydown", closeMenuOnEscape)
+    }
+  }, [openMenuId])
+
   if (items.length === 0) {
     return (
       <div className="empty-state">
@@ -154,12 +223,20 @@ export const BoardList = ({
 
   const itemIds = items.map((item) => item.id)
 
+  const closeOpenDetailsMenus = () => {
+    document.querySelectorAll<HTMLDetailsElement>(".add-menu[open]").forEach((menu) => {
+      menu.removeAttribute("open")
+    })
+  }
+
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(String(active.id))
+    setOpenMenuId(null)
   }
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveId(null)
+    setOpenMenuId(null)
 
     if (!over || active.id === over.id) {
       return
@@ -170,6 +247,12 @@ export const BoardList = ({
 
   const handleDragCancel = () => {
     setActiveId(null)
+    setOpenMenuId(null)
+  }
+
+  const openMenu = (id: string) => {
+    closeOpenDetailsMenus()
+    setOpenMenuId(id)
   }
 
   return (
@@ -187,10 +270,13 @@ export const BoardList = ({
             <SortableBoardRow
               activeId={activeId}
               compact={compact}
+              isMenuOpen={openMenuId === item.id}
               index={index}
               item={item}
               key={item.id}
               now={now}
+              onCloseMenu={() => setOpenMenuId(null)}
+              onOpenMenu={openMenu}
               prefersReducedMotion={prefersReducedMotion}
               renderItemActions={renderItemActions}
             />

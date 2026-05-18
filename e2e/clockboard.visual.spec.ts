@@ -160,6 +160,14 @@ const attachScreenshot = async (
   })
 }
 
+const openWidgetMenu = async (page: Page, title: string) => {
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: title }) })
+
+  await card.click({ button: "right" })
+}
+
 test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
   await openStoryBoard(page)
 
@@ -187,13 +195,13 @@ test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
   await attachScreenshot(testInfo, page, "clockboard-add-countdown-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
-  await page.getByRole("button", { name: "Actions for New York" }).click()
+  await openWidgetMenu(page, "New York")
   await page.getByRole("button", { name: "Edit New York" }).click()
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-edit-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
-  await page.getByRole("button", { name: "Actions for Summer vacation" }).click()
+  await openWidgetMenu(page, "Summer vacation")
   await page.getByRole("button", { name: "Edit Summer vacation" }).click()
   await expect(
     page.getByRole("dialog", { name: "Edit countdown" })

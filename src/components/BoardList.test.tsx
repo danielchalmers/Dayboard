@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import { BoardList } from "./BoardList"
@@ -47,7 +47,7 @@ describe("BoardList", () => {
     expect(container.querySelectorAll(".board-row--draggable")).toHaveLength(2)
   })
 
-  it("does not render a drag-to-reorder action in the widget menu", () => {
+  it("opens the widget menu on right click without rendering a dedicated button", () => {
     const { container } = render(
       <BoardList
         items={widgets}
@@ -60,6 +60,12 @@ describe("BoardList", () => {
       />
     )
 
+    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(container.querySelector(".card-menu__panel")).not.toBeInTheDocument()
+
+    fireEvent.contextMenu(container.querySelector(".board-row--draggable") as Element)
+
+    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Reorder Local time" })).not.toBeInTheDocument()
     expect(container.querySelector('[aria-label="Edit Local time"]')).toBeInTheDocument()
   })

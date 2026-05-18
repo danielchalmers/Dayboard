@@ -337,6 +337,7 @@ details > summary::-webkit-details-marker {
   grid-template-rows: auto 1fr;
   min-block-size: 188px;
   padding: 24px 28px 22px;
+  position: relative;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast),
@@ -420,10 +421,22 @@ details > summary::-webkit-details-marker {
 .board-row__actions {
   display: flex;
   justify-content: end;
+  inset-block-start: 16px;
+  inset-inline-end: 16px;
+  position: absolute;
+  z-index: 2;
 }
 
 .board-row--sortable {
   transform-origin: center;
+}
+
+.board-row--draggable:hover:not(.board-row--dragging),
+.board-row--draggable:focus-visible,
+.board-row--menu-open {
+  background: color-mix(in srgb, var(--surface) 86%, CanvasText 14%);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card-raised);
 }
 
 .board-row--dragging {
@@ -446,21 +459,6 @@ details > summary::-webkit-details-marker {
 .board-row--draggable:active,
 .board-row--dragging {
   cursor: grabbing;
-}
-
-.board-row__actions .icon-button {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  color: var(--muted);
-  inline-size: 34px;
-  min-block-size: 34px;
-}
-
-.board-row__actions .icon-button:hover {
-  background: var(--surface-strong);
-  border-color: transparent;
-  color: var(--text);
 }
 
 .board-row--compact .board-row__value {
