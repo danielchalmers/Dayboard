@@ -14,11 +14,18 @@ import {
 
 export const STORAGE_KEY = "clockboard-state"
 
-const storage = new Storage({
+const syncedStorage = new Storage({
+  area: "sync"
+})
+
+const legacyLocalStorage = new Storage({
   area: "local"
 })
 
-const hasExtensionStorage = (): boolean =>
+const hasSyncedExtensionStorage = (): boolean =>
+  typeof chrome !== "undefined" && Boolean(chrome.storage?.sync)
+
+const hasLegacyExtensionStorage = (): boolean =>
   typeof chrome !== "undefined" && Boolean(chrome.storage?.local)
 
 const readFallbackStorage = (): unknown => {
@@ -208,9 +215,38 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
   }
 }
 
+const clearLegacyExtensionState = async (): Promise<void> => {
+  if (hasLegacyExtensionStorage()) {
+    await legacyLocalStorage.remove(STORAGE_KEY)
+  }
+}
+
+const readSyncedExtensionState = async (): Promise<unknown> => {
+  const syncedValue = await syncedStorage.get<unknown>(STORAGE_KEY)
+
+  if (syncedValue !== undefined) {
+    return syncedValue
+  }
+
+  if (!hasLegacyExtensionStorage()) {
+    return undefined
+  }
+
+  const legacyValue = await legacyLocalStorage.get<unknown>(STORAGE_KEY)
+
+  if (legacyValue === undefined) {
+    return undefined
+  }
+
+  const migratedState = migrateClockboardState(legacyValue)
+  await syncedStorage.set(STORAGE_KEY, migratedState)
+  await clearLegacyExtensionState()
+  return migratedState
+}
+
 export const readClockboardState = async (): Promise<ClockboardState> => {
-  const value = hasExtensionStorage()
-    ? await storage.get<unknown>(STORAGE_KEY)
+  const value = hasSyncedExtensionStorage()
+    ? await readSyncedExtensionState()
     : readFallbackStorage()
 
   return migrateClockboardState(value)
@@ -219,12 +255,31 @@ export const readClockboardState = async (): Promise<ClockboardState> => {
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {
-  if (hasExtensionStorage()) {
-    await storage.set(STORAGE_KEY, state)
+  if (hasSyncedExtensionStorage()) {
+    await syncedStorage.set(STORAGE_KEY, state)
+    await clearLegacyExtensionState()
     return
   }
 
   writeFallbackStorage(state)
+}
+
+export const watchClockboardState = (
+  listener: (state: ClockboardState) => void
+): (() => void) => {
+  const callbackMap = {
+    [STORAGE_KEY]: ({ newValue }: { newValue: unknown }) => {
+      listener(migrateClockboardState(newValue))
+    }
+  }
+
+  const watching = syncedStorage.watch(callbackMap)
+
+  return () => {
+    if (watching) {
+      syncedStorage.unwatch(callbackMap)
+    }
+  }
 }
 
 export const updateClockboardState = async (

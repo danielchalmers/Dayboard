@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import {
   readClockboardState,
+  watchClockboardState,
   writeClockboardState
 } from "~/lib/storage"
 import type { ClockboardState, Widget } from "~/lib/types"
@@ -36,6 +37,16 @@ export const useClockboardState = (): UseClockboardStateResult => {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  useEffect(
+    () =>
+      watchClockboardState((nextState) => {
+        setState(nextState)
+        setIsLoading(false)
+        setError(null)
+      }),
+    []
+  )
 
   const saveState = useCallback(async (nextState: ClockboardState) => {
     setState(nextState)

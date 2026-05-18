@@ -13,6 +13,7 @@ Live clocks and countdowns on your new tab page.
 3. Enter a name and time zone.
 4. For countdowns, choose the target date and time.
 5. Use **Edit**, **Delete**, and arrow controls directly on the page to keep the list tidy.
+6. If browser sync is enabled, your board follows you across signed-in browsers.
 
 ## 🙏 Credits
 
