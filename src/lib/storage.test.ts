@@ -133,17 +133,15 @@ describe("migrateClockboardState", () => {
 describe("watchClockboardState", () => {
   it("watches sync storage changes", async () => {
     const addListener = vi.fn()
-    const removeListener = vi.fn()
+    const mockRemoveListener = vi.fn()
     const syncedStorageArea = createMockStorageArea()
-    const legacyStorageArea = createMockStorageArea()
 
     vi.stubGlobal("chrome", {
       storage: {
         sync: syncedStorageArea,
-        local: legacyStorageArea,
         onChanged: {
           addListener,
-          removeListener
+          removeListener: mockRemoveListener
         }
       }
     })
@@ -151,11 +149,11 @@ describe("watchClockboardState", () => {
     const { watchClockboardState } = await import("./storage")
     const handleChange = vi.fn()
     const stopWatching = watchClockboardState(handleChange)
-    const listener = addListener.mock.calls[0]?.[0]
+    const storageChangeListener = addListener.mock.calls[0]?.[0]
 
-    expect(listener).toBeTypeOf("function")
+    expect(storageChangeListener).toBeTypeOf("function")
 
-    listener?.(
+    storageChangeListener?.(
       {
         [STORAGE_KEY]: {
           newValue: JSON.stringify({
@@ -203,6 +201,6 @@ describe("watchClockboardState", () => {
 
     stopWatching()
 
-    expect(removeListener).toHaveBeenCalledWith(listener)
+    expect(mockRemoveListener).toHaveBeenCalledWith(storageChangeListener)
   })
 })
