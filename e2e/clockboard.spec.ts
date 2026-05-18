@@ -6,6 +6,34 @@ const openFreshNewTab = async (page: Page) => {
   await page.reload()
 }
 
+const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) => {
+  const source = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: sourceTitle }) })
+  const target = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: targetTitle }) })
+
+  const sourceBox = await source.boundingBox()
+  const targetBox = await target.boundingBox()
+
+  if (!sourceBox || !targetBox) {
+    throw new Error("Unable to locate widget bounds for dragging")
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height / 2,
+    { steps: 20 }
+  )
+  await page.mouse.up()
+}
+
 test("new tab page renders the default widgets and editing controls", async ({
   page
 }) => {
@@ -33,7 +61,7 @@ test("new tab page renders the default widgets and editing controls", async ({
   ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Reorder Tomorrow morning" })
-  ).toBeVisible()
+  ).toHaveCount(0)
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
@@ -46,11 +74,7 @@ test("reordering changes the visible order and persists after reload", async ({
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
-  await expect(
-    page.getByRole("button", { name: "Actions for Tomorrow morning" })
-  ).toBeVisible()
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
-  await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
+  await dragWidget(page, "Tomorrow morning", "Local time")
 
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 
@@ -138,8 +162,7 @@ test("delete flow removes an existing widget", async ({ page }) => {
 test("edit and delete controls still work after reordering", async ({ page }) => {
   await openFreshNewTab(page)
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
-  await page.getByRole("button", { name: "Move Tomorrow morning up" }).click()
+  await dragWidget(page, "Tomorrow morning", "Local time")
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])

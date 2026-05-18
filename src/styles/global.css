@@ -438,13 +438,13 @@ details > summary::-webkit-details-marker {
   border-color: var(--accent);
 }
 
-.drag-handle {
+.board-row--draggable {
   cursor: grab;
   touch-action: none;
 }
 
-.drag-handle:active,
-.board-row--dragging .drag-handle {
+.board-row--draggable:active,
+.board-row--dragging {
   cursor: grabbing;
 }
 
