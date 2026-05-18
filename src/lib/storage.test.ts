@@ -166,7 +166,9 @@ describe("migrateClockboardState", () => {
     })
     expect(migrated).not.toHaveProperty("settings")
   })
+})
 
+describe("readClockboardState", () => {
   it("moves existing extension data from local storage into sync storage", async () => {
     const syncedStorageArea = createMockStorageArea()
     const legacyStorageArea = createMockStorageArea({
@@ -211,7 +213,9 @@ describe("migrateClockboardState", () => {
     expect(syncedStorageArea.values.get(STORAGE_KEY)).toBe(JSON.stringify(state))
     expect(legacyStorageArea.values.has(STORAGE_KEY)).toBe(false)
   })
+})
 
+describe("watchClockboardState", () => {
   it("watches sync storage changes", async () => {
     const addListener = vi.fn()
     const removeListener = vi.fn()
