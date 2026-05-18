@@ -124,6 +124,10 @@ const SortableBoardRow = ({
       return
     }
 
+    if (isMenuOpen) {
+      return
+    }
+
     listeners?.onKeyDown?.(event)
   }
 
@@ -223,7 +227,7 @@ export const BoardList = ({
 
   const itemIds = items.map((item) => item.id)
 
-  const closeOpenDetailsMenus = () => {
+  const closeAddMenu = () => {
     document.querySelectorAll<HTMLDetailsElement>(".add-menu[open]").forEach((menu) => {
       menu.removeAttribute("open")
     })
@@ -251,7 +255,7 @@ export const BoardList = ({
   }
 
   const openMenu = (id: string) => {
-    closeOpenDetailsMenus()
+    closeAddMenu()
     setOpenMenuId(id)
   }
 
