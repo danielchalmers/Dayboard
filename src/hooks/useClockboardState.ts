@@ -38,15 +38,17 @@ export const useClockboardState = (): UseClockboardStateResult => {
     void reload()
   }, [reload])
 
-  useEffect(
-    () =>
-      watchClockboardState((nextState) => {
-        setState(nextState)
-        setIsLoading(false)
-        setError(null)
-      }),
-    []
-  )
+  useEffect(() => {
+    const stopWatching = watchClockboardState((nextState) => {
+      setState(nextState)
+      setIsLoading(false)
+      setError(null)
+    })
+
+    return () => {
+      stopWatching()
+    }
+  }, [])
 
   const saveState = useCallback(async (nextState: ClockboardState) => {
     setState(nextState)

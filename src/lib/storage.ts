@@ -273,13 +273,9 @@ export const watchClockboardState = (
     }
   }
 
-  const watching = syncedStorage.watch(callbackMap)
+  syncedStorage.watch(callbackMap)
 
-  return () => {
-    if (watching) {
-      syncedStorage.unwatch(callbackMap)
-    }
-  }
+  return () => syncedStorage.unwatch(callbackMap)
 }
 
 export const updateClockboardState = async (
