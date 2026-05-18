@@ -48,8 +48,8 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
             <h2>{item.title}</h2>
             <p className="board-row__detail">{detail}</p>
           </div>
-          {actions ? <div className="board-row__actions">{actions}</div> : null}
         </div>
+        {actions ? <div className="board-row__actions">{actions}</div> : null}
         <div className="board-row__body">
           <p className="board-row__value" aria-label={`${item.title} time`}>
             {formatClockTime(now, item)}
@@ -82,8 +82,8 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
           <h2>{item.title}</h2>
           <p className="board-row__detail">{formatCountdownTarget(item)}</p>
         </div>
-        {actions ? <div className="board-row__actions">{actions}</div> : null}
       </div>
+      {actions ? <div className="board-row__actions">{actions}</div> : null}
       <div className="board-row__body">
         <p className="board-row__value board-row__value--countdown">
           {value}

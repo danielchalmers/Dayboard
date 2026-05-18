@@ -34,6 +34,14 @@ const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) 
   await page.mouse.up()
 }
 
+const openWidgetMenu = async (page: Page, title: string) => {
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: title }) })
+
+  await card.click({ button: "right" })
+}
+
 test("new tab page renders the default widgets and editing controls", async ({
   page
 }) => {
@@ -47,15 +55,13 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: "Actions for Local time" })
-  ).toBeVisible()
+  await expect(page.getByLabel("Actions for Local time")).toHaveCount(0)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
+  await openWidgetMenu(page, "Tomorrow morning")
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
@@ -91,7 +97,7 @@ test("dropdowns close when clicking outside them", async ({ page }) => {
   await page.getByRole("heading", { name: "Clockboard" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
+  await openWidgetMenu(page, "Tomorrow morning")
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
@@ -126,7 +132,7 @@ test("add and edit countdown works without a time-zone field", async ({ page }) 
   await page.getByRole("button", { name: "Save countdown" }).click()
 
   await expect(page.getByRole("heading", { name: "Launch" })).toBeVisible()
-  await page.getByRole("button", { name: "Actions for Launch" }).click()
+  await openWidgetMenu(page, "Launch")
   await page.getByRole("button", { name: "Edit Launch" }).click()
   await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await expect(page.getByLabel("Time zone")).toHaveCount(0)
@@ -139,7 +145,7 @@ test("add and edit countdown works without a time-zone field", async ({ page }) 
 test("edit dialog opens for an existing clock", async ({ page }) => {
   await openFreshNewTab(page)
 
-  await page.getByRole("button", { name: "Actions for Local time" }).click()
+  await openWidgetMenu(page, "Local time")
   await page.getByRole("button", { name: "Edit Local time" }).click()
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await expect(page.getByLabel("Name")).toHaveValue("Local time")
@@ -149,7 +155,7 @@ test("edit dialog opens for an existing clock", async ({ page }) => {
 test("delete flow removes an existing widget", async ({ page }) => {
   await openFreshNewTab(page)
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
+  await openWidgetMenu(page, "Tomorrow morning")
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
   await expect(
     page.getByRole("dialog", { name: "Delete countdown?" })
@@ -167,7 +173,7 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 
-  await page.getByRole("button", { name: "Actions for Tomorrow morning" }).click()
+  await openWidgetMenu(page, "Tomorrow morning")
   await page.getByRole("button", { name: "Edit Tomorrow morning" }).click()
   await expect(
     page.getByRole("dialog", { name: "Edit countdown" })
@@ -177,7 +183,7 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
 
   await expect(page.getByRole("heading", { name: "Morning plans" })).toBeVisible()
 
-  await page.getByRole("button", { name: "Actions for Morning plans" }).click()
+  await openWidgetMenu(page, "Morning plans")
   await page.getByRole("button", { name: "Delete Morning plans" }).click()
   await page.getByRole("button", { name: "Delete widget" }).click()
 
