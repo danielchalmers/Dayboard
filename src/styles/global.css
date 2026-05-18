@@ -66,6 +66,39 @@
   }
 }
 
+/* ── Keyframe animations ───────────────────────────────────────────────── */
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* ── Reset & base ──────────────────────────────────────────────────────── */
 
 *,
@@ -269,9 +302,10 @@ details > summary::-webkit-details-marker {
 
 .add-menu__panel,
 .card-menu__panel {
-  background: var(--bg);
+  animation: menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  background: var(--surface);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
   display: grid;
   gap: 2px;
@@ -585,7 +619,9 @@ select:hover {
 /* ── Modal ─────────────────────────────────────────────────────────────── */
 
 .modal-backdrop {
-  background: color-mix(in srgb, CanvasText 20%, transparent);
+  animation: backdrop-in 200ms ease both;
+  background: color-mix(in srgb, CanvasText 42%, transparent);
+  backdrop-filter: blur(3px);
   display: grid;
   inset: 0;
   overflow: auto;
@@ -596,6 +632,7 @@ select:hover {
 }
 
 .modal-dialog {
+  animation: dialog-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
   background: var(--bg);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-xl);
@@ -634,10 +671,13 @@ select:hover {
 }
 
 .modal-dialog__actions {
+  border-top: 1px solid var(--line);
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: end;
+  margin-top: 4px;
+  padding-top: 16px;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
@@ -698,5 +738,12 @@ select:hover {
   .icon-button,
   .board-row {
     transition: none;
+  }
+
+  .modal-backdrop,
+  .modal-dialog,
+  .add-menu__panel,
+  .card-menu__panel {
+    animation: none;
   }
 }
