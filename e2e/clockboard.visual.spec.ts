@@ -187,8 +187,8 @@ test("uses uniform widget card dimensions across the desktop grid", async ({
   expect(firstBox).toBeDefined()
 
   for (const box of otherBoxes) {
-    expect(box.width).toBe(firstBox?.width)
-    expect(box.height).toBe(firstBox?.height)
+    expect(box.width).toBe(firstBox.width)
+    expect(box.height).toBe(firstBox.height)
   }
 })
 
