@@ -11,6 +11,10 @@ test("new tab page renders the default widgets and editing controls", async ({
 }) => {
   await openFreshNewTab(page)
 
+  await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
+    "href",
+    /icon32\..+\.png$/
+  )
   await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()

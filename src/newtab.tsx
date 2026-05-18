@@ -10,6 +10,8 @@ import { createWidget, moveWidget, reorderWidgets } from "~/lib/widgets"
 import type { Widget } from "~/lib/types"
 import "~/styles/global.css"
 
+const tabIconHref = new URL("../assets/icon32.png", import.meta.url).href
+
 interface EditorState {
   mode: "add" | "edit"
   item: Widget
@@ -30,6 +32,20 @@ export default function NewTabPage() {
   const { state, isLoading, error, setWidgets } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
+
+  useEffect(() => {
+    let tabIcon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
+
+    if (!tabIcon) {
+      tabIcon = document.createElement("link")
+      tabIcon.rel = "icon"
+      document.head.append(tabIcon)
+    }
+
+    tabIcon.type = "image/png"
+    tabIcon.sizes = "32x32"
+    tabIcon.href = tabIconHref
+  }, [])
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
