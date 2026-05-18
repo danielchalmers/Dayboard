@@ -261,7 +261,9 @@ describe("migrateClockboardState", () => {
       "sync"
     )
 
-    await Promise.resolve()
+    await vi.waitFor(() => {
+      expect(handleChange).toHaveBeenCalledTimes(1)
+    })
 
     expect(handleChange).toHaveBeenCalledWith({
       version: 2,

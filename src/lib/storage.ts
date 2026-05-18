@@ -1,4 +1,4 @@
-import { Storage } from "@plasmohq/storage"
+import { Storage, type StorageCallbackMap } from "@plasmohq/storage"
 
 import { zonedDateTimeToUtcMs } from "./time"
 import {
@@ -267,9 +267,9 @@ export const writeClockboardState = async (
 export const watchClockboardState = (
   listener: (state: ClockboardState) => void
 ): (() => void) => {
-  const callbackMap = {
-    [STORAGE_KEY]: ({ newValue }: { newValue: unknown }) => {
-      listener(migrateClockboardState(newValue))
+  const callbackMap: StorageCallbackMap = {
+    [STORAGE_KEY]: (change) => {
+      listener(migrateClockboardState(change.newValue))
     }
   }
 
