@@ -64,11 +64,9 @@ const SortableBoardRow = ({
   prefersReducedMotion
 }: SortableBoardRowProps) => {
   const {
-    attributes,
     listeners,
     isDragging,
     isOver,
-    setActivatorNodeRef,
     setNodeRef,
     transform,
     transition
@@ -79,6 +77,7 @@ const SortableBoardRow = ({
   const actions = renderItemActions?.(item, index)
   const className = [
     "board-row--sortable",
+    "board-row--draggable",
     isDragging ? "board-row--dragging" : "",
     activeId && activeId !== item.id && isOver ? "board-row--drop-target" : ""
   ]
@@ -106,19 +105,11 @@ const SortableBoardRow = ({
             </svg>
           </summary>
           <div className="card-menu__panel">
-          <button
-            aria-label={`Reorder ${item.title}`}
-            className="menu-button drag-handle"
-            ref={setActivatorNodeRef}
-            type="button"
-            {...attributes}
-            {...listeners}>
-            Drag to reorder
-          </button>
             {actions}
           </div>
         </details>
       }
+      articleProps={listeners}
       className={className}
       compact={compact}
       item={item}

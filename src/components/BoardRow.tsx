@@ -1,4 +1,9 @@
-import { forwardRef, type CSSProperties, type ReactNode } from "react"
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ReactNode
+} from "react"
 
 import {
   formatClockDate,
@@ -14,12 +19,13 @@ interface BoardRowProps {
   now: Date
   compact?: boolean
   actions?: ReactNode
+  articleProps?: ComponentPropsWithoutRef<"article">
   className?: string
   style?: CSSProperties
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, compact = false, actions, className, style },
+  { item, now, compact = false, actions, articleProps, className, style },
   ref
 ) {
   const rowClassName = [
@@ -36,7 +42,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : item.settings.timeZone
 
     return (
-      <article className={rowClassName} ref={ref} style={style}>
+      <article {...articleProps} className={rowClassName} ref={ref} style={style}>
         <div className="board-row__header">
           <div className="board-row__identity">
             <h2>{item.title}</h2>
@@ -70,7 +76,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : "from now"
 
   return (
-    <article className={rowClassName} ref={ref} style={style}>
+    <article {...articleProps} className={rowClassName} ref={ref} style={style}>
       <div className="board-row__header">
         <div className="board-row__identity">
           <h2>{item.title}</h2>
