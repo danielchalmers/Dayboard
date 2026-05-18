@@ -135,7 +135,7 @@ const SortableBoardRow = ({
             <div
               aria-label={`Actions for ${item.title}`}
               className="card-menu__panel"
-              onClickCapture={onCloseMenu}>
+              onClick={onCloseMenu}>
               {actions}
             </div>
           </div>
