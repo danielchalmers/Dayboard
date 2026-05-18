@@ -28,7 +28,6 @@ export interface CountdownWidget extends WidgetBase {
 export type Widget = ClockWidget | CountdownWidget
 
 export interface ClockboardState {
-  version: 2
   widgets: Widget[]
 }
 
@@ -70,7 +69,6 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
 }
 
 export const createDefaultState = (now = new Date()): ClockboardState => ({
-  version: 2,
   widgets: createDefaultWidgets(now)
 })
 

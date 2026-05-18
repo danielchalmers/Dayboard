@@ -36,13 +36,12 @@ afterEach(() => {
   vi.resetModules()
 })
 
-describe("migrateClockboardState", () => {
+describe("sanitizeClockboardState", () => {
   it("falls back to default widgets for missing or invalid state", async () => {
-    const { migrateClockboardState } = await import("./storage")
-    const missingState = migrateClockboardState(undefined)
-    const invalidState = migrateClockboardState({ version: 2, widgets: [] })
+    const { sanitizeClockboardState } = await import("./storage")
+    const missingState = sanitizeClockboardState(undefined)
+    const invalidState = sanitizeClockboardState({ widgets: [] })
 
-    expect(missingState.version).toBe(2)
     expect(missingState.widgets).toHaveLength(2)
     expect(missingState.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
@@ -51,10 +50,9 @@ describe("migrateClockboardState", () => {
     expect(invalidState.widgets).toHaveLength(2)
   })
 
-  it("drops unsupported legacy state shapes", async () => {
-    const { migrateClockboardState } = await import("./storage")
-    const migrated = migrateClockboardState({
-      version: 1,
+  it("falls back to defaults for unsupported stored shapes", async () => {
+    const { sanitizeClockboardState } = await import("./storage")
+    const sanitized = sanitizeClockboardState({
       items: [
         {
           id: "clock-1",
@@ -65,18 +63,16 @@ describe("migrateClockboardState", () => {
       ]
     })
 
-    expect(migrated.version).toBe(2)
-    expect(migrated.widgets).toHaveLength(2)
-    expect(migrated.widgets.map((widget) => widget.kind)).toEqual([
+    expect(sanitized.widgets).toHaveLength(2)
+    expect(sanitized.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
       "countdown"
     ])
   })
 
-  it("sanitizes existing v2 widgets", async () => {
-    const { migrateClockboardState } = await import("./storage")
-    const migrated = migrateClockboardState({
-      version: 2,
+  it("sanitizes stored widgets", async () => {
+    const { sanitizeClockboardState } = await import("./storage")
+    const sanitized = sanitizeClockboardState({
       settings: {
         boardTitle: "Legacy",
         showDate: true
@@ -107,8 +103,7 @@ describe("migrateClockboardState", () => {
       ]
     })
 
-    expect(migrated.version).toBe(2)
-    expect(migrated.widgets[0]).toMatchObject({
+    expect(sanitized.widgets[0]).toMatchObject({
       id: "clock-1",
       kind: "clock",
       placement: "main",
@@ -117,7 +112,7 @@ describe("migrateClockboardState", () => {
         timeZone: expect.any(String)
       }
     })
-    expect(migrated.widgets[1]).toMatchObject({
+    expect(sanitized.widgets[1]).toMatchObject({
       id: "countdown-1",
       kind: "countdown",
       placement: "more",
@@ -126,7 +121,7 @@ describe("migrateClockboardState", () => {
         targetAt: expect.stringMatching(/Z$/)
       }
     })
-    expect(migrated).not.toHaveProperty("settings")
+    expect(sanitized).not.toHaveProperty("settings")
   })
 })
 
@@ -157,7 +152,6 @@ describe("watchClockboardState", () => {
       {
         [STORAGE_KEY]: {
           newValue: JSON.stringify({
-            version: 2,
             widgets: [
               {
                 id: "clock-1",
@@ -183,7 +177,6 @@ describe("watchClockboardState", () => {
     })
 
     expect(handleChange).toHaveBeenCalledWith({
-      version: 2,
       widgets: [
         {
           id: "clock-1",

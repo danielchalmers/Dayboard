@@ -4,7 +4,6 @@ const STORAGE_KEY = "clockboard-state"
 const STORY_NOW = "2025-05-09T15:24:00.000Z"
 
 const storyState = {
-  version: 2,
   widgets: [
     {
       id: "austin",

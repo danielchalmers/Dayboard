@@ -137,7 +137,7 @@ const sanitizeWidgets = (value: unknown): Widget[] => {
     .filter((widget): widget is Widget => widget !== null)
 }
 
-export const migrateClockboardState = (value: unknown): ClockboardState => {
+export const sanitizeClockboardState = (value: unknown): ClockboardState => {
   if (!isRecord(value)) {
     return createDefaultState()
   }
@@ -145,7 +145,6 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
   const widgets = sanitizeWidgets(value.widgets)
 
   return {
-    version: 2,
     widgets: widgets.length > 0 ? widgets : createDefaultState().widgets
   }
 }
@@ -155,7 +154,7 @@ export const readClockboardState = async (): Promise<ClockboardState> => {
     ? await syncedStorage.get<unknown>(STORAGE_KEY)
     : readFallbackStorage()
 
-  return migrateClockboardState(value)
+  return sanitizeClockboardState(value)
 }
 
 export const writeClockboardState = async (
@@ -174,7 +173,7 @@ export const watchClockboardState = (
 ): (() => void) => {
   const callbackMap: StorageCallbackMap = {
     [STORAGE_KEY]: (change) => {
-      listener(migrateClockboardState(change.newValue))
+      listener(sanitizeClockboardState(change.newValue))
     }
   }
 
