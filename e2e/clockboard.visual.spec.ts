@@ -168,6 +168,30 @@ const openWidgetMenu = async (page: Page, title: string) => {
   await card.click({ button: "right" })
 }
 
+test("uses uniform widget card dimensions across the desktop grid", async ({
+  page
+}) => {
+  await openStoryBoard(page)
+
+  const boxes = await page.locator(".board-row").evaluateAll((elements) =>
+    elements.map((element) => {
+      const { height, width } = element.getBoundingClientRect()
+      return { height, width }
+    })
+  )
+
+  expect(boxes.length).toBeGreaterThan(1)
+
+  const [firstBox, ...otherBoxes] = boxes
+
+  expect(firstBox).toBeDefined()
+
+  for (const box of otherBoxes) {
+    expect(box.width).toBe(firstBox?.width)
+    expect(box.height).toBe(firstBox?.height)
+  }
+})
+
 test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
   await openStoryBoard(page)
 
