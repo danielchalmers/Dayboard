@@ -1,6 +1,5 @@
-import { Storage } from "@plasmohq/storage"
+import { Storage, type StorageCallbackMap } from "@plasmohq/storage"
 
-import { zonedDateTimeToUtcMs } from "./time"
 import {
   createDefaultState,
   DEFAULT_TIME_ZONE,
@@ -14,12 +13,12 @@ import {
 
 export const STORAGE_KEY = "clockboard-state"
 
-const storage = new Storage({
-  area: "local"
+const syncedStorage = new Storage({
+  area: "sync"
 })
 
-const hasExtensionStorage = (): boolean =>
-  typeof chrome !== "undefined" && Boolean(chrome.storage?.local)
+const hasSyncedExtensionStorage = (): boolean =>
+  typeof chrome !== "undefined" && Boolean(chrome.storage?.sync)
 
 const readFallbackStorage = (): unknown => {
   if (typeof localStorage === "undefined") {
@@ -128,50 +127,6 @@ const sanitizeWidget = (value: unknown): Widget | null => {
   return null
 }
 
-const migrateLegacyItem = (value: unknown): Widget | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const base = {
-    ...sanitizeWidgetBase(value),
-    placement: DEFAULT_WIDGET_PLACEMENT
-  }
-
-  if (value.kind === "clock") {
-    return {
-      ...base,
-      kind: "clock",
-      settings: {
-        timeZone: asString(value.timeZone, DEFAULT_TIME_ZONE)
-      }
-    }
-  }
-
-  if (value.kind === "countdown") {
-    const timeZone = asString(value.timeZone, DEFAULT_TIME_ZONE)
-    const targetUtcMs = zonedDateTimeToUtcMs(
-      asString(value.targetDateTime, ""),
-      timeZone
-    )
-    const fallbackTargetAt = createDefaultState().widgets.find(
-      (widget): widget is CountdownWidget => widget.kind === "countdown"
-    )!.settings.targetAt
-
-    return {
-      ...base,
-      kind: "countdown",
-      settings: {
-        targetAt: Number.isNaN(targetUtcMs)
-          ? fallbackTargetAt
-          : new Date(targetUtcMs).toISOString()
-      }
-    }
-  }
-
-  return null
-}
-
 const sanitizeWidgets = (value: unknown): Widget[] => {
   if (!Array.isArray(value)) {
     return []
@@ -182,25 +137,12 @@ const sanitizeWidgets = (value: unknown): Widget[] => {
     .filter((widget): widget is Widget => widget !== null)
 }
 
-const migrateLegacyItems = (value: unknown): Widget[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value
-    .map((item) => migrateLegacyItem(item))
-    .filter((widget): widget is Widget => widget !== null)
-}
-
 export const migrateClockboardState = (value: unknown): ClockboardState => {
   if (!isRecord(value)) {
     return createDefaultState()
   }
 
-  const widgets =
-    value.version === 2 || Array.isArray(value.widgets)
-      ? sanitizeWidgets(value.widgets)
-      : migrateLegacyItems(value.items)
+  const widgets = sanitizeWidgets(value.widgets)
 
   return {
     version: 2,
@@ -209,8 +151,8 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
 }
 
 export const readClockboardState = async (): Promise<ClockboardState> => {
-  const value = hasExtensionStorage()
-    ? await storage.get<unknown>(STORAGE_KEY)
+  const value = hasSyncedExtensionStorage()
+    ? await syncedStorage.get<unknown>(STORAGE_KEY)
     : readFallbackStorage()
 
   return migrateClockboardState(value)
@@ -219,12 +161,26 @@ export const readClockboardState = async (): Promise<ClockboardState> => {
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {
-  if (hasExtensionStorage()) {
-    await storage.set(STORAGE_KEY, state)
+  if (hasSyncedExtensionStorage()) {
+    await syncedStorage.set(STORAGE_KEY, state)
     return
   }
 
   writeFallbackStorage(state)
+}
+
+export const watchClockboardState = (
+  listener: (state: ClockboardState) => void
+): (() => void) => {
+  const callbackMap: StorageCallbackMap = {
+    [STORAGE_KEY]: (change) => {
+      listener(migrateClockboardState(change.newValue))
+    }
+  }
+
+  syncedStorage.watch(callbackMap)
+
+  return () => syncedStorage.unwatch(callbackMap)
 }
 
 export const updateClockboardState = async (

@@ -1,9 +1,44 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { migrateClockboardState } from "./storage"
+const STORAGE_KEY = "clockboard-state"
+
+const createMockStorageArea = (initialValues: Record<string, string> = {}) => {
+  const values = new Map(Object.entries(initialValues))
+
+  return {
+    values,
+    get: vi.fn(async (keys?: string | string[]) => {
+      if (typeof keys === "undefined") {
+        return Object.fromEntries(values)
+      }
+
+      const keyList = Array.isArray(keys) ? keys : [keys]
+      return Object.fromEntries(keyList.map((key) => [key, values.get(key)]))
+    }),
+    set: vi.fn(async (items: Record<string, string>) => {
+      Object.entries(items).forEach(([key, value]) => {
+        values.set(key, value)
+      })
+    }),
+    remove: vi.fn(async (keys: string | string[]) => {
+      ;(Array.isArray(keys) ? keys : [keys]).forEach((key) => {
+        values.delete(key)
+      })
+    }),
+    clear: vi.fn(async () => {
+      values.clear()
+    })
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.resetModules()
+})
 
 describe("migrateClockboardState", () => {
-  it("falls back to default widgets for missing or invalid state", () => {
+  it("falls back to default widgets for missing or invalid state", async () => {
+    const { migrateClockboardState } = await import("./storage")
     const missingState = migrateClockboardState(undefined)
     const invalidState = migrateClockboardState({ version: 2, widgets: [] })
 
@@ -16,66 +51,30 @@ describe("migrateClockboardState", () => {
     expect(invalidState.widgets).toHaveLength(2)
   })
 
-  it("migrates v1 items into v2 widgets and drops legacy settings", () => {
+  it("drops unsupported legacy state shapes", async () => {
+    const { migrateClockboardState } = await import("./storage")
     const migrated = migrateClockboardState({
       version: 1,
-      settings: {
-        boardTitle: "My board",
-        showDate: false
-      },
       items: [
         {
           id: "clock-1",
           kind: "clock",
           title: "Paris",
-          timeZone: "Europe/Paris",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-02T00:00:00.000Z"
-        },
-        {
-          id: "countdown-1",
-          kind: "countdown",
-          title: "Launch",
-          timeZone: "America/New_York",
-          targetDateTime: "2026-01-01T09:30",
-          createdAt: "2026-01-03T00:00:00.000Z",
-          updatedAt: "2026-01-04T00:00:00.000Z"
+          timeZone: "Europe/Paris"
         }
       ]
     })
 
-    expect(migrated).toEqual({
-      version: 2,
-      widgets: [
-        {
-          id: "clock-1",
-          kind: "clock",
-          title: "Paris",
-          placement: "main",
-          settings: {
-            timeZone: "Europe/Paris"
-          },
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-02T00:00:00.000Z"
-        },
-        {
-          id: "countdown-1",
-          kind: "countdown",
-          title: "Launch",
-          placement: "main",
-          settings: {
-            targetAt: "2026-01-01T14:30:00.000Z"
-          },
-          createdAt: "2026-01-03T00:00:00.000Z",
-          updatedAt: "2026-01-04T00:00:00.000Z"
-        }
-      ]
-    })
-    expect(migrated).not.toHaveProperty("settings")
-    expect(migrated.widgets[1]?.settings).not.toHaveProperty("timeZone")
+    expect(migrated.version).toBe(2)
+    expect(migrated.widgets).toHaveLength(2)
+    expect(migrated.widgets.map((widget) => widget.kind)).toEqual([
+      "clock",
+      "countdown"
+    ])
   })
 
-  it("sanitizes existing v2 widgets", () => {
+  it("sanitizes existing v2 widgets", async () => {
+    const { migrateClockboardState } = await import("./storage")
     const migrated = migrateClockboardState({
       version: 2,
       settings: {
@@ -128,5 +127,80 @@ describe("migrateClockboardState", () => {
       }
     })
     expect(migrated).not.toHaveProperty("settings")
+  })
+})
+
+describe("watchClockboardState", () => {
+  it("watches sync storage changes", async () => {
+    const addListener = vi.fn()
+    const mockRemoveListener = vi.fn()
+    const syncedStorageArea = createMockStorageArea()
+
+    vi.stubGlobal("chrome", {
+      storage: {
+        sync: syncedStorageArea,
+        onChanged: {
+          addListener,
+          removeListener: mockRemoveListener
+        }
+      }
+    })
+
+    const { watchClockboardState } = await import("./storage")
+    const handleChange = vi.fn()
+    const stopWatching = watchClockboardState(handleChange)
+    const storageChangeListener = addListener.mock.calls[0]?.[0]
+
+    expect(storageChangeListener).toBeTypeOf("function")
+
+    storageChangeListener?.(
+      {
+        [STORAGE_KEY]: {
+          newValue: JSON.stringify({
+            version: 2,
+            widgets: [
+              {
+                id: "clock-1",
+                kind: "clock",
+                title: "Tokyo",
+                placement: "main",
+                settings: {
+                  timeZone: "Asia/Tokyo"
+                },
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-02T00:00:00.000Z"
+              }
+            ]
+          }),
+          oldValue: undefined
+        }
+      },
+      "sync"
+    )
+
+    await vi.waitFor(() => {
+      expect(handleChange).toHaveBeenCalledTimes(1)
+    })
+
+    expect(handleChange).toHaveBeenCalledWith({
+      version: 2,
+      widgets: [
+        {
+          id: "clock-1",
+          kind: "clock",
+          title: "Tokyo",
+          placement: "main",
+          settings: {
+            timeZone: "Asia/Tokyo"
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-02T00:00:00.000Z"
+        }
+      ]
+    })
+
+    stopWatching()
+
+    expect(mockRemoveListener).toHaveBeenCalledWith(storageChangeListener)
   })
 })
