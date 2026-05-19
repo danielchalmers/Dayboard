@@ -10,6 +10,7 @@ const storyState = {
       id: "austin",
       kind: "clock",
       title: "Austin",
+      color: "#26a69a",
       placement: "main",
       settings: {
         timeZone: "America/Chicago"
@@ -21,6 +22,7 @@ const storyState = {
       id: "new-york",
       kind: "clock",
       title: "New York",
+      color: "#4f7cff",
       placement: "main",
       settings: {
         timeZone: "America/New_York"
@@ -32,6 +34,7 @@ const storyState = {
       id: "london",
       kind: "clock",
       title: "London",
+      color: "#d69e2e",
       placement: "main",
       settings: {
         timeZone: "Europe/London"
@@ -43,6 +46,7 @@ const storyState = {
       id: "tokyo",
       kind: "clock",
       title: "Tokyo",
+      color: "#8b5cf6",
       placement: "main",
       settings: {
         timeZone: "Asia/Tokyo"
@@ -54,6 +58,7 @@ const storyState = {
       id: "weekend-getaway",
       kind: "countdown",
       title: "Weekend getaway",
+      color: "#e76f51",
       placement: "main",
       settings: {
         targetAt: "2025-05-17T13:00:00.000Z"
@@ -65,6 +70,7 @@ const storyState = {
       id: "summer-vacation",
       kind: "countdown",
       title: "Summer vacation",
+      color: "#26a69a",
       placement: "main",
       settings: {
         targetAt: "2025-06-28T13:00:00.000Z"
@@ -76,6 +82,7 @@ const storyState = {
       id: "emma-birthday",
       kind: "countdown",
       title: "Emma's birthday",
+      color: "#d69e2e",
       placement: "main",
       settings: {
         targetAt: "2025-07-14T05:00:00.000Z"
@@ -87,6 +94,7 @@ const storyState = {
       id: "christmas",
       kind: "countdown",
       title: "Christmas",
+      color: "#4f7cff",
       placement: "main",
       settings: {
         targetAt: "2025-12-25T06:00:00.000Z"
@@ -184,6 +192,7 @@ test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
   await page.getByLabel("Name").fill("Paris")
   await page.getByLabel("Time zone").fill("Europe/Paris")
+  await page.getByLabel("Mint").click()
   await attachScreenshot(testInfo, page, "clockboard-add-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
@@ -192,6 +201,7 @@ test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
   await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
   await page.getByLabel("Name").fill("Product launch")
   await page.getByLabel("When").fill("2025-06-12T09:00")
+  await page.getByLabel("Coral").click()
   await attachScreenshot(testInfo, page, "clockboard-add-countdown-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 

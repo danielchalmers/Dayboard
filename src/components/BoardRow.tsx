@@ -28,6 +28,13 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   { item, now, compact = false, actions, articleProps, className, style },
   ref
 ) {
+  const rowStyle = item.color
+    ? ({
+        ...style,
+        "--widget-accent": item.color
+      } as CSSProperties)
+    : style
+
   const rowClassName = [
     compact ? "board-row board-row--compact" : "board-row",
     className
@@ -42,7 +49,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : item.settings.timeZone
 
     return (
-      <article {...articleProps} className={rowClassName} ref={ref} style={style}>
+      <article {...articleProps} className={rowClassName} ref={ref} style={rowStyle}>
         <div className="board-row__header">
           <div className="board-row__identity">
             <h2>{item.title}</h2>
@@ -76,7 +83,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : "from now"
 
   return (
-    <article {...articleProps} className={rowClassName} ref={ref} style={style}>
+    <article {...articleProps} className={rowClassName} ref={ref} style={rowStyle}>
       <div className="board-row__header">
         <div className="board-row__identity">
           <h2>{item.title}</h2>

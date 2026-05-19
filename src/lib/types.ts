@@ -2,10 +2,43 @@ export type WidgetKind = "clock" | "countdown"
 
 export type WidgetPlacement = "main" | "more"
 
+export type WidgetColor = string | null
+
+export const WIDGET_COLOR_OPTIONS = [
+  {
+    label: "Theme accent",
+    value: null
+  },
+  {
+    label: "Blue",
+    value: "#4f7cff"
+  },
+  {
+    label: "Mint",
+    value: "#26a69a"
+  },
+  {
+    label: "Gold",
+    value: "#d69e2e"
+  },
+  {
+    label: "Coral",
+    value: "#e76f51"
+  },
+  {
+    label: "Violet",
+    value: "#8b5cf6"
+  }
+] as const
+
+export const WIDGET_COLOR_INPUT_FALLBACK =
+  WIDGET_COLOR_OPTIONS.find((option) => option.value !== null)?.value ?? "#4f7cff"
+
 export interface WidgetBase {
   id: string
   kind: WidgetKind
   title: string
+  color: WidgetColor
   placement: WidgetPlacement
   createdAt: string
   updatedAt: string
@@ -48,6 +81,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       id: "home-clock",
       kind: "clock",
       title: "Local time",
+      color: null,
       placement: DEFAULT_WIDGET_PLACEMENT,
       settings: {
         timeZone: DEFAULT_TIME_ZONE
@@ -59,6 +93,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       id: "tomorrow-countdown",
       kind: "countdown",
       title: "Tomorrow morning",
+      color: null,
       placement: DEFAULT_WIDGET_PLACEMENT,
       settings: {
         targetAt: tomorrow.toISOString()

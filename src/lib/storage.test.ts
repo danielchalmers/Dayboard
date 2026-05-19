@@ -86,6 +86,7 @@ describe("migrateClockboardState", () => {
           id: "clock-1",
           kind: "clock",
           title: "Clock",
+          color: "#4f7cff",
           placement: "somewhere",
           settings: {
             timeZone: ""
@@ -97,6 +98,7 @@ describe("migrateClockboardState", () => {
           id: "countdown-1",
           kind: "countdown",
           title: "Countdown",
+          color: "violet",
           placement: "more",
           settings: {
             targetAt: "not-an-instant"
@@ -113,6 +115,7 @@ describe("migrateClockboardState", () => {
       kind: "clock",
       placement: "main",
       title: "Clock",
+      color: "#4f7cff",
       settings: {
         timeZone: expect.any(String)
       }
@@ -122,6 +125,7 @@ describe("migrateClockboardState", () => {
       kind: "countdown",
       placement: "more",
       title: "Countdown",
+      color: null,
       settings: {
         targetAt: expect.stringMatching(/Z$/)
       }
@@ -163,6 +167,7 @@ describe("watchClockboardState", () => {
                 id: "clock-1",
                 kind: "clock",
                 title: "Tokyo",
+                color: "#8b5cf6",
                 placement: "main",
                 settings: {
                   timeZone: "Asia/Tokyo"
@@ -189,6 +194,7 @@ describe("watchClockboardState", () => {
           id: "clock-1",
           kind: "clock",
           title: "Tokyo",
+          color: "#8b5cf6",
           placement: "main",
           settings: {
             timeZone: "Asia/Tokyo"

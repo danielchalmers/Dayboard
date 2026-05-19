@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 
 import {
   dateTimeInputValueToIsoInstant,
   getTimeZoneOptions,
   isoInstantToDateTimeInputValue
 } from "~/lib/time"
-import type { Widget } from "~/lib/types"
+import {
+  WIDGET_COLOR_INPUT_FALLBACK,
+  WIDGET_COLOR_OPTIONS,
+  type Widget,
+  type WidgetColor
+} from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 
 interface ItemDialogProps {
@@ -100,6 +105,10 @@ export const ItemDialog = ({
     )
   }
 
+  const updateColor = (color: WidgetColor) => {
+    setDraft((current) => (current ? { ...current, color } : current))
+  }
+
   return (
     <div className="modal-backdrop">
       <section
@@ -147,6 +156,38 @@ export const ItemDialog = ({
                 />
               </label>
             ) : null}
+
+            <fieldset className="color-picker">
+              <legend>Color</legend>
+              <div className="color-picker__options">
+                {WIDGET_COLOR_OPTIONS.map((option) => {
+                  const optionId = `widget-color-${option.value ?? "theme"}`
+                  const swatchStyle =
+                    option.value === null
+                      ? undefined
+                      : ({
+                          "--swatch-color": option.value
+                        } as CSSProperties)
+
+                  return (
+                    <label
+                      className="color-picker__option"
+                      data-selected={draft.color === option.value}
+                      key={optionId}>
+                      <input
+                        checked={draft.color === option.value}
+                        name="widget-color"
+                        onChange={() => updateColor(option.value)}
+                        type="radio"
+                        value={option.value ?? WIDGET_COLOR_INPUT_FALLBACK}
+                      />
+                      <span className="color-picker__swatch" style={swatchStyle} />
+                      <span className="color-picker__label">{option.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
 
             {draft.kind === "countdown" ? (
               <label>

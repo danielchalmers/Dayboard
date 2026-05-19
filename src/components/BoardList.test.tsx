@@ -9,6 +9,7 @@ const widgets: Widget[] = [
     id: "local",
     kind: "clock",
     title: "Local time",
+    color: null,
     placement: "main",
     settings: {
       timeZone: "UTC"
@@ -20,6 +21,7 @@ const widgets: Widget[] = [
     id: "launch",
     kind: "countdown",
     title: "Launch",
+    color: null,
     placement: "main",
     settings: {
       targetAt: "2026-01-02T09:00:00.000Z"

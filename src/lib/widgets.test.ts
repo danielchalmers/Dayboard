@@ -7,6 +7,7 @@ const createWidget = (id: string, title: string): Widget => ({
   id,
   kind: "clock",
   title,
+  color: null,
   placement: "main",
   settings: {
     timeZone: "UTC"

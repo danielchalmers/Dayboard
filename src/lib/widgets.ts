@@ -20,13 +20,14 @@ export interface WidgetDefinition<K extends WidgetKind> {
 const createClockWidget = (now = new Date()): ClockWidget => {
   const timestamp = now.toISOString()
 
-  return {
-    id: crypto.randomUUID(),
-    kind: "clock",
-    title: "New clock",
-    placement: DEFAULT_WIDGET_PLACEMENT,
-    settings: {
-      timeZone: DEFAULT_TIME_ZONE
+    return {
+      id: crypto.randomUUID(),
+      kind: "clock",
+      title: "New clock",
+      color: null,
+      placement: DEFAULT_WIDGET_PLACEMENT,
+      settings: {
+        timeZone: DEFAULT_TIME_ZONE
     },
     createdAt: timestamp,
     updatedAt: timestamp
@@ -38,13 +39,14 @@ const createCountdownWidget = (now = new Date()): CountdownWidget => {
   const target = new Date(now)
   target.setHours(target.getHours() + 1, 0, 0, 0)
 
-  return {
-    id: crypto.randomUUID(),
-    kind: "countdown",
-    title: "New countdown",
-    placement: DEFAULT_WIDGET_PLACEMENT,
-    settings: {
-      targetAt: target.toISOString()
+    return {
+      id: crypto.randomUUID(),
+      kind: "countdown",
+      title: "New countdown",
+      color: null,
+      placement: DEFAULT_WIDGET_PLACEMENT,
+      settings: {
+        targetAt: target.toISOString()
     },
     createdAt: timestamp,
     updatedAt: timestamp

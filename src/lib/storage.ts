@@ -55,6 +55,9 @@ const asPlacement = (
   fallback: WidgetPlacement = DEFAULT_WIDGET_PLACEMENT
 ): WidgetPlacement => (value === "main" || value === "more" ? value : fallback)
 
+const sanitizeWidgetColor = (value: unknown) =>
+  typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : null
+
 const sanitizeIsoInstant = (value: unknown, fallback: string): string => {
   if (typeof value !== "string") {
     return fallback
@@ -70,6 +73,7 @@ const sanitizeWidgetBase = (value: Record<string, unknown>) => {
   return {
     id: asString(value.id, crypto.randomUUID()),
     title: asString(value.title, "Untitled"),
+    color: sanitizeWidgetColor(value.color),
     placement: asPlacement(value.placement),
     createdAt: asString(value.createdAt, now),
     updatedAt: asString(value.updatedAt, now)

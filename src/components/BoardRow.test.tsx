@@ -7,12 +7,13 @@ import type { Widget } from "~/lib/types"
 describe("BoardRow", () => {
   it("renders a clock card with time and date metadata", () => {
     const item: Widget = {
-      id: "utc",
-      kind: "clock",
-      title: "UTC",
-      placement: "main",
-      settings: {
-        timeZone: "UTC"
+        id: "utc",
+        kind: "clock",
+        title: "UTC",
+        color: "#4f7cff",
+        placement: "main",
+        settings: {
+          timeZone: "UTC"
       },
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z"
@@ -23,6 +24,7 @@ describe("BoardRow", () => {
     expect(screen.getByRole("heading", { name: "UTC" })).toBeInTheDocument()
     expect(screen.getByLabelText("UTC time")).toHaveTextContent(/12:30/)
     expect(screen.getByText(/Thu, Jan 1, 2026/).closest(".board-row__meta")).toHaveTextContent("UTC")
+    expect(screen.getByRole("article")).toHaveStyle("--widget-accent: #4f7cff")
   })
 
   it("renders card actions when provided", () => {
@@ -30,6 +32,7 @@ describe("BoardRow", () => {
       id: "local",
       kind: "clock",
       title: "Local time",
+      color: null,
       placement: "main",
       settings: {
         timeZone: "UTC"
@@ -54,6 +57,7 @@ describe("BoardRow", () => {
       id: "deadline",
       kind: "countdown",
       title: "Deadline",
+      color: null,
       placement: "main",
       settings: {
         targetAt: "2026-01-01T12:30:00.000Z"

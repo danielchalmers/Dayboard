@@ -328,8 +328,13 @@ details > summary::-webkit-details-marker {
 /* ── Card ──────────────────────────────────────────────────────────────── */
 
 .board-row {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: color-mix(
+    in srgb,
+    var(--widget-accent, var(--accent)) 7%,
+    var(--surface)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--widget-accent, var(--accent)) 18%, var(--line));
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   display: grid;
@@ -363,6 +368,7 @@ details > summary::-webkit-details-marker {
 }
 
 .board-row h2 {
+  color: color-mix(in srgb, var(--widget-accent, var(--accent)) 28%, var(--text));
   font-size: clamp(1.05rem, 1.8vw, 1.35rem);
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -434,7 +440,11 @@ details > summary::-webkit-details-marker {
 .board-row--draggable:hover:not(.board-row--dragging),
 .board-row--draggable:focus-visible,
 .board-row--menu-open {
-  background: color-mix(in srgb, var(--surface) 86%, CanvasText 14%);
+  background: color-mix(
+    in srgb,
+    var(--widget-accent, var(--accent)) 11%,
+    color-mix(in srgb, var(--surface) 86%, CanvasText 14%)
+  );
   border-color: var(--line-strong);
   box-shadow: var(--shadow-card-raised);
 }
@@ -560,6 +570,75 @@ select:hover {
   font-size: 0.88rem;
   line-height: 1.5;
   margin: 0;
+}
+
+.color-picker {
+  border: 0;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.color-picker legend {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.color-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.color-picker__option {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  min-block-size: 42px;
+  padding: 8px 10px;
+}
+
+.color-picker__option:hover {
+  border-color: color-mix(in srgb, CanvasText 36%, Canvas);
+}
+
+.color-picker__option[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
+  box-shadow: var(--shadow-sm);
+}
+
+.color-picker__option input {
+  accent-color: var(--accent);
+  inline-size: 16px;
+  margin: 0;
+  min-block-size: 16px;
+}
+
+.color-picker__swatch {
+  background: var(--accent);
+  block-size: 18px;
+  border: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 24%, transparent);
+  inline-size: 18px;
+}
+
+.color-picker__option:has(input:checked) .color-picker__swatch {
+  background: var(--swatch-color, var(--accent));
+}
+
+.color-picker__label {
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
 }
 
 /* ── Status & empty states ─────────────────────────────────────────────── */

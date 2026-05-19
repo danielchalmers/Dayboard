@@ -115,9 +115,15 @@ test("add clock flow works from the new tab page", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
   await page.getByLabel("Name").fill("Paris")
   await page.getByLabel("Time zone").fill("Europe/Paris")
+  await page.getByLabel("Mint").click()
   await page.getByRole("button", { name: "Save clock" }).click()
 
   await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible()
+  await expect(
+    page
+      .locator(".board-row")
+      .filter({ has: page.getByRole("heading", { name: "Paris" }) })
+  ).toHaveAttribute("style", /--widget-accent:\s?#26a69a/)
 })
 
 test("add and edit countdown works without a time-zone field", async ({ page }) => {
@@ -137,9 +143,15 @@ test("add and edit countdown works without a time-zone field", async ({ page }) 
   await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await expect(page.getByLabel("Time zone")).toHaveCount(0)
   await page.getByLabel("Name").fill("Launch day")
+  await page.getByLabel("Coral").click()
   await page.getByRole("button", { name: "Save changes" }).click()
 
   await expect(page.getByRole("heading", { name: "Launch day" })).toBeVisible()
+  await expect(
+    page
+      .locator(".board-row")
+      .filter({ has: page.getByRole("heading", { name: "Launch day" }) })
+  ).toHaveAttribute("style", /--widget-accent:\s?#e76f51/)
 })
 
 test("edit dialog opens for an existing clock", async ({ page }) => {
@@ -150,6 +162,7 @@ test("edit dialog opens for an existing clock", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await expect(page.getByLabel("Name")).toHaveValue("Local time")
   await expect(page.getByLabel("Time zone")).toBeVisible()
+  await expect(page.getByLabel("Theme accent")).toBeChecked()
 })
 
 test("delete flow removes an existing widget", async ({ page }) => {

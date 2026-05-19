@@ -13,6 +13,7 @@ const countdownWidget = (targetAt: string): CountdownWidget => ({
   id: "launch",
   kind: "countdown",
   title: "Launch",
+  color: null,
   placement: "main",
   settings: {
     targetAt
