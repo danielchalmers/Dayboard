@@ -34,7 +34,6 @@ export default function NewTabPage() {
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
 
   useEffect(() => {
-    document.title = ""
     document.head.querySelector("title")?.remove()
   }, [])
 
