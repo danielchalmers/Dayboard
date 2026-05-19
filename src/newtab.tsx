@@ -34,6 +34,11 @@ export default function NewTabPage() {
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
 
   useEffect(() => {
+    document.title = ""
+    document.head.querySelector("title")?.remove()
+  }, [])
+
+  useEffect(() => {
     let tabIcon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
 
     if (!tabIcon) {
