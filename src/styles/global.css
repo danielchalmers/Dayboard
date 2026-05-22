@@ -527,7 +527,16 @@ details > summary::-webkit-details-marker {
   box-shadow: var(--shadow-card-hover);
   opacity: 0.92;
   z-index: 50;
+  animation: none !important;
+  transition: none !important;
 }
+
+/* Disable default transitions and optimize for GPU layers during active drag operations */
+.board-list--dragging .board-row {
+  transition: none;
+  will-change: transform;
+}
+
 
 .board-row--drop-target {
   border-color: var(--accent);
