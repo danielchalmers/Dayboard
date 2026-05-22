@@ -13,6 +13,7 @@ import {
   getCountdownParts
 } from "~/lib/time"
 import type { Widget } from "~/lib/types"
+import { getPresetCssVars } from "~/lib/colors"
 
 interface BoardRowProps {
   item: Widget
@@ -30,10 +31,23 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
 ) {
   const rowClassName = [
     compact ? "board-row board-row--compact" : "board-row",
+    `board-row--theme-${item.colorPreset}`,
     className
   ]
     .filter(Boolean)
     .join(" ")
+
+  const combinedStyle = {
+    ...style,
+    ...getPresetCssVars(item.colorPreset)
+  }
+
+  const colorDot = item.colorPreset !== "slate" ? (
+    <span
+      className={`board-row__color-dot board-row__color-dot--${item.colorPreset}`}
+      aria-hidden="true"
+    />
+  ) : null
 
   if (item.kind === "clock") {
     const detail =
@@ -42,10 +56,18 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : item.settings.timeZone
 
     return (
-      <article {...articleProps} className={rowClassName} ref={ref} style={style}>
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
         <div className="board-row__header">
           <div className="board-row__identity">
-            <h2>{item.title}</h2>
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
             <p className="board-row__detail">{detail}</p>
           </div>
         </div>
@@ -76,10 +98,18 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : "from now"
 
   return (
-    <article {...articleProps} className={rowClassName} ref={ref} style={style}>
+    <article
+      {...articleProps}
+      className={rowClassName}
+      ref={ref}
+      style={combinedStyle}
+      data-color-preset={item.colorPreset}>
       <div className="board-row__header">
         <div className="board-row__identity">
-          <h2>{item.title}</h2>
+          <h2 className="board-row__title">
+            {colorDot}
+            {item.title}
+          </h2>
           <p className="board-row__detail">{formatCountdownTarget(item)}</p>
         </div>
       </div>

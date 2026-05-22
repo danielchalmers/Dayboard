@@ -2,11 +2,26 @@ export type WidgetKind = "clock" | "countdown"
 
 export type WidgetPlacement = "main" | "more"
 
+export type WidgetColorPreset =
+  | "slate"
+  | "rose"
+  | "amber"
+  | "emerald"
+  | "sky"
+  | "violet"
+  | "teal"
+  | "coral"
+  | "indigo"
+  | "mint"
+
+export const DEFAULT_COLOR_PRESET: WidgetColorPreset = "slate"
+
 export interface WidgetBase {
   id: string
   kind: WidgetKind
   title: string
   placement: WidgetPlacement
+  colorPreset: WidgetColorPreset
   createdAt: string
   updatedAt: string
 }
@@ -28,7 +43,7 @@ export interface CountdownWidget extends WidgetBase {
 export type Widget = ClockWidget | CountdownWidget
 
 export interface ClockboardState {
-  version: 2
+  version: 3
   widgets: Widget[]
 }
 
@@ -49,6 +64,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       kind: "clock",
       title: "Local time",
       placement: DEFAULT_WIDGET_PLACEMENT,
+      colorPreset: DEFAULT_COLOR_PRESET,
       settings: {
         timeZone: DEFAULT_TIME_ZONE
       },
@@ -60,6 +76,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       kind: "countdown",
       title: "Tomorrow morning",
       placement: DEFAULT_WIDGET_PLACEMENT,
+      colorPreset: DEFAULT_COLOR_PRESET,
       settings: {
         targetAt: tomorrow.toISOString()
       },
@@ -70,7 +87,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
 }
 
 export const createDefaultState = (now = new Date()): ClockboardState => ({
-  version: 2,
+  version: 3,
   widgets: createDefaultWidgets(now)
 })
 
@@ -83,3 +100,4 @@ export const toDateTimeInputValue = (date: Date): string => {
 
   return `${year}-${month}-${day}T${hour}:${minute}`
 }
+

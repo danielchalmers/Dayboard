@@ -40,9 +40,9 @@ describe("migrateClockboardState", () => {
   it("falls back to default widgets for missing or invalid state", async () => {
     const { migrateClockboardState } = await import("./storage")
     const missingState = migrateClockboardState(undefined)
-    const invalidState = migrateClockboardState({ version: 2, widgets: [] })
+    const invalidState = migrateClockboardState({ version: 3, widgets: [] })
 
-    expect(missingState.version).toBe(2)
+    expect(missingState.version).toBe(3)
     expect(missingState.widgets).toHaveLength(2)
     expect(missingState.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
@@ -51,7 +51,7 @@ describe("migrateClockboardState", () => {
     expect(invalidState.widgets).toHaveLength(2)
   })
 
-  it("drops unsupported legacy state shapes", async () => {
+  it("drops unsupported legacy version 1 state shapes", async () => {
     const { migrateClockboardState } = await import("./storage")
     const migrated = migrateClockboardState({
       version: 1,
@@ -65,7 +65,7 @@ describe("migrateClockboardState", () => {
       ]
     })
 
-    expect(migrated.version).toBe(2)
+    expect(migrated.version).toBe(3)
     expect(migrated.widgets).toHaveLength(2)
     expect(migrated.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
@@ -73,7 +73,7 @@ describe("migrateClockboardState", () => {
     ])
   })
 
-  it("sanitizes existing v2 widgets", async () => {
+  it("migrates and sanitizes existing version 2 widgets, applying colorPreset", async () => {
     const { migrateClockboardState } = await import("./storage")
     const migrated = migrateClockboardState({
       version: 2,
@@ -98,6 +98,7 @@ describe("migrateClockboardState", () => {
           kind: "countdown",
           title: "Countdown",
           placement: "more",
+          colorPreset: "invalid-color-preset-so-should-fallback",
           settings: {
             targetAt: "not-an-instant"
           },
@@ -107,11 +108,12 @@ describe("migrateClockboardState", () => {
       ]
     })
 
-    expect(migrated.version).toBe(2)
+    expect(migrated.version).toBe(3)
     expect(migrated.widgets[0]).toMatchObject({
       id: "clock-1",
       kind: "clock",
       placement: "main",
+      colorPreset: "slate", // default color preset applied
       title: "Clock",
       settings: {
         timeZone: expect.any(String)
@@ -121,6 +123,7 @@ describe("migrateClockboardState", () => {
       id: "countdown-1",
       kind: "countdown",
       placement: "more",
+      colorPreset: "slate", // invalid color preset sanitized to slate
       title: "Countdown",
       settings: {
         targetAt: expect.stringMatching(/Z$/)
@@ -131,6 +134,65 @@ describe("migrateClockboardState", () => {
 })
 
 describe("watchClockboardState", () => {
+  it("watches fallback storage changes", async () => {
+    const { watchClockboardState } = await import("./storage")
+    const handleChange = vi.fn()
+    const stopWatching = watchClockboardState(handleChange)
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: STORAGE_KEY,
+        newValue: JSON.stringify({
+          version: 3,
+          widgets: [
+            {
+              id: "clock-1",
+              kind: "clock",
+              title: "Tokyo",
+              placement: "main",
+              colorPreset: "rose",
+              settings: {
+                timeZone: "Asia/Tokyo"
+              },
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-02T00:00:00.000Z"
+            }
+          ]
+        })
+      })
+    )
+
+    expect(handleChange).toHaveBeenCalledWith({
+      version: 3,
+      widgets: [
+        {
+          id: "clock-1",
+          kind: "clock",
+          title: "Tokyo",
+          placement: "main",
+          colorPreset: "rose",
+          settings: {
+            timeZone: "Asia/Tokyo"
+          },
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-02T00:00:00.000Z"
+        }
+      ]
+    })
+
+    stopWatching()
+    handleChange.mockClear()
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: STORAGE_KEY,
+        newValue: null
+      })
+    )
+
+    expect(handleChange).not.toHaveBeenCalled()
+  })
+
   it("watches sync storage changes", async () => {
     const addListener = vi.fn()
     const mockRemoveListener = vi.fn()
@@ -157,13 +219,14 @@ describe("watchClockboardState", () => {
       {
         [STORAGE_KEY]: {
           newValue: JSON.stringify({
-            version: 2,
+            version: 3,
             widgets: [
               {
                 id: "clock-1",
                 kind: "clock",
                 title: "Tokyo",
                 placement: "main",
+                colorPreset: "teal",
                 settings: {
                   timeZone: "Asia/Tokyo"
                 },
@@ -183,13 +246,14 @@ describe("watchClockboardState", () => {
     })
 
     expect(handleChange).toHaveBeenCalledWith({
-      version: 2,
+      version: 3,
       widgets: [
         {
           id: "clock-1",
           kind: "clock",
           title: "Tokyo",
           placement: "main",
+          colorPreset: "teal",
           settings: {
             timeZone: "Asia/Tokyo"
           },

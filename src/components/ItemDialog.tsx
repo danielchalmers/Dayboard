@@ -5,8 +5,9 @@ import {
   getTimeZoneOptions,
   isoInstantToDateTimeInputValue
 } from "~/lib/time"
-import type { Widget } from "~/lib/types"
+import type { Widget, WidgetColorPreset } from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
+import { ColorPresetPicker } from "~/components/ColorPresetPicker"
 
 interface ItemDialogProps {
   isOpen: boolean
@@ -72,6 +73,10 @@ export const ItemDialog = ({
     setDraft((current) => (current ? { ...current, title } : current))
   }
 
+  const updateColorPreset = (colorPreset: WidgetColorPreset) => {
+    setDraft((current) => (current ? { ...current, colorPreset } : current))
+  }
+
   const updateTimeZone = (timeZone: string) => {
     setDraft((current) =>
       current?.kind === "clock"
@@ -125,18 +130,24 @@ export const ItemDialog = ({
             })
           }}>
           <div className="form-grid">
-            <label>
+            <label className="form-label-group">
               <span>Name</span>
               <input
                 onChange={(event) => updateTitle(event.currentTarget.value)}
                 required
                 type="text"
                 value={draft.title}
+                placeholder="Give it a name..."
               />
             </label>
 
+            <ColorPresetPicker
+              value={draft.colorPreset}
+              onChange={updateColorPreset}
+            />
+
             {draft.kind === "clock" ? (
-              <label>
+              <label className="form-label-group">
                 <span>Time zone</span>
                 <input
                   list="clockboard-time-zones"
@@ -144,12 +155,13 @@ export const ItemDialog = ({
                   required
                   type="text"
                   value={draft.settings.timeZone}
+                  placeholder="Select time zone..."
                 />
               </label>
             ) : null}
 
             {draft.kind === "countdown" ? (
-              <label>
+              <label className="form-label-group">
                 <span>{widgetDefinition.editor.targetLabel}</span>
                 <input
                   onChange={(event) => updateTargetAt(event.currentTarget.value)}

@@ -1,6 +1,7 @@
 import {
   DEFAULT_TIME_ZONE,
   DEFAULT_WIDGET_PLACEMENT,
+  DEFAULT_COLOR_PRESET,
   type ClockWidget,
   type CountdownWidget,
   type Widget,
@@ -25,6 +26,7 @@ const createClockWidget = (now = new Date()): ClockWidget => {
     kind: "clock",
     title: "New clock",
     placement: DEFAULT_WIDGET_PLACEMENT,
+    colorPreset: DEFAULT_COLOR_PRESET,
     settings: {
       timeZone: DEFAULT_TIME_ZONE
     },
@@ -43,6 +45,7 @@ const createCountdownWidget = (now = new Date()): CountdownWidget => {
     kind: "countdown",
     title: "New countdown",
     placement: DEFAULT_WIDGET_PLACEMENT,
+    colorPreset: DEFAULT_COLOR_PRESET,
     settings: {
       targetAt: target.toISOString()
     },
