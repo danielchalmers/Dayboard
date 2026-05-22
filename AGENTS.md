@@ -13,7 +13,8 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Do not add per-item color, seconds, or 12-hour/24-hour controls.
 - Clocks use the user's system time format through `Intl.DateTimeFormat`.
 - Countdowns use natural language such as `5 days, 3 hours from now`.
-- User-facing copy should be concise, warm, and not overly explanatory. Dialog titles should name the action and kind, such as `Edit countdown`, not the item name.
+- User-facing copy should be concise, warm, and not overly explanatory.
+- Dialog titles should name the action and kind, such as `Edit countdown`, not the item name.
 - Keep permissions minimal. Clockboard should only need `storage`.
 
 ## Architecture
@@ -27,6 +28,13 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Keep the extension new-tab-only for this phase; do not reintroduce popup or options manifest entries.
 - Keep checked-in local versions at `0.0.0` in both `package.json.version` and `package.json.manifest.version`.
 - Keep support for both Chrome and Edge MV3 builds.
+
+## Workflow
+
+- Read the nearest relevant code before editing; preserve the existing structure unless the task requires changing it.
+- Keep changes narrow and durable. Avoid broad abstractions unless they remove real duplication or make a rule testable.
+- Prefer repository-local evidence over memory or chat context.
+- If a rule becomes important enough to repeat, consider whether it belongs in a test, CI check, or script.
 
 ## Commands
 
@@ -78,7 +86,8 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Avoid broad abstractions unless they remove real duplication.
 - Keep layout stable at mobile and desktop widths.
 - Use semantic controls and accessible labels.
-- Keep buttons and form controls native-feeling, crisp, and restrained. Buttons should use a pointer cursor and should not move on hover.
+- Keep buttons and form controls native-feeling, crisp, and restrained.
+- Buttons should use a pointer cursor and should not move on hover.
 - Dropdowns should close when clicking outside them or when selecting an action.
 - Dialogs and message views should open centered in the viewport.
 - Use subtle shadows for cards, dropdowns, and dialogs; avoid broad glow effects.
