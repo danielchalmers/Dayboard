@@ -14,6 +14,7 @@ const countdownWidget = (targetAt: string): CountdownWidget => ({
   kind: "countdown",
   title: "Launch",
   placement: "main",
+  colorPreset: "slate",
   settings: {
     targetAt
   },

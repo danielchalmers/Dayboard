@@ -120,6 +120,44 @@ test("add clock flow works from the new tab page", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible()
 })
 
+test("multiple open tabs stay synchronized", async ({ context, page }) => {
+  await openFreshNewTab(page)
+
+  const secondPage = await context.newPage()
+  const thirdPage = await context.newPage()
+
+  await secondPage.goto("/newtab.html")
+  await thirdPage.goto("/newtab.html")
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.getByLabel("Name").fill("Paris")
+  await page.getByLabel("Time zone").fill("Europe/Paris")
+  await page.getByRole("button", { name: "Save clock" }).click()
+
+  await expect(secondPage.getByRole("heading", { name: "Paris" })).toBeVisible()
+  await expect(thirdPage.getByRole("heading", { name: "Paris" })).toBeVisible()
+
+  await openWidgetMenu(secondPage, "Paris")
+  await secondPage.getByRole("button", { name: "Edit Paris" }).click()
+  await secondPage.getByLabel("Name").fill("Tokyo")
+  await secondPage.getByLabel("Time zone").fill("Asia/Tokyo")
+  await secondPage.getByRole("button", { name: "Save changes" }).click()
+
+  await expect(page.getByRole("heading", { name: "Tokyo" })).toBeVisible()
+  await expect(thirdPage.getByRole("heading", { name: "Tokyo" })).toBeVisible()
+
+  await openWidgetMenu(thirdPage, "Tokyo")
+  await thirdPage.getByRole("button", { name: "Delete Tokyo" }).click()
+  await thirdPage.getByRole("button", { name: "Delete widget" }).click()
+
+  await expect(page.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
+  await expect(secondPage.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
+
+  await secondPage.close()
+  await thirdPage.close()
+})
+
 test("add and edit countdown works without a time-zone field", async ({ page }) => {
   await openFreshNewTab(page)
 

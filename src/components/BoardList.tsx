@@ -268,7 +268,12 @@ export const BoardList = ({
       sensors={sensors}>
       <SortableContext items={itemIds} strategy={rectSortingStrategy}>
         <section
-          className={compact ? "board-list board-list--compact" : "board-list"}
+          className={[
+            compact ? "board-list board-list--compact" : "board-list",
+            activeId ? "board-list--dragging" : ""
+          ]
+            .filter(Boolean)
+            .join(" ")}
           aria-label="Clockboard widgets">
           {items.map((item, index) => (
             <SortableBoardRow

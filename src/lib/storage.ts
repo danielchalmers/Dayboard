@@ -4,11 +4,13 @@ import {
   createDefaultState,
   DEFAULT_TIME_ZONE,
   DEFAULT_WIDGET_PLACEMENT,
+  DEFAULT_COLOR_PRESET,
   type ClockboardState,
   type ClockWidget,
   type CountdownWidget,
   type Widget,
-  type WidgetPlacement
+  type WidgetPlacement,
+  type WidgetColorPreset
 } from "./types"
 
 export const STORAGE_KEY = "clockboard-state"
@@ -25,8 +27,10 @@ const readFallbackStorage = (): unknown => {
     return undefined
   }
 
-  const rawValue = localStorage.getItem(STORAGE_KEY)
+  return parseFallbackStorageValue(localStorage.getItem(STORAGE_KEY))
+}
 
+const parseFallbackStorageValue = (rawValue: string | null): unknown => {
   if (!rawValue) {
     return undefined
   }
@@ -55,6 +59,27 @@ const asPlacement = (
   fallback: WidgetPlacement = DEFAULT_WIDGET_PLACEMENT
 ): WidgetPlacement => (value === "main" || value === "more" ? value : fallback)
 
+const VALID_PRESETS = new Set<string>([
+  "slate",
+  "rose",
+  "amber",
+  "emerald",
+  "sky",
+  "violet",
+  "teal",
+  "coral",
+  "indigo",
+  "mint"
+])
+
+const asColorPreset = (
+  value: unknown,
+  fallback: WidgetColorPreset = DEFAULT_COLOR_PRESET
+): WidgetColorPreset =>
+  typeof value === "string" && VALID_PRESETS.has(value)
+    ? (value as WidgetColorPreset)
+    : fallback
+
 const sanitizeIsoInstant = (value: unknown, fallback: string): string => {
   if (typeof value !== "string") {
     return fallback
@@ -71,6 +96,7 @@ const sanitizeWidgetBase = (value: Record<string, unknown>) => {
     id: asString(value.id, crypto.randomUUID()),
     title: asString(value.title, "Untitled"),
     placement: asPlacement(value.placement),
+    colorPreset: asColorPreset(value.colorPreset),
     createdAt: asString(value.createdAt, now),
     updatedAt: asString(value.updatedAt, now)
   }
@@ -145,7 +171,7 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
   const widgets = sanitizeWidgets(value.widgets)
 
   return {
-    version: 2,
+    version: 3,
     widgets: widgets.length > 0 ? widgets : createDefaultState().widgets
   }
 }
@@ -172,6 +198,24 @@ export const writeClockboardState = async (
 export const watchClockboardState = (
   listener: (state: ClockboardState) => void
 ): (() => void) => {
+  if (!hasSyncedExtensionStorage()) {
+    if (typeof window === "undefined") {
+      return () => {}
+    }
+
+    const handleFallbackStorageChange = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY || event.key === null) {
+        listener(
+          migrateClockboardState(parseFallbackStorageValue(event.newValue))
+        )
+      }
+    }
+
+    window.addEventListener("storage", handleFallbackStorageChange)
+
+    return () => window.removeEventListener("storage", handleFallbackStorageChange)
+  }
+
   const callbackMap: StorageCallbackMap = {
     [STORAGE_KEY]: (change) => {
       listener(migrateClockboardState(change.newValue))
