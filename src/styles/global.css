@@ -366,8 +366,7 @@ details > summary::-webkit-details-marker {
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast),
-    box-shadow var(--t-fast),
-    transform var(--t-fast);
+    box-shadow var(--t-fast);
   animation: card-enter var(--t-normal) cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -518,7 +517,6 @@ details > summary::-webkit-details-marker {
 .board-row--menu-open {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 35%, var(--card-border-resolved));
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
 }
 
 .board-row--dragging {
