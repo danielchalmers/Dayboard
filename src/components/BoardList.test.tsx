@@ -71,4 +71,30 @@ describe("BoardList", () => {
     expect(screen.queryByRole("button", { name: "Reorder Local time" })).not.toBeInTheDocument()
     expect(container.querySelector('[aria-label="Edit Local time"]')).toBeInTheDocument()
   })
+
+  it("keeps the widget overlay open until an action closes it", () => {
+    const { container } = render(
+      <BoardList
+        items={widgets}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        renderItemActions={(_item, _index, { closeMenu }) => (
+          <>
+            <button type="button">Keep open</button>
+            <button onClick={closeMenu} type="button">
+              Done
+            </button>
+          </>
+        )}
+      />
+    )
+
+    fireEvent.contextMenu(container.querySelector(".board-row--draggable") as Element)
+    fireEvent.click(screen.getByRole("button", { name: "Keep open" }))
+
+    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }))
+
+    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+  })
 })

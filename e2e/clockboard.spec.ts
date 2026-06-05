@@ -62,6 +62,7 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
 
   await openWidgetMenu(page, "Tomorrow morning")
+  await expect(page.getByText("Theme color")).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
@@ -107,6 +108,21 @@ test("dropdowns close when clicking outside them", async ({ page }) => {
   ).not.toBeVisible()
 })
 
+test("widget overlay keeps quick theme changes inside the card", async ({ page }) => {
+  await openFreshNewTab(page)
+
+  const localTimeCard = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+
+  await expect(localTimeCard).toHaveAttribute("data-color-preset", "slate")
+  await openWidgetMenu(page, "Local time")
+  await page.getByRole("radio", { name: "Rose" }).click()
+
+  await expect(localTimeCard).toHaveAttribute("data-color-preset", "rose")
+  await expect(page.getByLabel("Actions for Local time")).toBeVisible()
+})
+
 test("add clock flow works from the new tab page", async ({ page }) => {
   await openFreshNewTab(page)
 
@@ -149,6 +165,7 @@ test("multiple open tabs stay synchronized", async ({ context, page }) => {
 
   await openWidgetMenu(thirdPage, "Tokyo")
   await thirdPage.getByRole("button", { name: "Delete Tokyo" }).click()
+  await expect(thirdPage.getByLabel("Confirm delete Tokyo")).toBeVisible()
   await thirdPage.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
@@ -195,9 +212,8 @@ test("delete flow removes an existing widget", async ({ page }) => {
 
   await openWidgetMenu(page, "Tomorrow morning")
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
-  await expect(
-    page.getByRole("dialog", { name: "Delete countdown?" })
-  ).toBeVisible()
+  await expect(page.getByLabel("Confirm delete Tomorrow morning")).toBeVisible()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
   await page.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
@@ -223,6 +239,7 @@ test("edit and delete controls still work after reordering", async ({ page }) =>
 
   await openWidgetMenu(page, "Morning plans")
   await page.getByRole("button", { name: "Delete Morning plans" }).click()
+  await expect(page.getByLabel("Confirm delete Morning plans")).toBeVisible()
   await page.getByRole("button", { name: "Delete widget" }).click()
 
   await expect(page.getByText("Morning plans")).toHaveCount(0)

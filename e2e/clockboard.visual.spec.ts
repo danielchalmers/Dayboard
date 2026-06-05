@@ -207,4 +207,12 @@ test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
     page.getByRole("dialog", { name: "Edit countdown" })
   ).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-edit-countdown-dialog")
+  await page.getByRole("button", { name: "Cancel" }).click()
+
+  await openWidgetMenu(page, "New York")
+  await expect(page.getByLabel("Actions for New York")).toBeVisible()
+  await attachScreenshot(testInfo, page, "clockboard-widget-overlay")
+  await page.getByRole("button", { name: "Delete New York" }).click()
+  await expect(page.getByLabel("Confirm delete New York")).toBeVisible()
+  await attachScreenshot(testInfo, page, "clockboard-delete-confirmation")
 })

@@ -256,13 +256,11 @@ details > summary::-webkit-details-marker {
   display: none;
 }
 
-.add-menu,
-.card-menu {
+.add-menu {
   position: relative;
 }
 
-.add-menu__panel,
-.card-menu__panel {
+.add-menu__panel {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
@@ -295,10 +293,135 @@ details > summary::-webkit-details-marker {
   inset-inline-end: 0;
 }
 
+.card-menu {
+  display: grid;
+  inset: 0;
+  position: absolute;
+}
+
 .card-menu__panel {
-  inset-block-start: 0;
-  inset-inline-end: calc(100% + 8px);
-  transform-origin: top right;
+  align-content: start;
+  animation: fade-in var(--t-fast) ease both;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card-bg-resolved) 98%, var(--surface)) 0%,
+      color-mix(in srgb, var(--card-bg-resolved) 92%, var(--surface)) 100%
+    );
+  border-radius: calc(var(--radius-lg) - 2px);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--card-accent-resolved) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 72%, transparent);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.44fr);
+  inset: 0;
+  padding: 24px;
+  position: absolute;
+  z-index: 1;
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
+}
+
+.card-menu__quick-settings {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent-resolved) 14%, var(--card-border-resolved));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  min-inline-size: 0;
+  padding: 16px;
+}
+
+.card-menu__quick-settings .color-preset-picker {
+  gap: 11px;
+  padding-block-end: 0;
+}
+
+.card-menu__quick-settings .color-preset-label {
+  color: var(--card-tint-resolved);
+}
+
+.card-menu__actions {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-inline-size: 0;
+}
+
+.card-menu__actions .menu-button {
+  background: color-mix(in srgb, var(--surface) 48%, transparent);
+  border: 1px solid transparent;
+  color: var(--text);
+  min-block-size: 38px;
+  padding-inline: 12px;
+}
+
+.card-menu__actions .menu-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border-color: color-mix(in srgb, var(--card-accent-resolved) 18%, transparent);
+  color: var(--card-accent-resolved);
+}
+
+.card-menu__actions .menu-button--danger {
+  color: var(--danger);
+}
+
+.card-menu__actions .menu-button--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger);
+}
+
+.card-menu__confirmation {
+  align-content: center;
+  justify-items: center;
+  display: grid;
+  gap: 14px;
+  grid-column: 1 / -1;
+  inset: 0;
+  padding: 24px;
+  position: absolute;
+  text-align: center;
+}
+
+.card-menu__danger-mark {
+  align-items: center;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, transparent);
+  border-radius: 999px;
+  color: var(--danger);
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 800;
+  block-size: 34px;
+  inline-size: 34px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.card-menu__title {
+  color: var(--text);
+  font-size: 1.16rem;
+  font-weight: 750;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.card-menu__text {
+  color: var(--card-tint-resolved);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: 7px auto 0;
+  max-inline-size: 28ch;
+  overflow-wrap: anywhere;
+}
+
+.card-menu__confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-block-start: 4px;
 }
 
 .menu-button {
@@ -494,12 +617,9 @@ details > summary::-webkit-details-marker {
 }
 
 .board-row__actions {
-  display: flex;
-  justify-content: end;
-  inset-block-start: 22px;
-  inset-inline-end: 22px;
+  inset: 0;
   position: absolute;
-  z-index: 2;
+  z-index: 3;
 }
 
 /* Hover & Interactive effects */
@@ -543,6 +663,12 @@ details > summary::-webkit-details-marker {
 
 .board-row--compact .board-row__value {
   font-size: 1.95rem;
+}
+
+.board-row--compact .card-menu__panel {
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 0.42fr);
+  padding: 18px 20px;
 }
 
 /* ── Forms ─────────────────────────────────────────────────────────────── */

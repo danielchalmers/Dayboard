@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
 
 import { BoardList } from "~/components/BoardList"
-import { DeleteDialog } from "~/components/DeleteDialog"
+import { ColorPresetPicker } from "~/components/ColorPresetPicker"
 import { ItemDialog } from "~/components/ItemDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
 import { createWidget, moveWidget, reorderWidgets } from "~/lib/widgets"
-import type { Widget } from "~/lib/types"
+import type { Widget, WidgetColorPreset } from "~/lib/types"
 import "~/styles/global.css"
 
 const tabIconHref = new URL("../assets/icon32.png", import.meta.url).href
@@ -83,8 +83,23 @@ export default function NewTabPage() {
     void setWidgets(reorderWidgets(state.widgets, activeId, overId))
   }
 
-  const deleteItem = (item: Widget) => {
+  const updateItemColor = (item: Widget, colorPreset: WidgetColorPreset) => {
+    void setWidgets(
+      state.widgets.map((current) =>
+        current.id === item.id
+          ? {
+              ...current,
+              colorPreset,
+              updatedAt: new Date().toISOString()
+            }
+          : current
+      )
+    )
+  }
+
+  const deleteItem = (item: Widget, closeMenu: () => void) => {
     closeOpenMenus()
+    closeMenu()
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
   }
@@ -175,46 +190,99 @@ export default function NewTabPage() {
           items={state.widgets}
           now={now}
           onReorder={reorderList}
-          renderItemActions={(item, index) => (
-            <>
-              <button
-                aria-label={`Move ${item.title} up`}
-                className="menu-button"
-                disabled={index === 0}
-                onClick={() => reorderItem(item.id, -1)}
-                type="button">
-                Move up
-              </button>
-              <button
-                aria-label={`Move ${item.title} down`}
-                className="menu-button"
-                disabled={index === state.widgets.length - 1}
-                onClick={() => reorderItem(item.id, 1)}
-                type="button">
-                Move down
-              </button>
-              <button
-                aria-label={`Edit ${item.title}`}
-                className="menu-button"
-                onClick={() => {
-                  closeOpenMenus()
-                  setEditorState({ mode: "edit", item })
-                }}
-                type="button">
-                Edit
-              </button>
-              <button
-                aria-label={`Delete ${item.title}`}
-                className="menu-button menu-button--danger"
-                onClick={() => {
-                  closeOpenMenus()
-                  setItemPendingDelete(item)
-                }}
-                type="button">
-                Delete
-              </button>
-            </>
-          )}
+          onMenuClose={() => setItemPendingDelete(null)}
+          renderItemActions={(item, index, { closeMenu }) => {
+            const isConfirmingDelete = itemPendingDelete?.id === item.id
+
+            if (isConfirmingDelete) {
+              return (
+                <div
+                  aria-label={`Confirm delete ${item.title}`}
+                  className="card-menu__confirmation"
+                  role="group">
+                  <span className="card-menu__danger-mark" aria-hidden="true">
+                    !
+                  </span>
+                  <div>
+                    <p className="card-menu__title">Delete {item.kind}?</p>
+                    <p className="card-menu__text">
+                      This removes {item.title} from your board.
+                    </p>
+                  </div>
+                  <div className="card-menu__confirmation-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={() => setItemPendingDelete(null)}
+                      type="button">
+                      Cancel
+                    </button>
+                    <button
+                      className="danger-button"
+                      onClick={() => deleteItem(item, closeMenu)}
+                      type="button">
+                      Delete widget
+                    </button>
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                <div className="card-menu__quick-settings">
+                  <ColorPresetPicker
+                    value={item.colorPreset}
+                    onChange={(colorPreset) => updateItemColor(item, colorPreset)}
+                  />
+                </div>
+                <div
+                  aria-label={`Controls for ${item.title}`}
+                  className="card-menu__actions"
+                  role="group">
+                  <button
+                    aria-label={`Move ${item.title} up`}
+                    className="menu-button"
+                    disabled={index === 0}
+                    onClick={() => {
+                      closeMenu()
+                      reorderItem(item.id, -1)
+                    }}
+                    type="button">
+                    Move up
+                  </button>
+                  <button
+                    aria-label={`Move ${item.title} down`}
+                    className="menu-button"
+                    disabled={index === state.widgets.length - 1}
+                    onClick={() => {
+                      closeMenu()
+                      reorderItem(item.id, 1)
+                    }}
+                    type="button">
+                    Move down
+                  </button>
+                  <button
+                    aria-label={`Edit ${item.title}`}
+                    className="menu-button"
+                    onClick={() => {
+                      closeOpenMenus()
+                      closeMenu()
+                      setEditorState({ mode: "edit", item })
+                    }}
+                    type="button">
+                    Edit
+                  </button>
+                  <button
+                    aria-label={`Delete ${item.title}`}
+                    className="menu-button menu-button--danger"
+                    onClick={() => setItemPendingDelete(item)}
+                    type="button">
+                    Delete
+                  </button>
+                </div>
+              </>
+            )
+          }}
         />
       </main>
       <ItemDialog
@@ -223,12 +291,6 @@ export default function NewTabPage() {
         mode={editorState?.mode ?? "add"}
         onClose={() => setEditorState(null)}
         onSave={saveItem}
-      />
-      <DeleteDialog
-        isOpen={Boolean(itemPendingDelete)}
-        item={itemPendingDelete}
-        onCancel={() => setItemPendingDelete(null)}
-        onConfirm={deleteItem}
       />
     </>
   )

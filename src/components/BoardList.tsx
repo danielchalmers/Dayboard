@@ -30,8 +30,13 @@ interface BoardListProps {
   items: Widget[]
   now: Date
   compact?: boolean
-  renderItemActions?: (item: Widget, index: number) => ReactNode
+  renderItemActions?: (
+    item: Widget,
+    index: number,
+    controls: { closeMenu: () => void }
+  ) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
+  onMenuClose?: () => void
 }
 
 const usePrefersReducedMotion = () => {
@@ -57,7 +62,7 @@ interface SortableBoardRowProps {
   compact?: boolean
   activeId: string | null
   isMenuOpen: boolean
-  renderItemActions?: (item: Widget, index: number) => ReactNode
+  renderItemActions?: BoardListProps["renderItemActions"]
   prefersReducedMotion: boolean
   onCloseMenu: () => void
   onOpenMenu: (id: string) => void
@@ -86,7 +91,7 @@ const SortableBoardRow = ({
     id: item.id
   })
 
-  const actions = renderItemActions?.(item, index)
+  const actions = renderItemActions?.(item, index, { closeMenu: onCloseMenu })
   const className = [
     "board-row--sortable",
     "board-row--draggable",
@@ -138,8 +143,7 @@ const SortableBoardRow = ({
           <div className="card-menu">
             <div
               aria-label={`Actions for ${item.title}`}
-              className="card-menu__panel"
-              onClick={onCloseMenu}>
+              className="card-menu__panel">
               {actions}
             </div>
           </div>
@@ -170,7 +174,8 @@ export const BoardList = ({
   now,
   compact,
   renderItemActions,
-  onReorder
+  onReorder,
+  onMenuClose
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -186,6 +191,11 @@ export const BoardList = ({
     })
   )
 
+  const closeMenu = () => {
+    setOpenMenuId(null)
+    onMenuClose?.()
+  }
+
   useEffect(() => {
     if (!openMenuId) {
       return
@@ -198,12 +208,12 @@ export const BoardList = ({
         return
       }
 
-      setOpenMenuId(null)
+      closeMenu()
     }
 
     const closeMenuOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpenMenuId(null)
+        closeMenu()
       }
     }
 
@@ -214,7 +224,7 @@ export const BoardList = ({
       window.removeEventListener("pointerdown", closeMenuOnPointerDownOutside)
       window.removeEventListener("keydown", closeMenuOnEscape)
     }
-  }, [openMenuId])
+  }, [openMenuId, onMenuClose])
 
   if (items.length === 0) {
     return (
@@ -235,12 +245,12 @@ export const BoardList = ({
 
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(String(active.id))
-    setOpenMenuId(null)
+    closeMenu()
   }
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveId(null)
-    setOpenMenuId(null)
+    closeMenu()
 
     if (!over || active.id === over.id) {
       return
@@ -251,11 +261,12 @@ export const BoardList = ({
 
   const handleDragCancel = () => {
     setActiveId(null)
-    setOpenMenuId(null)
+    closeMenu()
   }
 
   const openMenu = (id: string) => {
     closeAddMenu()
+    onMenuClose?.()
     setOpenMenuId(id)
   }
 
@@ -284,7 +295,7 @@ export const BoardList = ({
               item={item}
               key={item.id}
               now={now}
-              onCloseMenu={() => setOpenMenuId(null)}
+              onCloseMenu={closeMenu}
               onOpenMenu={openMenu}
               prefersReducedMotion={prefersReducedMotion}
               renderItemActions={renderItemActions}
