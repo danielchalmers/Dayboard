@@ -165,6 +165,7 @@ export function NewTabPage() {
                 className="menu-button"
                 disabled={index === 0}
                 onClick={() => reorderItem(item.id, -1)}
+                role="menuitem"
                 type="button">
                 Move up
               </button>
@@ -173,6 +174,7 @@ export function NewTabPage() {
                 className="menu-button"
                 disabled={index === state.widgets.length - 1}
                 onClick={() => reorderItem(item.id, 1)}
+                role="menuitem"
                 type="button">
                 Move down
               </button>
@@ -183,6 +185,7 @@ export function NewTabPage() {
                   closeOpenMenus()
                   setEditorState({ mode: "edit", item })
                 }}
+                role="menuitem"
                 type="button">
                 Edit
               </button>
@@ -193,6 +196,7 @@ export function NewTabPage() {
                   closeOpenMenus()
                   setItemPendingDelete(item)
                 }}
+                role="menuitem"
                 type="button">
                 Delete
               </button>

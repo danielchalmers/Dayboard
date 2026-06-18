@@ -256,9 +256,23 @@ details > summary::-webkit-details-marker {
   display: none;
 }
 
-.add-menu,
-.card-menu {
+.add-menu {
   position: relative;
+}
+
+/* Free-form widget menu: a native popover pinned under the cursor in the top
+   layer, with the UA popover styles reset back to our own panel styling. */
+.card-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  max-inline-size: none;
+  max-block-size: none;
+  z-index: 200;
 }
 
 .add-menu__panel,
@@ -296,9 +310,8 @@ details > summary::-webkit-details-marker {
 }
 
 .card-menu__panel {
-  inset-block-start: 0;
-  inset-inline-end: calc(100% + 8px);
-  transform-origin: top right;
+  position: static;
+  transform-origin: top left;
 }
 
 .menu-button {
@@ -481,15 +494,6 @@ details > summary::-webkit-details-marker {
 
 .board-row__meta span {
   color: color-mix(in srgb, var(--card-tint-resolved) 60%, transparent);
-}
-
-.board-row__actions {
-  display: flex;
-  justify-content: end;
-  inset-block-start: 22px;
-  inset-inline-end: 22px;
-  position: absolute;
-  z-index: 2;
 }
 
 /* Hover & Interactive effects */
