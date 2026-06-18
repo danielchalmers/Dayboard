@@ -29,28 +29,6 @@ describe("BoardRow", () => {
     expect(article).toHaveAttribute("data-color-preset", "rose")
   })
 
-  it("renders card actions when provided", () => {
-    const item: Widget = {
-      id: "local",
-      kind: "clock",
-      title: "Local time",
-      colorPreset: "slate",
-      settings: {
-        timeZone: "UTC"
-      }
-    }
-
-    render(
-      <BoardRow
-        actions={<button type="button">Edit</button>}
-        item={item}
-        now={new Date("2026-01-01T12:30:00.000Z")}
-      />
-    )
-
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument()
-  })
-
   it("renders a due countdown without time-zone text", () => {
     const item: Widget = {
       id: "deadline",

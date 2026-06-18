@@ -143,6 +143,14 @@ test("captures Clockboard product screenshots", async ({
 
   await attachScreenshot(testInfo, page, "clockboard-main-desktop")
 
+  await openWidgetMenu(page, "New York")
+  await expect(page.getByRole("button", { name: "Edit New York" })).toBeVisible()
+  await attachScreenshot(testInfo, page, "clockboard-widget-menu-desktop")
+  await page.keyboard.press("Escape")
+  await expect(
+    page.getByRole("button", { name: "Edit New York" })
+  ).toHaveCount(0)
+
   await page.setViewportSize({ width: 390, height: 844 })
   await attachScreenshot(testInfo, page, "clockboard-main-mobile", {
     fullPage: true

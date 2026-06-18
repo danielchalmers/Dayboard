@@ -1,8 +1,7 @@
 import {
   forwardRef,
   type ComponentPropsWithoutRef,
-  type CSSProperties,
-  type ReactNode
+  type CSSProperties
 } from "react"
 
 import {
@@ -18,14 +17,13 @@ import { getPresetCssVars } from "~/lib/colors"
 interface BoardRowProps {
   item: Widget
   now: Date
-  actions?: ReactNode
   articleProps?: ComponentPropsWithoutRef<"article">
   className?: string
   style?: CSSProperties
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, actions, articleProps, className, style },
+  { item, now, articleProps, className, style },
   ref
 ) {
   const rowClassName = [
@@ -70,7 +68,6 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
             <p className="board-row__detail">{detail}</p>
           </div>
         </div>
-        {actions ? <div className="board-row__actions">{actions}</div> : null}
         <div className="board-row__body">
           <p className="board-row__value" aria-label={`${item.title} time`}>
             {formatClockTime(now, item)}
@@ -112,7 +109,6 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
           <p className="board-row__detail">{formatCountdownTarget(item)}</p>
         </div>
       </div>
-      {actions ? <div className="board-row__actions">{actions}</div> : null}
       <div className="board-row__body">
         <p className="board-row__value board-row__value--countdown">
           {value}

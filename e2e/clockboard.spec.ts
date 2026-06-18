@@ -76,6 +76,100 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
 })
 
+test("widget menu spawns under the cursor and breaks free of the card", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const cardBox = await card.boundingBox()
+
+  if (!cardBox) {
+    throw new Error("Unable to locate widget bounds")
+  }
+
+  // Right-click near the card's bottom-right corner.
+  const cursorX = cardBox.x + cardBox.width - 12
+  const cursorY = cardBox.y + cardBox.height - 12
+  await page.mouse.move(cursorX, cursorY)
+  await page.mouse.down({ button: "right" })
+  await page.mouse.up({ button: "right" })
+
+  const menu = page.locator(".card-menu")
+  await expect(menu).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Edit Local time" })
+  ).toBeVisible()
+
+  const menuBox = await menu.boundingBox()
+
+  if (!menuBox) {
+    throw new Error("Unable to locate widget menu bounds")
+  }
+
+  // The menu opens at the cursor instead of a fixed corner of the card...
+  expect(menuBox.x).toBeGreaterThan(cardBox.x + cardBox.width / 2)
+  // ...and is allowed to extend past the card's edges rather than being clipped.
+  expect(menuBox.x + menuBox.width).toBeGreaterThan(cardBox.x + cardBox.width)
+})
+
+test("widget menu stays within the viewport when opened near the screen edge", async ({
+  page,
+  extensionId
+}) => {
+  // A narrow viewport keeps the board single-column so a card spans to the right edge.
+  await page.setViewportSize({ width: 420, height: 800 })
+  await openNewTab(page, extensionId)
+
+  const viewport = page.viewportSize()
+
+  if (!viewport) {
+    throw new Error("Unable to determine viewport size")
+  }
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const cardBox = await card.boundingBox()
+
+  if (!cardBox) {
+    throw new Error("Unable to locate widget bounds")
+  }
+
+  // Right-click near the card's right edge, where an unclamped menu would spill off screen.
+  const cursorX = cardBox.x + cardBox.width - 6
+  const cursorY = cardBox.y + cardBox.height - 6
+  await page.mouse.move(cursorX, cursorY)
+  await page.mouse.down({ button: "right" })
+  await page.mouse.up({ button: "right" })
+
+  const menu = page.locator(".card-menu")
+  await expect(menu).toBeVisible()
+
+  // Wait for the scale-up animation to settle so we measure the menu at full size.
+  await menu
+    .locator(".card-menu__panel")
+    .evaluate((panel) =>
+      Promise.all(panel.getAnimations().map((animation) => animation.finished))
+    )
+
+  const menuBox = await menu.boundingBox()
+
+  if (!menuBox) {
+    throw new Error("Unable to locate widget menu bounds")
+  }
+
+  // The cursor sat past the right edge minus the menu width, so it must have been clamped back.
+  expect(menuBox.x).toBeLessThan(cursorX)
+  expect(menuBox.x).toBeGreaterThanOrEqual(0)
+  expect(menuBox.y).toBeGreaterThanOrEqual(0)
+  expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewport.width)
+  expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(viewport.height)
+})
+
 test("reordering changes the visible order and persists after reload", async ({
   page,
   extensionId

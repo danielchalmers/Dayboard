@@ -25,6 +25,36 @@ const widgets: Widget[] = [
   }
 ]
 
+const renderActions = (item: Widget) => (
+  <>
+    <button aria-label={`Move ${item.title} up`} type="button">
+      Move up
+    </button>
+    <button aria-label={`Edit ${item.title}`} type="button">
+      Edit
+    </button>
+  </>
+)
+
+const renderBoard = () =>
+  render(
+    <BoardList
+      items={widgets}
+      now={new Date("2026-01-01T12:30:00.000Z")}
+      renderItemActions={renderActions}
+    />
+  )
+
+const openMenu = (
+  container: HTMLElement,
+  coordinates: { clientX: number; clientY: number }
+) => {
+  const card = container.querySelector(".board-row--draggable") as HTMLElement
+  card.focus()
+  fireEvent.contextMenu(card, coordinates)
+  return card
+}
+
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -43,26 +73,102 @@ describe("BoardList", () => {
     expect(container.querySelectorAll(".board-row--draggable")).toHaveLength(2)
   })
 
-  it("opens the widget menu on right click without rendering a dedicated button", () => {
-    const { container } = render(
-      <BoardList
-        items={widgets}
-        now={new Date("2026-01-01T12:30:00.000Z")}
-        renderItemActions={(item) => (
-          <button aria-label={`Edit ${item.title}`} type="button">
-            Edit
-          </button>
-        )}
-      />
-    )
+  it("opens a free-form widget menu under the cursor on right click", () => {
+    const { container } = renderBoard()
 
     expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
     expect(container.querySelector(".card-menu__panel")).not.toBeInTheDocument()
 
-    fireEvent.contextMenu(container.querySelector(".board-row--draggable") as Element)
+    const card = openMenu(container, { clientX: 320, clientY: 240 })
 
-    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
+    const panel = screen.getByLabelText("Actions for Local time")
+    expect(panel).toBeInTheDocument()
+    expect(screen.getByLabelText("Edit Local time")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Reorder Local time" })).not.toBeInTheDocument()
-    expect(container.querySelector('[aria-label="Edit Local time"]')).toBeInTheDocument()
+
+    // The menu is portaled out of the card so it can break free of the card bounds.
+    const menu = panel.closest(".card-menu") as HTMLElement
+    expect(card.contains(menu)).toBe(false)
+    expect(menu.parentElement).toBe(document.body)
+
+    // It spawns under the cursor rather than in a fixed corner of the card.
+    expect(menu.style.left).toBe("320px")
+    expect(menu.style.top).toBe("240px")
+  })
+
+  it("clamps the menu back inside the viewport when the cursor is near an edge", () => {
+    const { container } = renderBoard()
+
+    openMenu(container, { clientX: -50, clientY: -50 })
+
+    const menu = screen
+      .getByLabelText("Actions for Local time")
+      .closest(".card-menu") as HTMLElement
+
+    // Negative cursor coordinates are clamped back to the viewport margin.
+    expect(menu.style.left).toBe("8px")
+    expect(menu.style.top).toBe("8px")
+  })
+
+  it("clamps the menu so its real size stays on screen near the right and bottom edges", () => {
+    const offsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth")
+    const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight")
+    const innerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth")
+    const innerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight")
+
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get: () => 300 })
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 200 })
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 500 })
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 })
+
+    try {
+      const { container } = renderBoard()
+
+      openMenu(container, { clientX: 480, clientY: 380 })
+
+      const menu = screen
+        .getByLabelText("Actions for Local time")
+        .closest(".card-menu") as HTMLElement
+
+      // Clamped to innerWidth/Height − menu size − 8px margin, measured at full size.
+      expect(menu.style.left).toBe("192px")
+      expect(menu.style.top).toBe("192px")
+    } finally {
+      if (offsetWidth) Object.defineProperty(HTMLElement.prototype, "offsetWidth", offsetWidth)
+      if (offsetHeight) Object.defineProperty(HTMLElement.prototype, "offsetHeight", offsetHeight)
+      if (innerWidth) Object.defineProperty(window, "innerWidth", innerWidth)
+      if (innerHeight) Object.defineProperty(window, "innerHeight", innerHeight)
+    }
+  })
+
+  it("moves focus into the portaled menu so keyboard users can reach it", () => {
+    const { container } = renderBoard()
+
+    openMenu(container, { clientX: 10, clientY: 10 })
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Move Local time up"))
+  })
+
+  it("restores focus to the opener when the menu is dismissed", () => {
+    const { container } = renderBoard()
+
+    const card = openMenu(container, { clientX: 10, clientY: 10 })
+    expect(document.activeElement).not.toBe(card)
+
+    fireEvent.keyDown(window, { key: "Escape" })
+
+    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(card)
+  })
+
+  it("leaves focus restoration to the action when a menu item is chosen", () => {
+    const { container } = renderBoard()
+
+    const card = openMenu(container, { clientX: 10, clientY: 10 })
+    fireEvent.click(screen.getByLabelText("Edit Local time"))
+
+    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    // The chosen action manages focus; the menu does not force it back to the card.
+    expect(document.activeElement).not.toBe(card)
   })
 })
