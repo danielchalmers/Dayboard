@@ -17,9 +17,8 @@ Live clocks and countdowns on your new tab page.
 
 ## 🙏 Credits
 
-- Plasmo — MIT
+- WXT — MIT
 - React — MIT
-- @plasmohq/storage — MIT
 - Playwright (@playwright/test) — Apache-2.0
 - Testing Library (@testing-library/react, @testing-library/jest-dom) — MIT
 - TypeScript — Apache-2.0

@@ -64,11 +64,11 @@ jobs:
           - target: chrome
             command: npm run build
             artifact: clockboard-chrome-build
-            path: build/chrome-mv3-prod
+            path: .output/chrome-mv3
           - target: edge
             command: npm run build:edge
             artifact: clockboard-edge-build
-            path: build/edge-mv3-prod
+            path: .output/edge-mv3
 
     steps:
       - name: Check out
@@ -91,6 +91,7 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.path }}
+          include-hidden-files: true
 
   playwright:
     name: Playwright

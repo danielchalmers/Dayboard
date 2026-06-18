@@ -1,5 +1,3 @@
-import { Storage, type StorageCallbackMap } from "@plasmohq/storage"
-
 import {
   createDefaultState,
   DEFAULT_TIME_ZONE,
@@ -15,12 +13,13 @@ import {
 
 export const STORAGE_KEY = "clockboard-state"
 
-const syncedStorage = new Storage({
-  area: "sync"
-})
-
 const hasSyncedExtensionStorage = (): boolean =>
   typeof chrome !== "undefined" && Boolean(chrome.storage?.sync)
+
+// Values are persisted as JSON strings so the format stays compatible with
+// data written by earlier @plasmohq/storage builds across synced browsers.
+const parseStoredValue = (value: unknown): unknown =>
+  typeof value === "string" ? parseFallbackStorageValue(value) : value
 
 const readFallbackStorage = (): unknown => {
   if (typeof localStorage === "undefined") {
@@ -177,18 +176,19 @@ export const migrateClockboardState = (value: unknown): ClockboardState => {
 }
 
 export const readClockboardState = async (): Promise<ClockboardState> => {
-  const value = hasSyncedExtensionStorage()
-    ? await syncedStorage.get<unknown>(STORAGE_KEY)
-    : readFallbackStorage()
+  if (!hasSyncedExtensionStorage()) {
+    return migrateClockboardState(readFallbackStorage())
+  }
 
-  return migrateClockboardState(value)
+  const result = await chrome.storage.sync.get(STORAGE_KEY)
+  return migrateClockboardState(parseStoredValue(result[STORAGE_KEY]))
 }
 
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {
   if (hasSyncedExtensionStorage()) {
-    await syncedStorage.set(STORAGE_KEY, state)
+    await chrome.storage.sync.set({ [STORAGE_KEY]: JSON.stringify(state) })
     return
   }
 
@@ -216,15 +216,25 @@ export const watchClockboardState = (
     return () => window.removeEventListener("storage", handleFallbackStorageChange)
   }
 
-  const callbackMap: StorageCallbackMap = {
-    [STORAGE_KEY]: (change) => {
-      listener(migrateClockboardState(change.newValue))
+  const handleStorageChange = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    areaName: string
+  ) => {
+    if (areaName !== "sync") {
+      return
     }
+
+    const change = changes[STORAGE_KEY]
+    if (!change) {
+      return
+    }
+
+    listener(migrateClockboardState(parseStoredValue(change.newValue)))
   }
 
-  syncedStorage.watch(callbackMap)
+  chrome.storage.onChanged.addListener(handleStorageChange)
 
-  return () => syncedStorage.unwatch(callbackMap)
+  return () => chrome.storage.onChanged.removeListener(handleStorageChange)
 }
 
 export const updateClockboardState = async (

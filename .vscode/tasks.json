@@ -2,56 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Plasmo: Chrome dev",
-      "type": "npm",
-      "script": "dev",
-      "args": [
-        "--",
-        "--serve-port=1012",
-        "--hmr-port=1815"
-      ],
-      "isBackground": true,
-      "problemMatcher": {
-        "owner": "plasmo",
-        "pattern": {
-          "regexp": "^(?!.*)(.*):(\\d+):(.*)$",
-          "file": 1,
-          "line": 2,
-          "message": 3
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*Starting the extension development server.*",
-          "endsPattern": ".*Extension re-packaged.*"
-        }
-      }
-    },
-    {
-      "label": "Plasmo: Edge dev",
-      "type": "npm",
-      "script": "dev:edge",
-      "args": [
-        "--",
-        "--serve-port=1013",
-        "--hmr-port=1817"
-      ],
-      "isBackground": true,
-      "problemMatcher": {
-        "owner": "plasmo",
-        "pattern": {
-          "regexp": "^(?!.*)(.*):(\\d+):(.*)$",
-          "file": 1,
-          "line": 2,
-          "message": 3
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*Starting the extension development server.*",
-          "endsPattern": ".*Extension re-packaged.*"
-        }
-      }
-    },
-    {
       "label": "Build",
       "type": "npm",
       "script": "build",
@@ -65,7 +15,17 @@
       "label": "Verify",
       "type": "npm",
       "script": "verify",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
       "problemMatcher": "$tsc"
+    },
+    {
+      "label": "E2E",
+      "type": "npm",
+      "script": "e2e",
+      "problemMatcher": []
     }
   ]
 }
