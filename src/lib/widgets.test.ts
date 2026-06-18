@@ -7,13 +7,10 @@ const createWidget = (id: string, title: string): Widget => ({
   id,
   kind: "clock",
   title,
-  placement: "main",
   colorPreset: "slate",
   settings: {
     timeZone: "UTC"
-  },
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z"
+  }
 })
 
 describe("createWidget", () => {

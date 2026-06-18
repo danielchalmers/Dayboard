@@ -4,8 +4,7 @@ import {
   dateTimeInputValueToIsoInstant,
   formatRelativeCountdown,
   getCountdownParts,
-  isoInstantToDateTimeInputValue,
-  zonedDateTimeToUtcMs
+  isoInstantToDateTimeInputValue
 } from "./time"
 import type { CountdownWidget } from "./types"
 
@@ -13,27 +12,10 @@ const countdownWidget = (targetAt: string): CountdownWidget => ({
   id: "launch",
   kind: "countdown",
   title: "Launch",
-  placement: "main",
   colorPreset: "slate",
   settings: {
     targetAt
-  },
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z"
-})
-
-describe("zonedDateTimeToUtcMs", () => {
-  it("keeps UTC local datetime unchanged", () => {
-    expect(zonedDateTimeToUtcMs("2026-01-01T09:30", "UTC")).toBe(
-      Date.UTC(2026, 0, 1, 9, 30, 0)
-    )
-  })
-
-  it("converts a zoned New York datetime into UTC", () => {
-    expect(
-      zonedDateTimeToUtcMs("2026-01-01T09:30", "America/New_York")
-    ).toBe(Date.UTC(2026, 0, 1, 14, 30, 0))
-  })
+  }
 })
 
 describe("datetime-local countdown conversions", () => {

@@ -19,15 +19,15 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 
 ## Architecture
 
-- WXT entrypoints live in `src/entrypoints` (`newtab` for the new tab page, `background` for the service worker).
+- WXT entrypoints live in `src/entrypoints` (`newtab` for the new tab page; a minimal `background` service worker that exists so MV3 registers one).
 - The root `NewTabPage` component lives in `src/NewTabPage.tsx`; `src/entrypoints/newtab/main.tsx` mounts it.
-- Shared time, storage, background, and item logic lives in `src/lib`.
+- Shared time, storage, color, and item logic lives in `src/lib`.
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
 - Do not add Tailwind or a UI component library.
 - The manifest is defined in `wxt.config.ts`, not a root `manifest.json` or `package.json`.
 - Static icons live in `public/` and are copied to the build output as-is.
-- Storage uses raw `chrome.storage.sync` with a `localStorage` fallback; values are persisted as JSON strings.
+- Storage uses `chrome.storage.sync` with a `chrome.storage.onChanged` watch so open tabs and signed-in browsers stay in sync. There is no versioning, migration, or fallback layer; the stored shape is the current `ClockboardState` and breaking it is acceptable.
 - Keep the extension new-tab-only for this phase; do not reintroduce popup or options entrypoints.
 - Keep the checked-in `package.json.version` at `0.0.0`; release builds set the manifest version from the `RELEASE_VERSION` environment variable.
 - Keep support for both Chrome and Edge MV3 builds.
@@ -62,6 +62,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 
 - For domain or UI behavior changes, update Vitest coverage.
 - For page-level behavior changes, update Playwright coverage.
+- Playwright loads the built extension from `.output/chrome-mv3` via `launchPersistentContext` (`e2e/fixtures.ts`, built by `e2e/global-setup.ts`) and seeds state through `chrome.storage.sync`, not a served page.
 - Before handoff after frontend work, run:
   - `npm run verify`
   - `npm run build:edge`

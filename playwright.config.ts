@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test"
+import { defineConfig } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./e2e",
@@ -7,21 +7,17 @@ export default defineConfig({
     timeout: 5_000
   },
   fullyParallel: true,
+  // Each test launches its own full Chromium persistent context with the
+  // extension loaded; cap workers on CI so the runner does not run out of memory.
+  workers: process.env.CI ? 2 : undefined,
+  globalSetup: "./e2e/global-setup.ts",
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://127.0.0.1:18181",
     trace: "on-first-retry"
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      name: "chromium"
     }
-  ],
-  webServer: {
-    command: "npm run build && npx http-server .output/chrome-mv3 -p 18181 -c-1",
-    url: "http://127.0.0.1:18181",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  }
+  ]
 })

@@ -12,7 +12,8 @@ Clockboard stores only the clocks and countdowns you create, including:
 - Countdown dates and times
 - Item order and basic item metadata needed to keep the board working
 
-This data is stored locally in your browser using `chrome.storage.local`.
+This data is stored using `chrome.storage.sync`, which Chrome syncs across the
+browsers where you are signed in. It is never sent anywhere else.
 
 ## Data Clockboard Does Not Collect
 

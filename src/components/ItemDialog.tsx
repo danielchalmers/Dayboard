@@ -124,10 +124,7 @@ export const ItemDialog = ({
           className="dialog-form"
           onSubmit={(event) => {
             event.preventDefault()
-            onSave({
-              ...draft,
-              updatedAt: new Date().toISOString()
-            })
+            onSave(draft)
           }}>
           <div className="form-grid">
             <label className="form-label-group">

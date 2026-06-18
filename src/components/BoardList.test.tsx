@@ -9,25 +9,19 @@ const widgets: Widget[] = [
     id: "local",
     kind: "clock",
     title: "Local time",
-    placement: "main",
     colorPreset: "slate",
     settings: {
       timeZone: "UTC"
-    },
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z"
+    }
   },
   {
     id: "launch",
     kind: "countdown",
     title: "Launch",
-    placement: "main",
     colorPreset: "rose",
     settings: {
       targetAt: "2026-01-02T09:00:00.000Z"
-    },
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z"
+    }
   }
 ]
 

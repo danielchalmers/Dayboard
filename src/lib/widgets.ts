@@ -1,6 +1,5 @@
 import {
   DEFAULT_TIME_ZONE,
-  DEFAULT_WIDGET_PLACEMENT,
   DEFAULT_COLOR_PRESET,
   type ClockWidget,
   type CountdownWidget,
@@ -18,25 +17,17 @@ export interface WidgetDefinition<K extends WidgetKind> {
   createDefault: (now?: Date) => Extract<Widget, { kind: K }>
 }
 
-const createClockWidget = (now = new Date()): ClockWidget => {
-  const timestamp = now.toISOString()
-
-  return {
-    id: crypto.randomUUID(),
-    kind: "clock",
-    title: "New clock",
-    placement: DEFAULT_WIDGET_PLACEMENT,
-    colorPreset: DEFAULT_COLOR_PRESET,
-    settings: {
-      timeZone: DEFAULT_TIME_ZONE
-    },
-    createdAt: timestamp,
-    updatedAt: timestamp
+const createClockWidget = (): ClockWidget => ({
+  id: crypto.randomUUID(),
+  kind: "clock",
+  title: "New clock",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    timeZone: DEFAULT_TIME_ZONE
   }
-}
+})
 
 const createCountdownWidget = (now = new Date()): CountdownWidget => {
-  const timestamp = now.toISOString()
   const target = new Date(now)
   target.setHours(target.getHours() + 1, 0, 0, 0)
 
@@ -44,13 +35,10 @@ const createCountdownWidget = (now = new Date()): CountdownWidget => {
     id: crypto.randomUUID(),
     kind: "countdown",
     title: "New countdown",
-    placement: DEFAULT_WIDGET_PLACEMENT,
     colorPreset: DEFAULT_COLOR_PRESET,
     settings: {
       targetAt: target.toISOString()
-    },
-    createdAt: timestamp,
-    updatedAt: timestamp
+    }
   }
 }
 

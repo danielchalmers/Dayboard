@@ -1,98 +1,68 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test"
+import type { Page, TestInfo } from "@playwright/test"
+
+import { expect, test } from "./fixtures"
+import type { ClockboardState } from "../src/lib/types"
 
 const STORAGE_KEY = "clockboard-state"
 const STORY_NOW = "2025-05-09T15:24:00.000Z"
 
-const storyState = {
-  version: 2,
+const storyState: ClockboardState = {
   widgets: [
     {
       id: "austin",
       kind: "clock",
       title: "Austin",
-      placement: "main",
-      settings: {
-        timeZone: "America/Chicago"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { timeZone: "America/Chicago" }
     },
     {
       id: "new-york",
       kind: "clock",
       title: "New York",
-      placement: "main",
-      settings: {
-        timeZone: "America/New_York"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { timeZone: "America/New_York" }
     },
     {
       id: "london",
       kind: "clock",
       title: "London",
-      placement: "main",
-      settings: {
-        timeZone: "Europe/London"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { timeZone: "Europe/London" }
     },
     {
       id: "tokyo",
       kind: "clock",
       title: "Tokyo",
-      placement: "main",
-      settings: {
-        timeZone: "Asia/Tokyo"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { timeZone: "Asia/Tokyo" }
     },
     {
       id: "weekend-getaway",
       kind: "countdown",
       title: "Weekend getaway",
-      placement: "main",
-      settings: {
-        targetAt: "2025-05-17T13:00:00.000Z"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { targetAt: "2025-05-17T13:00:00.000Z" }
     },
     {
       id: "summer-vacation",
       kind: "countdown",
       title: "Summer vacation",
-      placement: "main",
-      settings: {
-        targetAt: "2025-06-28T13:00:00.000Z"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { targetAt: "2025-06-28T13:00:00.000Z" }
     },
     {
       id: "emma-birthday",
       kind: "countdown",
       title: "Emma's birthday",
-      placement: "main",
-      settings: {
-        targetAt: "2025-07-14T05:00:00.000Z"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { targetAt: "2025-07-14T05:00:00.000Z" }
     },
     {
       id: "christmas",
       kind: "countdown",
       title: "Christmas",
-      placement: "main",
-      settings: {
-        targetAt: "2025-12-25T06:00:00.000Z"
-      },
-      createdAt: STORY_NOW,
-      updatedAt: STORY_NOW
+      colorPreset: "slate",
+      settings: { targetAt: "2025-12-25T06:00:00.000Z" }
     }
   ]
 }
@@ -125,16 +95,13 @@ const freezeTime = async (page: Page) => {
   }, STORY_NOW)
 }
 
-const openStoryBoard = async (page: Page) => {
+const openStoryBoard = async (page: Page, extensionId: string) => {
   await freezeTime(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto("/newtab.html")
+  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
   await page.evaluate(
-    ({ key, state }) => localStorage.setItem(key, JSON.stringify(state)),
-    {
-      key: STORAGE_KEY,
-      state: storyState
-    }
+    ({ key, state }) => chrome.storage.sync.set({ [key]: state }),
+    { key: STORAGE_KEY, state: storyState }
   )
   await page.reload()
   await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
@@ -168,8 +135,11 @@ const openWidgetMenu = async (page: Page, title: string) => {
   await card.click({ button: "right" })
 }
 
-test("captures Clockboard product screenshots", async ({ page }, testInfo) => {
-  await openStoryBoard(page)
+test("captures Clockboard product screenshots", async ({
+  page,
+  extensionId
+}, testInfo) => {
+  await openStoryBoard(page, extensionId)
 
   await attachScreenshot(testInfo, page, "clockboard-main-desktop")
 

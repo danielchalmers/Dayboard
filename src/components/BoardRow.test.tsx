@@ -10,13 +10,10 @@ describe("BoardRow", () => {
       id: "utc",
       kind: "clock",
       title: "UTC",
-      placement: "main",
       colorPreset: "rose",
       settings: {
         timeZone: "UTC"
-      },
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z"
+      }
     }
 
     const { container } = render(
@@ -37,13 +34,10 @@ describe("BoardRow", () => {
       id: "local",
       kind: "clock",
       title: "Local time",
-      placement: "main",
       colorPreset: "slate",
       settings: {
         timeZone: "UTC"
-      },
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z"
+      }
     }
 
     render(
@@ -62,13 +56,10 @@ describe("BoardRow", () => {
       id: "deadline",
       kind: "countdown",
       title: "Deadline",
-      placement: "main",
       colorPreset: "amber",
       settings: {
         targetAt: "2026-01-01T12:30:00.000Z"
-      },
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z"
+      }
     }
 
     const { container } = render(

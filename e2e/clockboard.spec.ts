@@ -1,8 +1,10 @@
-import { expect, test, type Page } from "@playwright/test"
+import type { Page } from "@playwright/test"
 
-const openFreshNewTab = async (page: Page) => {
-  await page.goto("/newtab.html")
-  await page.evaluate(() => localStorage.clear())
+import { expect, test } from "./fixtures"
+
+const openNewTab = async (page: Page, extensionId: string) => {
+  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
+  await page.evaluate(() => chrome.storage.sync.clear())
   await page.reload()
 }
 
@@ -43,9 +45,10 @@ const openWidgetMenu = async (page: Page, title: string) => {
 }
 
 test("new tab page renders the default widgets and editing controls", async ({
-  page
+  page,
+  extensionId
 }) => {
-  await openFreshNewTab(page)
+  await openNewTab(page, extensionId)
 
   await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
     "href",
@@ -74,9 +77,10 @@ test("new tab page renders the default widgets and editing controls", async ({
 })
 
 test("reordering changes the visible order and persists after reload", async ({
-  page
+  page,
+  extensionId
 }) => {
-  await openFreshNewTab(page)
+  await openNewTab(page, extensionId)
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
@@ -89,8 +93,11 @@ test("reordering changes the visible order and persists after reload", async ({
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
 })
 
-test("dropdowns close when clicking outside them", async ({ page }) => {
-  await openFreshNewTab(page)
+test("dropdowns close when clicking outside them", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
@@ -107,8 +114,11 @@ test("dropdowns close when clicking outside them", async ({ page }) => {
   ).not.toBeVisible()
 })
 
-test("add clock flow works from the new tab page", async ({ page }) => {
-  await openFreshNewTab(page)
+test("add clock flow works from the new tab page", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add clock" }).click()
@@ -120,14 +130,18 @@ test("add clock flow works from the new tab page", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Paris" })).toBeVisible()
 })
 
-test("multiple open tabs stay synchronized", async ({ context, page }) => {
-  await openFreshNewTab(page)
+test("multiple open tabs stay synchronized", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
 
   const secondPage = await context.newPage()
   const thirdPage = await context.newPage()
 
-  await secondPage.goto("/newtab.html")
-  await thirdPage.goto("/newtab.html")
+  await secondPage.goto(`chrome-extension://${extensionId}/newtab.html`)
+  await thirdPage.goto(`chrome-extension://${extensionId}/newtab.html`)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add clock" }).click()
@@ -158,8 +172,11 @@ test("multiple open tabs stay synchronized", async ({ context, page }) => {
   await thirdPage.close()
 })
 
-test("add and edit countdown works without a time-zone field", async ({ page }) => {
-  await openFreshNewTab(page)
+test("add and edit countdown works without a time-zone field", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add countdown" }).click()
@@ -180,8 +197,8 @@ test("add and edit countdown works without a time-zone field", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Launch day" })).toBeVisible()
 })
 
-test("edit dialog opens for an existing clock", async ({ page }) => {
-  await openFreshNewTab(page)
+test("edit dialog opens for an existing clock", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "Local time")
   await page.getByRole("button", { name: "Edit Local time" }).click()
@@ -190,8 +207,8 @@ test("edit dialog opens for an existing clock", async ({ page }) => {
   await expect(page.getByLabel("Time zone")).toBeVisible()
 })
 
-test("delete flow removes an existing widget", async ({ page }) => {
-  await openFreshNewTab(page)
+test("delete flow removes an existing widget", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "Tomorrow morning")
   await page.getByRole("button", { name: "Delete Tomorrow morning" }).click()
@@ -203,8 +220,11 @@ test("delete flow removes an existing widget", async ({ page }) => {
   await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
 })
 
-test("edit and delete controls still work after reordering", async ({ page }) => {
-  await openFreshNewTab(page)
+test("edit and delete controls still work after reordering", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
 
   await dragWidget(page, "Tomorrow morning", "Local time")
 
