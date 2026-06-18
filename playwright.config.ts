@@ -19,7 +19,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: "npm run build && npx http-server build/chrome-mv3-prod -p 18181 -c-1",
+    command: "npm run build && npx http-server .output/chrome-mv3 -p 18181 -c-1",
     url: "http://127.0.0.1:18181",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

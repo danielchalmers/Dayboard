@@ -36,36 +36,16 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
 
-      - name: Patch package and manifest version
-        run: |
-          node --input-type=module <<'EOF'
-          import { readFile, writeFile } from 'node:fs/promises'
-
-          const packagePath = 'package.json'
-          const packageJson = JSON.parse(await readFile(packagePath, 'utf8'))
-
-          packageJson.version = process.env.RELEASE_VERSION
-          packageJson.manifest.version = process.env.RELEASE_VERSION
-
-          await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`)
-          EOF
-
-      - name: Build Chrome extension
-        run: npm run build
-
-      - name: Build Edge extension
-        run: npm run build:edge
-
       - name: Package Chrome extension
-        run: npm run package
+        run: npm run zip
 
       - name: Package Edge extension
-        run: npm run package:edge
+        run: npm run zip:edge
 
       - name: Name release artifacts
         run: |
-          cp build/chrome-mv3-prod.zip "clockboard-chrome-${RELEASE_VERSION}.zip"
-          cp build/edge-mv3-prod.zip "clockboard-edge-${RELEASE_VERSION}.zip"
+          cp .output/*-chrome.zip "clockboard-chrome-${RELEASE_VERSION}.zip"
+          cp .output/*-edge.zip "clockboard-edge-${RELEASE_VERSION}.zip"
 
       - name: Attach release artifacts
         uses: ncipollo/release-action@v1.21.0

@@ -1,6 +1,6 @@
 node_modules/
-.plasmo/
-build/
+.output/
+.wxt/
 dist/
 coverage/
 playwright-report/

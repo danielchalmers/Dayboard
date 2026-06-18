@@ -1,31 +1,23 @@
 {
-  "extends": "plasmo/templates/tsconfig.base",
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "~/*": [
-        "./src/*"
-      ]
-    },
+    "jsx": "react-jsx",
     "types": [
       "chrome",
       "node",
       "vitest/globals",
       "@testing-library/jest-dom"
     ],
-    "strict": true,
-    "jsx": "react-jsx",
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
   "include": [
-    ".plasmo/index.d.ts",
-    "./**/*.ts",
-    "./**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist"
+    "src/**/*",
+    "test/**/*",
+    "e2e/**/*",
+    "wxt.config.ts",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    ".wxt/wxt.d.ts"
   ]
 }

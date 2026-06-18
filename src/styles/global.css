@@ -78,7 +78,7 @@
 
 html,
 body,
-#plasmo-shadow-container {
+#root {
   min-height: 100%;
 }
 

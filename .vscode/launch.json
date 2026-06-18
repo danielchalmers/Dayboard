@@ -2,22 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Chrome extension",
-      "type": "chrome",
+      "name": "Start WXT Dev Server",
+      "type": "node-terminal",
       "request": "launch",
-      "runtimeExecutable": "${env:LOCALAPPDATA}\\ms-playwright\\chromium-1223\\chrome-win64\\chrome.exe",
-      "preLaunchTask": "Build",
-      "userDataDir": "${workspaceFolder}\\.vscode\\chrome-debug-profile",
-      "webRoot": "${workspaceFolder}",
-      "runtimeArgs": [
-        "--disable-extensions-except=${workspaceFolder}/build/chrome-mv3-prod",
-        "--load-extension=${workspaceFolder}/build/chrome-mv3-prod",
-        "--no-first-run",
-        "--no-default-browser-check"
-      ],
-      "url": "chrome://newtab",
-      "sourceMaps": true,
-      "timeout": 30000
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Start WXT Dev Server (Edge)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:edge",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

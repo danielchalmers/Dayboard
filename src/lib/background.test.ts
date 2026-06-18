@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-describe("background entry", () => {
+import { registerBackground } from "./background"
+
+describe("registerBackground", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
-    vi.resetModules()
   })
 
-  it("opens a new tab when the toolbar icon is clicked", async () => {
+  it("opens a new tab when the toolbar icon is clicked", () => {
     let handleClick: (() => void) | undefined
     const create = vi.fn()
 
@@ -23,7 +24,7 @@ describe("background entry", () => {
       }
     })
 
-    await import("./background")
+    registerBackground()
 
     expect(handleClick).toBeTypeOf("function")
 
