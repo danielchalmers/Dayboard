@@ -18,12 +18,13 @@ interface BoardRowProps {
   item: Widget
   now: Date
   articleProps?: ComponentPropsWithoutRef<"article">
+  dragHandleProps?: ComponentPropsWithoutRef<"div">
   className?: string
   style?: CSSProperties
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, articleProps, className, style },
+  { item, now, articleProps, dragHandleProps, className, style },
   ref
 ) {
   const rowClassName = [
@@ -38,6 +39,13 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     ...style,
     ...getPresetCssVars(item.colorPreset)
   }
+
+  // The frame is an overlay that only covers the padded edge around the
+  // content, so dragging starts from the border while the body stays
+  // selectable. It only renders when a drag handle is wired up.
+  const frame = dragHandleProps ? (
+    <div className="board-row__frame" aria-hidden="true" {...dragHandleProps} />
+  ) : null
 
   const colorDot = item.colorPreset !== "slate" ? (
     <span
@@ -59,6 +67,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         ref={ref}
         style={combinedStyle}
         data-color-preset={item.colorPreset}>
+        {frame}
         <div className="board-row__header">
           <div className="board-row__identity">
             <h2 className="board-row__title">
@@ -100,6 +109,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
       ref={ref}
       style={combinedStyle}
       data-color-preset={item.colorPreset}>
+      {frame}
       <div className="board-row__header">
         <div className="board-row__identity">
           <h2 className="board-row__title">

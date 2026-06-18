@@ -29,6 +29,40 @@ describe("BoardRow", () => {
     expect(article).toHaveAttribute("data-color-preset", "rose")
   })
 
+  it("renders a drag-handle frame only when drag handle props are provided", () => {
+    const item: Widget = {
+      id: "utc",
+      kind: "clock",
+      title: "UTC",
+      colorPreset: "slate",
+      settings: {
+        timeZone: "UTC"
+      }
+    }
+
+    const { container, rerender } = render(
+      <BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />
+    )
+
+    expect(container.querySelector(".board-row__frame")).toBeNull()
+
+    rerender(
+      <BoardRow
+        dragHandleProps={{ id: "drag-handle" }}
+        item={item}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+      />
+    )
+
+    const frame = container.querySelector(".board-row__frame")
+    expect(frame).toHaveAttribute("id", "drag-handle")
+    // The heading is a sibling of the drag frame, not nested inside it, so the
+    // body text sits outside the draggable surface and stays selectable.
+    expect(frame?.contains(screen.getByRole("heading", { name: "UTC" }))).toBe(
+      false
+    )
+  })
+
   it("renders a due countdown without time-zone text", () => {
     const item: Widget = {
       id: "deadline",

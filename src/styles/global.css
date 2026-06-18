@@ -496,17 +496,34 @@ details > summary::-webkit-details-marker {
   color: color-mix(in srgb, var(--card-tint-resolved) 60%, transparent);
 }
 
-/* Hover & Interactive effects */
-.board-row--draggable {
+/* The frame overlay is the only draggable surface. It fills the padded edge
+   around the card but sits beneath the content, so grabbing the border starts
+   a drag while the body text stays selectable. */
+.board-row__frame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
   cursor: grab;
   touch-action: none;
 }
 
-.board-row--draggable:active {
+.board-row__frame:active {
   cursor: grabbing;
 }
 
-.board-row--draggable:hover:not(.board-row--dragging),
+/* Lift the content above the frame so pointer interactions over text select it
+   instead of initiating a drag. (The actions menu is a separate top-layer
+   popover, so it always renders above the card regardless of this stacking.) */
+.board-row__header,
+.board-row__body {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hover & Interactive effects — only light up when the draggable frame is
+   hovered, so hovering the body stays calm and undistracting. */
+.board-row--draggable:has(.board-row__frame:hover):not(.board-row--dragging),
 .board-row--draggable:focus-visible,
 .board-row--menu-open {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 35%, var(--card-border-resolved));

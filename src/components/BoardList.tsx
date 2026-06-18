@@ -22,6 +22,7 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type PointerEventHandler,
   type ReactNode
 } from "react"
 
@@ -311,15 +312,23 @@ const SortableBoardRow = ({
     listeners?.onKeyDown?.(event)
   }
 
+  // Only the pointer activator moves to the frame so dragging starts from the
+  // border; keyboard dragging stays on the focusable card via handleKeyDown,
+  // which still defers to the sortable's onKeyDown listener. dnd-kit types its
+  // listeners loosely as `Function`, so narrow the pointer-down handler here.
+  const onPointerDown = listeners?.onPointerDown as
+    | PointerEventHandler<HTMLDivElement>
+    | undefined
+
   return (
     <BoardRow
       articleProps={{
-        ...listeners,
         "aria-haspopup": hasActions ? "menu" : undefined,
         onContextMenu: handleContextMenu,
         onKeyDown: handleKeyDown,
         tabIndex: 0
       }}
+      dragHandleProps={{ onPointerDown }}
       className={className}
       item={item}
       now={now}
