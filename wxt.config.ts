@@ -1,4 +1,13 @@
+import { mkdirSync } from "node:fs"
+import { resolve } from "node:path"
+
 import { defineConfig } from "wxt"
+
+// Reuse a single Chromium profile in `wxt` dev mode so chrome.storage (and the
+// board you build up while developing) survives dev-server restarts instead of
+// starting from a fresh throwaway profile each run.
+const chromiumProfile = resolve(".wxt/chrome-data")
+mkdirSync(chromiumProfile, { recursive: true })
 
 // https://wxt.dev/api/config.html
 export default defineConfig({
@@ -19,6 +28,8 @@ export default defineConfig({
     }
   },
   webExt: {
+    chromiumProfile,
+    keepProfileChanges: true,
     // Allow --load-extension on newer Chrome builds during `wxt` dev mode.
     chromiumArgs: ["--disable-features=DisableLoadExtensionCommandLineSwitch"]
   }
