@@ -27,10 +27,10 @@ const widgets: Widget[] = [
 
 const renderActions = (item: Widget) => (
   <>
-    <button aria-label={`Move ${item.title} up`} type="button">
+    <button aria-label={`Move ${item.title} up`} role="menuitem" type="button">
       Move up
     </button>
-    <button aria-label={`Edit ${item.title}`} type="button">
+    <button aria-label={`Edit ${item.title}`} role="menuitem" type="button">
       Edit
     </button>
   </>
@@ -73,7 +73,7 @@ describe("BoardList", () => {
     expect(container.querySelectorAll(".board-row--draggable")).toHaveLength(2)
   })
 
-  it("opens a free-form widget menu under the cursor on right click", () => {
+  it("opens a free-form popover menu under the cursor on right click", () => {
     const { container } = renderBoard()
 
     expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
@@ -83,13 +83,13 @@ describe("BoardList", () => {
 
     const panel = screen.getByLabelText("Actions for Local time")
     expect(panel).toBeInTheDocument()
+    expect(panel).toHaveAttribute("role", "menu")
     expect(screen.getByLabelText("Edit Local time")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Reorder Local time" })).not.toBeInTheDocument()
 
-    // The menu is portaled out of the card so it can break free of the card bounds.
     const menu = panel.closest(".card-menu") as HTMLElement
+    // It is a native popover rendered outside the card so it can break free of it.
+    expect(menu).toHaveAttribute("popover", "auto")
     expect(card.contains(menu)).toBe(false)
-    expect(menu.parentElement).toBe(document.body)
 
     // It spawns under the cursor rather than in a fixed corner of the card.
     expect(menu.style.left).toBe("320px")
@@ -141,7 +141,7 @@ describe("BoardList", () => {
     }
   })
 
-  it("moves focus into the portaled menu so keyboard users can reach it", () => {
+  it("moves focus into the menu so keyboard users can reach it", () => {
     const { container } = renderBoard()
 
     openMenu(container, { clientX: 10, clientY: 10 })
@@ -149,26 +149,39 @@ describe("BoardList", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("Move Local time up"))
   })
 
-  it("restores focus to the opener when the menu is dismissed", () => {
+  it("moves focus between items with the arrow keys, Home, and End", () => {
     const { container } = renderBoard()
 
-    const card = openMenu(container, { clientX: 10, clientY: 10 })
-    expect(document.activeElement).not.toBe(card)
+    openMenu(container, { clientX: 10, clientY: 10 })
 
-    fireEvent.keyDown(window, { key: "Escape" })
+    const moveUp = screen.getByLabelText("Move Local time up")
+    const edit = screen.getByLabelText("Edit Local time")
+    const panel = screen.getByLabelText("Actions for Local time")
 
-    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
-    expect(document.activeElement).toBe(card)
+    expect(document.activeElement).toBe(moveUp)
+
+    fireEvent.keyDown(panel, { key: "ArrowDown" })
+    expect(document.activeElement).toBe(edit)
+
+    fireEvent.keyDown(panel, { key: "ArrowDown" })
+    expect(document.activeElement).toBe(moveUp) // wraps to the first item
+
+    fireEvent.keyDown(panel, { key: "ArrowUp" })
+    expect(document.activeElement).toBe(edit) // wraps to the last item
+
+    fireEvent.keyDown(panel, { key: "Home" })
+    expect(document.activeElement).toBe(moveUp)
+
+    fireEvent.keyDown(panel, { key: "End" })
+    expect(document.activeElement).toBe(edit)
   })
 
-  it("leaves focus restoration to the action when a menu item is chosen", () => {
+  it("closes the menu when an item is chosen", () => {
     const { container } = renderBoard()
 
-    const card = openMenu(container, { clientX: 10, clientY: 10 })
+    openMenu(container, { clientX: 10, clientY: 10 })
     fireEvent.click(screen.getByLabelText("Edit Local time"))
 
     expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
-    // The chosen action manages focus; the menu does not force it back to the card.
-    expect(document.activeElement).not.toBe(card)
   })
 })

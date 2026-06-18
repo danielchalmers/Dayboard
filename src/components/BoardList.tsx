@@ -24,7 +24,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode
 } from "react"
-import { createPortal } from "react-dom"
 
 import { BoardRow } from "~/components/BoardRow"
 import type { Widget } from "~/lib/types"
@@ -72,8 +71,9 @@ interface WidgetContextMenuProps {
 const getMenuItems = (panel: HTMLElement) =>
   Array.from(panel.querySelectorAll<HTMLButtonElement>("button:not([disabled])"))
 
-// A free-form context menu that spawns under the cursor and is portaled to the
-// document body so it can break free of the card's clipped, overflow-hidden bounds.
+// A free-form context menu that spawns under the cursor. It uses the native
+// Popover API so it renders in the top layer — escaping the card's clipped,
+// overflow-hidden bounds — and gets light-dismiss + Escape handling for free.
 const WidgetContextMenu = ({
   x,
   y,
@@ -81,16 +81,48 @@ const WidgetContextMenu = ({
   onClose,
   children
 }: WidgetContextMenuProps) => {
+  const menuRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: x, top: y })
-  // Selecting an action manages focus itself (opens a dialog, reorders), so only
-  // restore focus to the opener when the menu is dismissed rather than acted on.
-  const restoreFocusRef = useRef(true)
 
-  // Keep the menu fully on screen by nudging it back inside the viewport once we
-  // can measure its rendered size. Runs before paint to avoid a visible jump.
-  // offsetWidth/Height read the settled layout box, ignoring the scale-up
-  // animation transform so we clamp against the menu's real size.
+  // onClose is recreated on every parent render (the board re-renders each tick).
+  // Keep the latest in a ref so the mount-only effects don't re-run and steal focus.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Promote the menu to the top layer, move focus into it (it sits outside the
+  // card's tab order), and mirror native dismissals (Escape / click-away) into React.
+  useLayoutEffect(() => {
+    const menu = menuRef.current
+    const panel = panelRef.current
+
+    if (!menu || !panel) {
+      return
+    }
+
+    menu.setAttribute("popover", "auto")
+
+    try {
+      menu.showPopover()
+    } catch {
+      // Already shown — ignore.
+    }
+
+    getMenuItems(panel)[0]?.focus()
+
+    const handleToggle = (event: Event) => {
+      if ((event as ToggleEvent).newState === "closed") {
+        onCloseRef.current()
+      }
+    }
+
+    menu.addEventListener("toggle", handleToggle)
+
+    return () => menu.removeEventListener("toggle", handleToggle)
+  }, [])
+
+  // Keep the menu on screen, measuring the settled layout box (offsetWidth/Height
+  // ignore the scale-up transform so we clamp against the real size).
   useLayoutEffect(() => {
     const panel = panelRef.current
 
@@ -100,43 +132,39 @@ const WidgetContextMenu = ({
 
     const maxLeft = window.innerWidth - panel.offsetWidth - MENU_VIEWPORT_MARGIN
     const maxTop = window.innerHeight - panel.offsetHeight - MENU_VIEWPORT_MARGIN
-    const left = Math.max(MENU_VIEWPORT_MARGIN, Math.min(x, maxLeft))
-    const top = Math.max(MENU_VIEWPORT_MARGIN, Math.min(y, maxTop))
 
-    setPosition({ left, top })
+    setPosition({
+      left: Math.max(MENU_VIEWPORT_MARGIN, Math.min(x, maxLeft)),
+      top: Math.max(MENU_VIEWPORT_MARGIN, Math.min(y, maxTop))
+    })
   }, [x, y])
 
-  // The menu is portaled out of the card and its tab order, so move focus into it
-  // when it opens (keyboard users could not otherwise reach it) and return focus
-  // to the opener when it is dismissed.
+  // A viewport-fixed menu drifts away from its card on scroll or resize, so close
+  // it. Hide it through the Popover API (not a bare React unmount) so the browser
+  // runs its native focus-restoration and returns focus to the opener; the
+  // resulting toggle event then clears the React state.
   useEffect(() => {
-    const panel = panelRef.current
+    const close = () => {
+      const menu = menuRef.current
 
-    if (!panel) {
-      return
+      if (menu) {
+        menu.hidePopover()
+      } else {
+        onCloseRef.current()
+      }
     }
 
-    const opener = document.activeElement as HTMLElement | null
-    getMenuItems(panel)[0]?.focus()
+    window.addEventListener("resize", close)
+    window.addEventListener("scroll", close, true)
 
     return () => {
-      if (restoreFocusRef.current && opener?.isConnected) {
-        opener.focus()
-      }
+      window.removeEventListener("resize", close)
+      window.removeEventListener("scroll", close, true)
     }
   }, [])
 
-  const handleClick = () => {
-    restoreFocusRef.current = false
-    onClose()
-  }
-
-  // Trap Tab within the menu so focus cannot wander into the page behind it.
+  // Arrow keys move between items; Tab is trapped so focus stays inside the menu.
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") {
-      return
-    }
-
     const panel = panelRef.current
 
     if (!panel) {
@@ -144,36 +172,60 @@ const WidgetContextMenu = ({
     }
 
     const items = getMenuItems(panel)
-    const first = items[0]
-    const last = items[items.length - 1]
 
-    if (!first || !last) {
+    if (items.length === 0) {
       return
     }
 
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first.focus()
+    const current = items.indexOf(document.activeElement as HTMLButtonElement)
+    const focusItem = (index: number) =>
+      items[((index % items.length) + items.length) % items.length]?.focus()
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault()
+        focusItem(current + 1)
+        break
+      case "ArrowUp":
+        event.preventDefault()
+        focusItem(current < 0 ? items.length - 1 : current - 1)
+        break
+      case "Home":
+        event.preventDefault()
+        focusItem(0)
+        break
+      case "End":
+        event.preventDefault()
+        focusItem(items.length - 1)
+        break
+      case "Tab":
+        event.preventDefault()
+        focusItem(
+          event.shiftKey
+            ? current < 0
+              ? items.length - 1
+              : current - 1
+            : current + 1
+        )
+        break
     }
   }
 
-  return createPortal(
+  return (
     <div
       className="card-menu"
+      ref={menuRef}
       style={{ left: position.left, top: position.top }}>
       <div
         aria-label={label}
         className="card-menu__panel"
-        onClick={handleClick}
+        onClick={onClose}
         onKeyDown={handleKeyDown}
-        ref={panelRef}>
+        ref={panelRef}
+        role="menu">
         {children}
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
 
@@ -300,43 +352,6 @@ export const BoardList = ({
     })
   )
 
-  useEffect(() => {
-    if (!openMenu) {
-      return
-    }
-
-    const closeMenu = () => setOpenMenu(null)
-
-    const closeMenuOnPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target
-
-      if (target instanceof Element && target.closest(".card-menu")) {
-        return
-      }
-
-      closeMenu()
-    }
-
-    const closeMenuOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu()
-      }
-    }
-
-    window.addEventListener("pointerdown", closeMenuOnPointerDownOutside)
-    window.addEventListener("keydown", closeMenuOnEscape)
-    // A fixed menu would drift away from its anchor on scroll or resize, so close it.
-    window.addEventListener("resize", closeMenu)
-    window.addEventListener("scroll", closeMenu, true)
-
-    return () => {
-      window.removeEventListener("pointerdown", closeMenuOnPointerDownOutside)
-      window.removeEventListener("keydown", closeMenuOnEscape)
-      window.removeEventListener("resize", closeMenu)
-      window.removeEventListener("scroll", closeMenu, true)
-    }
-  }, [openMenu])
-
   if (items.length === 0) {
     return (
       <div className="empty-state">
@@ -389,36 +404,38 @@ export const BoardList = ({
   const activeMenuIndex = activeMenuItem ? items.indexOf(activeMenuItem) : -1
 
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEnd}
-      onDragStart={handleDragStart}
-      sensors={sensors}>
-      <SortableContext items={itemIds} strategy={rectSortingStrategy}>
-        <section
-          className={[
-            "board-list",
-            activeId ? "board-list--dragging" : ""
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          aria-label="Clockboard widgets">
-          {items.map((item) => (
-            <SortableBoardRow
-              activeId={activeId}
-              hasActions={hasActions}
-              isMenuOpen={openMenu?.id === item.id}
-              item={item}
-              key={item.id}
-              now={now}
-              onCloseMenu={closeMenu}
-              onOpenMenu={handleOpenMenu}
-              prefersReducedMotion={prefersReducedMotion}
-            />
-          ))}
-        </section>
-      </SortableContext>
+    <>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+        onDragStart={handleDragStart}
+        sensors={sensors}>
+        <SortableContext items={itemIds} strategy={rectSortingStrategy}>
+          <section
+            className={[
+              "board-list",
+              activeId ? "board-list--dragging" : ""
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-label="Clockboard widgets">
+            {items.map((item) => (
+              <SortableBoardRow
+                activeId={activeId}
+                hasActions={hasActions}
+                isMenuOpen={openMenu?.id === item.id}
+                item={item}
+                key={item.id}
+                now={now}
+                onCloseMenu={closeMenu}
+                onOpenMenu={handleOpenMenu}
+                prefersReducedMotion={prefersReducedMotion}
+              />
+            ))}
+          </section>
+        </SortableContext>
+      </DndContext>
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu
           label={`Actions for ${activeMenuItem.title}`}
@@ -428,6 +445,6 @@ export const BoardList = ({
           {renderItemActions(activeMenuItem, activeMenuIndex)}
         </WidgetContextMenu>
       ) : null}
-    </DndContext>
+    </>
   )
 }

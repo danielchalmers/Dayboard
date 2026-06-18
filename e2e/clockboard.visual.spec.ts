@@ -144,11 +144,11 @@ test("captures Clockboard product screenshots", async ({
   await attachScreenshot(testInfo, page, "clockboard-main-desktop")
 
   await openWidgetMenu(page, "New York")
-  await expect(page.getByRole("button", { name: "Edit New York" })).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Edit New York" })).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-widget-menu-desktop")
   await page.keyboard.press("Escape")
   await expect(
-    page.getByRole("button", { name: "Edit New York" })
+    page.getByRole("menuitem", { name: "Edit New York" })
   ).toHaveCount(0)
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -174,13 +174,13 @@ test("captures Clockboard product screenshots", async ({
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await openWidgetMenu(page, "New York")
-  await page.getByRole("button", { name: "Edit New York" }).click()
+  await page.getByRole("menuitem", { name: "Edit New York" }).click()
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
   await attachScreenshot(testInfo, page, "clockboard-edit-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await openWidgetMenu(page, "Summer vacation")
-  await page.getByRole("button", { name: "Edit Summer vacation" }).click()
+  await page.getByRole("menuitem", { name: "Edit Summer vacation" }).click()
   await expect(
     page.getByRole("dialog", { name: "Edit countdown" })
   ).toBeVisible()

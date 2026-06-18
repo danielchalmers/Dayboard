@@ -260,9 +260,18 @@ details > summary::-webkit-details-marker {
   position: relative;
 }
 
-/* Free-form widget menu: portaled to <body> and pinned under the cursor. */
+/* Free-form widget menu: a native popover pinned under the cursor in the top
+   layer, with the UA popover styles reset back to our own panel styling. */
 .card-menu {
   position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  max-inline-size: none;
+  max-block-size: none;
   z-index: 200;
 }
 
