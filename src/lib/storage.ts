@@ -1,221 +1,28 @@
-import {
-  createDefaultState,
-  DEFAULT_TIME_ZONE,
-  DEFAULT_WIDGET_PLACEMENT,
-  DEFAULT_COLOR_PRESET,
-  type ClockboardState,
-  type ClockWidget,
-  type CountdownWidget,
-  type Widget,
-  type WidgetPlacement,
-  type WidgetColorPreset
-} from "./types"
+import { createDefaultState, type ClockboardState } from "./types"
 
 export const STORAGE_KEY = "clockboard-state"
 
-const hasSyncedExtensionStorage = (): boolean =>
-  typeof chrome !== "undefined" && Boolean(chrome.storage?.sync)
-
-// Values are persisted as JSON strings so the format stays compatible with
-// data written by earlier @plasmohq/storage builds across synced browsers.
-const parseStoredValue = (value: unknown): unknown =>
-  typeof value === "string" ? parseFallbackStorageValue(value) : value
-
-const readFallbackStorage = (): unknown => {
-  if (typeof localStorage === "undefined") {
-    return undefined
-  }
-
-  return parseFallbackStorageValue(localStorage.getItem(STORAGE_KEY))
-}
-
-const parseFallbackStorageValue = (rawValue: string | null): unknown => {
-  if (!rawValue) {
-    return undefined
-  }
-
-  try {
-    return JSON.parse(rawValue)
-  } catch {
-    return undefined
-  }
-}
-
-const writeFallbackStorage = (state: ClockboardState): void => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
-
-const asString = (value: unknown, fallback: string): string =>
-  typeof value === "string" && value.trim().length > 0 ? value : fallback
-
-const asPlacement = (
-  value: unknown,
-  fallback: WidgetPlacement = DEFAULT_WIDGET_PLACEMENT
-): WidgetPlacement => (value === "main" || value === "more" ? value : fallback)
-
-const VALID_PRESETS = new Set<string>([
-  "slate",
-  "rose",
-  "amber",
-  "emerald",
-  "sky",
-  "violet",
-  "teal",
-  "coral",
-  "indigo",
-  "mint"
-])
-
-const asColorPreset = (
-  value: unknown,
-  fallback: WidgetColorPreset = DEFAULT_COLOR_PRESET
-): WidgetColorPreset =>
-  typeof value === "string" && VALID_PRESETS.has(value)
-    ? (value as WidgetColorPreset)
-    : fallback
-
-const sanitizeIsoInstant = (value: unknown, fallback: string): string => {
-  if (typeof value !== "string") {
-    return fallback
-  }
-
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? fallback : date.toISOString()
-}
-
-const sanitizeWidgetBase = (value: Record<string, unknown>) => {
-  const now = new Date().toISOString()
-
-  return {
-    id: asString(value.id, crypto.randomUUID()),
-    title: asString(value.title, "Untitled"),
-    placement: asPlacement(value.placement),
-    colorPreset: asColorPreset(value.colorPreset),
-    createdAt: asString(value.createdAt, now),
-    updatedAt: asString(value.updatedAt, now)
-  }
-}
-
-const sanitizeClockWidget = (value: unknown): ClockWidget | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const settings = isRecord(value.settings) ? value.settings : {}
-
-  return {
-    ...sanitizeWidgetBase(value),
-    kind: "clock",
-    settings: {
-      timeZone: asString(settings.timeZone, DEFAULT_TIME_ZONE)
-    }
-  }
-}
-
-const sanitizeCountdownWidget = (value: unknown): CountdownWidget | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const settings = isRecord(value.settings) ? value.settings : {}
-  const fallbackTargetAt = createDefaultState().widgets.find(
-    (widget): widget is CountdownWidget => widget.kind === "countdown"
-  )!.settings.targetAt
-
-  return {
-    ...sanitizeWidgetBase(value),
-    kind: "countdown",
-    settings: {
-      targetAt: sanitizeIsoInstant(settings.targetAt, fallbackTargetAt)
-    }
-  }
-}
-
-const sanitizeWidget = (value: unknown): Widget | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  if (value.kind === "clock") {
-    return sanitizeClockWidget(value)
-  }
-
-  if (value.kind === "countdown") {
-    return sanitizeCountdownWidget(value)
-  }
-
-  return null
-}
-
-const sanitizeWidgets = (value: unknown): Widget[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value
-    .map((widget) => sanitizeWidget(widget))
-    .filter((widget): widget is Widget => widget !== null)
-}
-
-export const migrateClockboardState = (value: unknown): ClockboardState => {
-  if (!isRecord(value)) {
-    return createDefaultState()
-  }
-
-  const widgets = sanitizeWidgets(value.widgets)
-
-  return {
-    version: 3,
-    widgets: widgets.length > 0 ? widgets : createDefaultState().widgets
-  }
-}
+const isClockboardState = (value: unknown): value is ClockboardState =>
+  typeof value === "object" &&
+  value !== null &&
+  Array.isArray((value as { widgets?: unknown }).widgets)
 
 export const readClockboardState = async (): Promise<ClockboardState> => {
-  if (!hasSyncedExtensionStorage()) {
-    return migrateClockboardState(readFallbackStorage())
-  }
-
   const result = await chrome.storage.sync.get(STORAGE_KEY)
-  return migrateClockboardState(parseStoredValue(result[STORAGE_KEY]))
+  const stored = result[STORAGE_KEY]
+
+  return isClockboardState(stored) ? stored : createDefaultState()
 }
 
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {
-  if (hasSyncedExtensionStorage()) {
-    await chrome.storage.sync.set({ [STORAGE_KEY]: JSON.stringify(state) })
-    return
-  }
-
-  writeFallbackStorage(state)
+  await chrome.storage.sync.set({ [STORAGE_KEY]: state })
 }
 
 export const watchClockboardState = (
   listener: (state: ClockboardState) => void
 ): (() => void) => {
-  if (!hasSyncedExtensionStorage()) {
-    if (typeof window === "undefined") {
-      return () => {}
-    }
-
-    const handleFallbackStorageChange = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === null) {
-        listener(
-          migrateClockboardState(parseFallbackStorageValue(event.newValue))
-        )
-      }
-    }
-
-    window.addEventListener("storage", handleFallbackStorageChange)
-
-    return () => window.removeEventListener("storage", handleFallbackStorageChange)
-  }
-
   const handleStorageChange = (
     changes: Record<string, chrome.storage.StorageChange>,
     areaName: string
@@ -229,18 +36,12 @@ export const watchClockboardState = (
       return
     }
 
-    listener(migrateClockboardState(parseStoredValue(change.newValue)))
+    listener(
+      isClockboardState(change.newValue) ? change.newValue : createDefaultState()
+    )
   }
 
   chrome.storage.onChanged.addListener(handleStorageChange)
 
   return () => chrome.storage.onChanged.removeListener(handleStorageChange)
-}
-
-export const updateClockboardState = async (
-  updater: (state: ClockboardState) => ClockboardState
-): Promise<ClockboardState> => {
-  const nextState = updater(await readClockboardState())
-  await writeClockboardState(nextState)
-  return nextState
 }

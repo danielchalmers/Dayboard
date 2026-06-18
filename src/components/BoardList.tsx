@@ -29,7 +29,6 @@ import type { Widget } from "~/lib/types"
 interface BoardListProps {
   items: Widget[]
   now: Date
-  compact?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
 }
@@ -54,7 +53,6 @@ interface SortableBoardRowProps {
   item: Widget
   index: number
   now: Date
-  compact?: boolean
   activeId: string | null
   isMenuOpen: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
@@ -67,7 +65,6 @@ const SortableBoardRow = ({
   item,
   index,
   now,
-  compact,
   activeId,
   isMenuOpen,
   renderItemActions,
@@ -153,7 +150,6 @@ const SortableBoardRow = ({
         tabIndex: 0
       }}
       className={className}
-      compact={compact}
       item={item}
       now={now}
       ref={setNodeRef}
@@ -168,7 +164,6 @@ const SortableBoardRow = ({
 export const BoardList = ({
   items,
   now,
-  compact,
   renderItemActions,
   onReorder
 }: BoardListProps) => {
@@ -269,7 +264,7 @@ export const BoardList = ({
       <SortableContext items={itemIds} strategy={rectSortingStrategy}>
         <section
           className={[
-            compact ? "board-list board-list--compact" : "board-list",
+            "board-list",
             activeId ? "board-list--dragging" : ""
           ]
             .filter(Boolean)
@@ -278,7 +273,6 @@ export const BoardList = ({
           {items.map((item, index) => (
             <SortableBoardRow
               activeId={activeId}
-              compact={compact}
               isMenuOpen={openMenuId === item.id}
               index={index}
               item={item}

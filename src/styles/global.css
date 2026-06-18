@@ -339,10 +339,6 @@ details > summary::-webkit-details-marker {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
 }
 
-.board-list--compact {
-  gap: 16px;
-}
-
 /* ── Card redesign ─────────────────────────────────────────────────────── */
 
 .board-row {
@@ -407,12 +403,6 @@ details > summary::-webkit-details-marker {
   inset: 0;
   background: radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--card-accent-resolved) 4%, transparent) 0%, transparent 60%);
   pointer-events: none;
-}
-
-.board-row--compact {
-  gap: 16px;
-  min-block-size: 140px;
-  padding: 20px 24px 18px;
 }
 
 .board-row__header {
@@ -539,10 +529,6 @@ details > summary::-webkit-details-marker {
 .board-row--drop-target {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent);
-}
-
-.board-row--compact .board-row__value {
-  font-size: 1.95rem;
 }
 
 /* ── Forms ─────────────────────────────────────────────────────────────── */

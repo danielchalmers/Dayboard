@@ -18,7 +18,6 @@ import { getPresetCssVars } from "~/lib/colors"
 interface BoardRowProps {
   item: Widget
   now: Date
-  compact?: boolean
   actions?: ReactNode
   articleProps?: ComponentPropsWithoutRef<"article">
   className?: string
@@ -26,11 +25,11 @@ interface BoardRowProps {
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, compact = false, actions, articleProps, className, style },
+  { item, now, actions, articleProps, className, style },
   ref
 ) {
   const rowClassName = [
-    compact ? "board-row board-row--compact" : "board-row",
+    "board-row",
     `board-row--theme-${item.colorPreset}`,
     className
   ]

@@ -24,5 +24,4 @@ Live clocks and countdowns on your new tab page.
 - TypeScript — Apache-2.0
 - Vitest — MIT
 - jsdom — MIT
-- http-server — MIT
 - @types/chrome, @types/node, @types/react, @types/react-dom — MIT
