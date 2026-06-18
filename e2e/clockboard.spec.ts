@@ -23,16 +23,19 @@ const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) 
     throw new Error("Unable to locate widget bounds for dragging")
   }
 
-  await page.mouse.move(
-    sourceBox.x + sourceBox.width / 2,
-    sourceBox.y + sourceBox.height / 2
-  )
+  // Grab the draggable frame (the padded top edge), not the body, which is no
+  // longer a drag handle. Move by the center-to-center delta so the card still
+  // lands on the target's position regardless of where it was grabbed.
+  const grabX = sourceBox.x + sourceBox.width / 2
+  const grabY = sourceBox.y + 12
+  const deltaX =
+    targetBox.x + targetBox.width / 2 - (sourceBox.x + sourceBox.width / 2)
+  const deltaY =
+    targetBox.y + targetBox.height / 2 - (sourceBox.y + sourceBox.height / 2)
+
+  await page.mouse.move(grabX, grabY)
   await page.mouse.down()
-  await page.mouse.move(
-    targetBox.x + targetBox.width / 2,
-    targetBox.y + targetBox.height / 2,
-    { steps: 20 }
-  )
+  await page.mouse.move(grabX + deltaX, grabY + deltaY, { steps: 20 })
   await page.mouse.up()
 }
 
@@ -254,6 +257,74 @@ test("reordering changes the visible order and persists after reload", async ({
   await page.reload()
 
   await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+})
+
+test("dragging across a widget body selects text instead of reordering", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const titles = page.locator(".board-row h2")
+  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+
+  const heading = page.getByRole("heading", { name: "Local time" })
+  const box = await heading.boundingBox()
+
+  if (!box) {
+    throw new Error("Unable to locate widget heading bounds")
+  }
+
+  await page.mouse.move(box.x + 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, {
+    steps: 12
+  })
+  await page.mouse.up()
+
+  // The body is not a drag handle, so the order does not change...
+  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+
+  // ...and dragging over the text selects it instead.
+  const selection = await page.evaluate(
+    () => window.getSelection()?.toString() ?? ""
+  )
+  expect(selection.length).toBeGreaterThan(0)
+})
+
+test("only the draggable frame lights the card up on hover", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = page.locator(".board-row--draggable").first()
+  const box = await card.boundingBox()
+
+  if (!box) {
+    throw new Error("Unable to locate widget bounds")
+  }
+
+  const readStyle = () =>
+    card.evaluate((el) => {
+      const style = getComputedStyle(el)
+      return `${style.borderColor}|${style.boxShadow}`
+    })
+
+  // Hovering the body (the heading text) leaves the card calm.
+  const heading = page.getByRole("heading", { name: "Local time" })
+  await heading.hover()
+  const calm = await readStyle()
+
+  // Hovering the frame (the padded top edge) lights the card up. Poll so the
+  // border/shadow transition settles, but never pin an exact color-mix value.
+  await page.mouse.move(box.x + box.width / 2, box.y + 8)
+  await expect.poll(() => readStyle()).not.toBe(calm)
+
+  // Returning to the body calms it back down, proving the lit state tracks the
+  // frame rather than the whole card.
+  await heading.hover()
+  await expect.poll(() => readStyle()).toBe(calm)
 })
 
 test("dropdowns close when clicking outside them", async ({

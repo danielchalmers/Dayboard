@@ -73,6 +73,17 @@ describe("BoardList", () => {
     expect(container.querySelectorAll(".board-row--draggable")).toHaveLength(2)
   })
 
+  it("exposes a drag-handle frame inside each draggable card", () => {
+    const { container } = render(<BoardList items={widgets} now={new Date("2026-01-01T12:30:00.000Z")} />)
+
+    const frames = container.querySelectorAll(".board-row__frame")
+
+    expect(frames).toHaveLength(2)
+    frames.forEach((frame) => {
+      expect(frame.closest(".board-row--draggable")).not.toBeNull()
+    })
+  })
+
   it("opens a free-form popover menu under the cursor on right click", () => {
     const { container } = renderBoard()
 
