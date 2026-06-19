@@ -37,8 +37,25 @@ export interface CountdownWidget extends WidgetBase {
 
 export type Widget = ClockWidget | CountdownWidget
 
+export type BoardColumns = "auto" | 1 | 2 | 3 | 4
+
+export const BOARD_COLUMN_CHOICES: BoardColumns[] = ["auto", 1, 2, 3, 4]
+
+export interface ClockboardSettings {
+  /** Whether widgets can be dragged to rearrange the board. */
+  dragToMove: boolean
+  /** Fixed number of board columns, or `auto` for the responsive default. */
+  columns: BoardColumns
+}
+
+export const DEFAULT_SETTINGS: ClockboardSettings = {
+  dragToMove: true,
+  columns: "auto"
+}
+
 export interface ClockboardState {
   widgets: Widget[]
+  settings: ClockboardSettings
 }
 
 export const DEFAULT_TIME_ZONE =
@@ -72,7 +89,8 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
 }
 
 export const createDefaultState = (now = new Date()): ClockboardState => ({
-  widgets: createDefaultWidgets(now)
+  widgets: createDefaultWidgets(now),
+  settings: { ...DEFAULT_SETTINGS }
 })
 
 export const toDateTimeInputValue = (date: Date): string => {

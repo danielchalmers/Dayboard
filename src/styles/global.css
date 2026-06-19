@@ -367,6 +367,18 @@ details > summary::-webkit-details-marker {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
 }
 
+/* A user-chosen fixed column count overrides the responsive default. */
+.board-list[data-columns] {
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
+}
+
+/* Keep a fixed multi-column board from becoming cramped on small screens. */
+@media (max-width: 720px) {
+  .board-list[data-columns] {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Card redesign ─────────────────────────────────────────────────────── */
 
 .board-row {
@@ -773,6 +785,103 @@ select:focus {
     padding: 28px 24px;
     max-block-size: calc(100vh - 32px);
   }
+}
+
+/* ── Options dialog ────────────────────────────────────────────────────── */
+
+.options-list {
+  display: grid;
+  gap: 8px;
+}
+
+.option-row {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+
+.option-row + .option-row {
+  border-block-start: 1px solid var(--line);
+}
+
+.option-row__text {
+  display: grid;
+  gap: 4px;
+}
+
+.option-row__label {
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.option-row__hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.option-row__control {
+  inline-size: auto;
+  min-inline-size: 88px;
+  flex-shrink: 0;
+}
+
+/* Switch toggle */
+.switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.switch__input {
+  position: absolute;
+  opacity: 0;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  padding: 0;
+}
+
+.switch__track {
+  background: var(--surface-strong);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  display: inline-block;
+  block-size: 28px;
+  inline-size: 48px;
+  position: relative;
+  transition: background-color var(--t-fast), border-color var(--t-fast);
+}
+
+.switch__track::after {
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  content: "";
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  block-size: 19px;
+  inline-size: 19px;
+  transition: transform var(--t-fast);
+}
+
+.switch__input:checked + .switch__track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch__input:checked + .switch__track::after {
+  background: var(--accent-text);
+  transform: translateX(20px);
+}
+
+.switch__input:focus-visible + .switch__track {
+  box-shadow: var(--focus-ring);
 }
 
 /* ── Status Views & Empty States ───────────────────────────────────────── */

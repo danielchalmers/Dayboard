@@ -105,6 +105,52 @@ test("anchors the board to the bottom so the omnibox does not cover it", async (
   expect(spaceBelow).toBeGreaterThan(0)
 })
 
+test("global options toggle drag and columns and persist across reloads", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // Drag handles exist by default and the grid is responsive (no fixed columns).
+  await expect(page.locator(".board-row__frame")).toHaveCount(2)
+  await expect(page.locator(".board-list")).not.toHaveAttribute("data-columns")
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
+
+  // Turning off drag-to-move removes the draggable frames from every card.
+  await page.getByRole("switch", { name: "Drag to rearrange" }).click()
+  await expect(page.locator(".board-row__frame")).toHaveCount(0)
+
+  // Choosing a fixed column count drives the grid.
+  await page.getByLabel("Columns").selectOption("2")
+  await expect(page.locator(".board-list")).toHaveAttribute("data-columns", "2")
+
+  await page.getByRole("button", { name: "Done" }).click()
+  await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
+
+  // Settings persist across a reload...
+  await page.reload()
+  await expect(page.locator(".board-row__frame")).toHaveCount(0)
+  await expect(page.locator(".board-list")).toHaveAttribute("data-columns", "2")
+
+  // ...and the overlay reflects the saved choices when reopened.
+  await page.getByRole("button", { name: "Options" }).click()
+  await expect(
+    page.getByRole("switch", { name: "Drag to rearrange" })
+  ).not.toBeChecked()
+  await expect(page.getByLabel("Columns")).toHaveValue("2")
+})
+
+test("opening the page as the options view shows the overlay", async ({
+  page,
+  extensionId
+}) => {
+  await page.goto(`chrome-extension://${extensionId}/newtab.html?view=settings`)
+
+  await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
+})
+
 test("widget menu spawns under the cursor and breaks free of the card", async ({
   page,
   extensionId

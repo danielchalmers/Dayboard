@@ -20,6 +20,14 @@ export default defineConfig({
     description: "Live digital clocks and countdowns for your new tab page.",
     minimum_chrome_version: "116",
     permissions: ["storage"],
+    // The new tab page doubles as the options page so the browser's "Options"
+    // link (right-click the extension / Manage extensions) opens the board with
+    // the options overlay shown. Reusing newtab.html keeps the extension
+    // new-tab-only with no separate options entrypoint.
+    options_ui: {
+      page: "newtab.html?view=settings",
+      open_in_tab: true
+    },
     icons: {
       16: "icon16.png",
       32: "icon32.png",
