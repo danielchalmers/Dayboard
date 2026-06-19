@@ -488,6 +488,39 @@ details > summary::-webkit-details-marker {
   gap: 8px;
 }
 
+/* Note cards let the editing area fill the whole body. */
+.board-row__body--fill {
+  align-self: stretch;
+  min-block-size: 0;
+}
+
+.note-field {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 92px;
+  margin: 0;
+  padding: 0;
+  resize: none;
+}
+
+.note-field:hover,
+.note-field:focus {
+  border: 0;
+  box-shadow: none;
+  outline: 0;
+}
+
+.note-field::placeholder {
+  color: var(--quiet);
+}
+
 .board-row__value {
   font-size: clamp(2.6rem, 4.5vw, 3.8rem);
   font-variant-numeric: tabular-nums;

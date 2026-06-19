@@ -1,4 +1,4 @@
-export type WidgetKind = "clock" | "countdown"
+export type WidgetKind = "clock" | "countdown" | "note"
 
 export type WidgetColorPreset =
   | "slate"
@@ -35,7 +35,14 @@ export interface CountdownWidget extends WidgetBase {
   }
 }
 
-export type Widget = ClockWidget | CountdownWidget
+export interface NoteWidget extends WidgetBase {
+  kind: "note"
+  settings: {
+    text: string
+  }
+}
+
+export type Widget = ClockWidget | CountdownWidget | NoteWidget
 
 export type BoardColumns = "auto" | 1 | 2 | 3 | 4
 

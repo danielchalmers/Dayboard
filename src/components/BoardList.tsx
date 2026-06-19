@@ -37,7 +37,17 @@ interface BoardListProps {
   columns?: BoardColumns
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
+  onWidgetChange?: (widget: Widget) => void
 }
+
+// Interactive widgets (a note's textarea, a timer's buttons) own their key and
+// right-click behavior, so the card must not hijack those events for dragging
+// or its context menu when they originate inside such a control.
+const FORM_FIELD_SELECTOR =
+  "input, textarea, select, button, [contenteditable='true']"
+
+const isFromInteractiveControl = (event: { target: EventTarget | null }) =>
+  Boolean((event.target as HTMLElement | null)?.closest(FORM_FIELD_SELECTOR))
 
 interface OpenMenu {
   id: string
@@ -243,6 +253,7 @@ interface SortableBoardRowProps {
   prefersReducedMotion: boolean
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
+  onWidgetChange?: (widget: Widget) => void
 }
 
 const SortableBoardRow = ({
@@ -254,7 +265,8 @@ const SortableBoardRow = ({
   draggable,
   prefersReducedMotion,
   onCloseMenu,
-  onOpenMenu
+  onOpenMenu,
+  onWidgetChange
 }: SortableBoardRowProps) => {
   const {
     listeners,
@@ -283,6 +295,11 @@ const SortableBoardRow = ({
       return
     }
 
+    // Let a note's textarea (etc.) keep its native copy/paste menu.
+    if (isFromInteractiveControl(event)) {
+      return
+    }
+
     event.preventDefault()
     onOpenMenu(item.id, event.clientX, event.clientY)
   }
@@ -296,6 +313,13 @@ const SortableBoardRow = ({
   }
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    // Keys typed into an interactive control (a note's textarea, a button) stay
+    // with that control — never start a drag or open the menu — except Escape,
+    // which still closes an open menu.
+    if (isFromInteractiveControl(event) && event.key !== "Escape") {
+      return
+    }
+
     if (!hasActions) {
       deferToDragKeys(event)
       return
@@ -348,6 +372,7 @@ const SortableBoardRow = ({
       className={className}
       item={item}
       now={now}
+      onWidgetChange={onWidgetChange}
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -363,7 +388,8 @@ export const BoardList = ({
   draggable = true,
   columns = "auto",
   renderItemActions,
-  onReorder
+  onReorder,
+  onWidgetChange
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -469,6 +495,7 @@ export const BoardList = ({
                 now={now}
                 onCloseMenu={closeMenu}
                 onOpenMenu={handleOpenMenu}
+                onWidgetChange={onWidgetChange}
                 prefersReducedMotion={prefersReducedMotion}
               />
             ))}

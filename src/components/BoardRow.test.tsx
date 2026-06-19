@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { BoardRow } from "./BoardRow"
 import type { Widget } from "~/lib/types"
@@ -84,5 +84,90 @@ describe("BoardRow", () => {
     
     const article = container.querySelector("article")
     expect(article).toHaveAttribute("data-color-preset", "amber")
+  })
+
+  it("renders a note card with an editable text area", () => {
+    const item: Widget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "violet",
+      settings: { text: "Call the dentist" }
+    }
+
+    render(<BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />)
+
+    expect(screen.getByRole("heading", { name: "Scratchpad" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Scratchpad note")).toHaveValue(
+      "Call the dentist"
+    )
+  })
+
+  it("saves note edits on blur", () => {
+    const item: Widget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "" }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(
+      <BoardRow
+        item={item}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+
+    const field = screen.getByLabelText("Scratchpad note")
+    fireEvent.change(field, { target: { value: "Buy milk" } })
+    fireEvent.blur(field)
+
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: { text: "Buy milk" }
+    })
+  })
+
+  describe("with fake timers", () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("auto-saves a note a short beat after typing stops", () => {
+      vi.useFakeTimers()
+
+      const item: Widget = {
+        id: "scratch",
+        kind: "note",
+        title: "Scratchpad",
+        colorPreset: "slate",
+        settings: { text: "" }
+      }
+      const onWidgetChange = vi.fn()
+
+      render(
+        <BoardRow
+          item={item}
+          now={new Date("2026-01-01T12:30:00.000Z")}
+          onWidgetChange={onWidgetChange}
+        />
+      )
+
+      fireEvent.change(screen.getByLabelText("Scratchpad note"), {
+        target: { value: "Idea" }
+      })
+
+      expect(onWidgetChange).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(600)
+
+      expect(onWidgetChange).toHaveBeenCalledWith({
+        ...item,
+        settings: { text: "Idea" }
+      })
+    })
   })
 })

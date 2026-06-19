@@ -1,5 +1,8 @@
 import {
   forwardRef,
+  useEffect,
+  useRef,
+  useState,
   type ComponentPropsWithoutRef,
   type CSSProperties
 } from "react"
@@ -11,7 +14,7 @@ import {
   formatTimeZoneName,
   getCountdownParts
 } from "~/lib/time"
-import type { Widget } from "~/lib/types"
+import type { NoteWidget, Widget } from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
 
 interface BoardRowProps {
@@ -21,10 +24,88 @@ interface BoardRowProps {
   dragHandleProps?: ComponentPropsWithoutRef<"div">
   className?: string
   style?: CSSProperties
+  onWidgetChange?: (widget: Widget) => void
+}
+
+// Auto-save notes a short beat after typing stops to stay well under
+// chrome.storage.sync's write-rate limits while still feeling instant.
+const NOTE_SAVE_DELAY = 600
+
+const NoteField = ({
+  item,
+  onWidgetChange
+}: {
+  item: NoteWidget
+  onWidgetChange?: (widget: Widget) => void
+}) => {
+  const [text, setText] = useState(item.settings.text)
+  const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const timerRef = useRef<number | undefined>(undefined)
+
+  // Keep the latest callback without re-running the save timers.
+  const onChangeRef = useRef(onWidgetChange)
+  onChangeRef.current = onWidgetChange
+
+  // Adopt external updates (another tab, an edit dialog) unless the user is
+  // actively typing here, so a remote change never clobbers an in-progress note.
+  useEffect(() => {
+    if (document.activeElement === fieldRef.current) {
+      return
+    }
+
+    setText(item.settings.text)
+  }, [item.settings.text])
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current)
+      }
+    },
+    []
+  )
+
+  const save = (value: string) => {
+    if (value !== item.settings.text) {
+      onChangeRef.current?.({ ...item, settings: { text: value } })
+    }
+  }
+
+  const handleChange = (value: string) => {
+    setText(value)
+
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+    }
+
+    timerRef.current = window.setTimeout(() => save(value), NOTE_SAVE_DELAY)
+  }
+
+  const flush = () => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = undefined
+    }
+
+    save(text)
+  }
+
+  return (
+    <textarea
+      aria-label={`${item.title} note`}
+      className="note-field"
+      onBlur={flush}
+      onChange={(event) => handleChange(event.currentTarget.value)}
+      placeholder="Jot something down..."
+      ref={fieldRef}
+      spellCheck={false}
+      value={text}
+    />
+  )
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, articleProps, dragHandleProps, className, style },
+  { item, now, articleProps, dragHandleProps, className, style, onWidgetChange },
   ref
 ) {
   const rowClassName = [
@@ -85,6 +166,30 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
             {formatClockDate(now, item.settings.timeZone)}
             <span>{formatTimeZoneName(now, item.settings.timeZone)}</span>
           </p>
+        </div>
+      </article>
+    )
+  }
+
+  if (item.kind === "note") {
+    return (
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
+        {frame}
+        <div className="board-row__header">
+          <div className="board-row__identity">
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
+          </div>
+        </div>
+        <div className="board-row__body board-row__body--fill">
+          <NoteField item={item} onWidgetChange={onWidgetChange} />
         </div>
       </article>
     )

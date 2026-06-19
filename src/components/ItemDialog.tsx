@@ -167,11 +167,19 @@ export const ItemDialog = ({
                   value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
                 />
               </label>
-            ) : (
+            ) : null}
+
+            {draft.kind === "clock" ? (
               <p className="form-note">
                 Clockboard uses your system clock format automatically.
               </p>
-            )}
+            ) : null}
+
+            {draft.kind === "note" ? (
+              <p className="form-note">
+                Type your note directly on the card &mdash; it saves itself.
+              </p>
+            ) : null}
           </div>
 
           <div className="modal-dialog__actions">
