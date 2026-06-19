@@ -24,8 +24,6 @@ const sampleState: DayboardState = {
   }
 }
 
-const LEGACY_STORAGE_KEY = "clockboard-state"
-
 const stubChromeStorage = () => {
   const store = new Map<string, unknown>()
   const addListener = vi.fn()
@@ -34,15 +32,9 @@ const stubChromeStorage = () => {
   vi.stubGlobal("chrome", {
     storage: {
       sync: {
-        get: vi.fn(async (keys: string | string[]) => {
-          const requested = Array.isArray(keys) ? keys : [keys]
-          return Object.fromEntries(requested.map((key) => [key, store.get(key)]))
-        }),
+        get: vi.fn(async (key: string) => ({ [key]: store.get(key) })),
         set: vi.fn(async (items: Record<string, unknown>) => {
           Object.entries(items).forEach(([key, value]) => store.set(key, value))
-        }),
-        remove: vi.fn(async (key: string) => {
-          store.delete(key)
         })
       },
       onChanged: {
@@ -102,30 +94,6 @@ describe("readDayboardState", () => {
 
     expect(state.widgets).toEqual(sampleState.widgets)
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
-  })
-
-  it("migrates a board saved under the legacy Clockboard key", async () => {
-    const { store } = stubChromeStorage()
-    store.set(LEGACY_STORAGE_KEY, sampleState)
-
-    const { readDayboardState } = await import("./storage")
-    const state = await readDayboardState()
-
-    expect(state).toEqual(sampleState)
-    // It moves to the new key and clears the old one.
-    expect(store.get(STORAGE_KEY)).toEqual(sampleState)
-    expect(store.has(LEGACY_STORAGE_KEY)).toBe(false)
-  })
-
-  it("prefers the new key over a leftover legacy key", async () => {
-    const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, sampleState)
-    store.set(LEGACY_STORAGE_KEY, { widgets: [] })
-
-    const { readDayboardState } = await import("./storage")
-    const state = await readDayboardState()
-
-    expect(state).toEqual(sampleState)
   })
 
   it("drops malformed widget entries while keeping valid ones", async () => {

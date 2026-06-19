@@ -9,9 +9,6 @@ import {
 import { widgetRegistry } from "./widgets"
 
 export const STORAGE_KEY = "dayboard-state"
-// The app was renamed from Clockboard; boards saved before the rename live under
-// the old key and are migrated to STORAGE_KEY the first time they are read.
-const LEGACY_STORAGE_KEY = "clockboard-state"
 
 const hasWidgets = (value: unknown): value is { widgets: unknown[] } =>
   typeof value === "object" &&
@@ -26,8 +23,8 @@ const isValidWidget = (value: unknown): value is Widget =>
   typeof (value as Widget).id === "string" &&
   (value as Widget).kind in widgetRegistry
 
-// Settings were added after the first widgets shipped, so fill any missing or
-// malformed fields with their defaults rather than discarding the whole board.
+// Fill any missing or malformed fields with their defaults so a partial or
+// hand-edited imported board still loads cleanly.
 const normalizeSettings = (value: unknown): DayboardSettings => {
   const stored = (typeof value === "object" && value !== null
     ? value
@@ -61,29 +58,9 @@ const normalizeState = (value: unknown): DayboardState => {
 }
 
 export const readDayboardState = async (): Promise<DayboardState> => {
-  const result = await chrome.storage.sync.get([STORAGE_KEY, LEGACY_STORAGE_KEY])
+  const result = await chrome.storage.sync.get(STORAGE_KEY)
 
-  if (result[STORAGE_KEY] !== undefined) {
-    return normalizeState(result[STORAGE_KEY])
-  }
-
-  // First read after the rename: adopt the board saved under the old key, move
-  // it to the new key, and drop the old one. Best-effort so a write failure
-  // still returns the board.
-  if (result[LEGACY_STORAGE_KEY] !== undefined) {
-    const migrated = normalizeState(result[LEGACY_STORAGE_KEY])
-
-    try {
-      await chrome.storage.sync.set({ [STORAGE_KEY]: migrated })
-      await chrome.storage.sync.remove(LEGACY_STORAGE_KEY)
-    } catch {
-      // Leave the legacy key in place; we'll try again on the next read.
-    }
-
-    return migrated
-  }
-
-  return createDefaultState()
+  return normalizeState(result[STORAGE_KEY])
 }
 
 // Pretty-printed JSON for the Export option.
