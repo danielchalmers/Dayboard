@@ -27,7 +27,8 @@ const normalizeSettings = (value: unknown): ClockboardSettings => {
         : DEFAULT_SETTINGS.dragToMove,
     columns: BOARD_COLUMN_CHOICES.includes(stored.columns as never)
       ? (stored.columns as ClockboardSettings["columns"])
-      : DEFAULT_SETTINGS.columns
+      : DEFAULT_SETTINGS.columns,
+    name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name
   }
 }
 
