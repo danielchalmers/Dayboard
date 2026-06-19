@@ -521,6 +521,31 @@ test("typing in a note does not start a drag or open the widget menu", async ({
   await expect(page.locator(".card-menu")).toHaveCount(0)
 })
 
+test("add quote flow shows a quote and keeps the daily pick across reloads", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add quote" }).click()
+  await expect(page.getByRole("dialog", { name: "Add quote" })).toBeVisible()
+  await page.getByLabel("Name").fill("Mantras")
+  await page.getByLabel("Quotes").fill("Stay curious.\nKeep going.")
+  await page.getByLabel("Show a new one").selectOption("daily")
+  await page.getByRole("button", { name: "Save quote" }).click()
+
+  await expect(page.getByRole("heading", { name: "Mantras" })).toBeVisible()
+
+  const quote = page.locator(".quote-text")
+  const shown = (await quote.textContent())?.trim() ?? ""
+  expect(["Stay curious.", "Keep going."]).toContain(shown)
+
+  // Daily rotation is deterministic, so the same quote returns after a reload.
+  await page.reload()
+  await expect(page.locator(".quote-text")).toHaveText(shown)
+})
+
 test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId

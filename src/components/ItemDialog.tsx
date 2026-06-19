@@ -5,7 +5,8 @@ import {
   getTimeZoneOptions,
   isoInstantToDateTimeInputValue
 } from "~/lib/time"
-import type { Widget, WidgetColorPreset } from "~/lib/types"
+import { quotesToText, textToQuotes } from "~/lib/quotes"
+import type { QuoteRotation, Widget, WidgetColorPreset } from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 import { ColorPresetPicker } from "~/components/ColorPresetPicker"
 
@@ -105,6 +106,25 @@ export const ItemDialog = ({
     )
   }
 
+  const updateQuotes = (value: string) => {
+    setDraft((current) =>
+      current?.kind === "quote"
+        ? { ...current, settings: { ...current.settings, quotes: textToQuotes(value) } }
+        : current
+    )
+  }
+
+  const updateRotation = (value: string) => {
+    setDraft((current) =>
+      current?.kind === "quote"
+        ? {
+            ...current,
+            settings: { ...current.settings, rotation: value as QuoteRotation }
+          }
+        : current
+    )
+  }
+
   return (
     <div className="modal-backdrop">
       <section
@@ -179,6 +199,31 @@ export const ItemDialog = ({
               <p className="form-note">
                 Type your note directly on the card &mdash; it saves itself.
               </p>
+            ) : null}
+
+            {draft.kind === "quote" ? (
+              <>
+                <label className="form-label-group">
+                  <span>Quotes</span>
+                  <textarea
+                    className="quote-list-input"
+                    onChange={(event) => updateQuotes(event.currentTarget.value)}
+                    placeholder="One quote per line..."
+                    rows={6}
+                    value={quotesToText(draft.settings.quotes)}
+                  />
+                </label>
+
+                <label className="form-label-group">
+                  <span>Show a new one</span>
+                  <select
+                    onChange={(event) => updateRotation(event.currentTarget.value)}
+                    value={draft.settings.rotation}>
+                    <option value="daily">Each day</option>
+                    <option value="open">Every time I open a tab</option>
+                  </select>
+                </label>
+              </>
             ) : null}
           </div>
 
