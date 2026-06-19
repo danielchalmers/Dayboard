@@ -40,33 +40,56 @@ interface BoardListProps {
   onReorder?: (activeId: string, overId: string) => void
   onWidgetChange?: (widget: Widget) => void
   onArchive?: (id: string) => void
+  onRestore?: (id: string) => void
 }
 
 const ARCHIVE_DROP_ID = "clockboard-archive-dropzone"
+const RESTORE_DROP_ID = "clockboard-restore-dropzone"
 
-// A drop target that only exists mid-drag: dropping a widget here archives it.
-const ArchiveDropZone = () => {
-  const { setNodeRef, isOver } = useDroppable({ id: ARCHIVE_DROP_ID })
+const ARCHIVE_ICON = (
+  <path
+    d="M4 7.5h16M4 7.5 5.2 19a1.5 1.5 0 0 0 1.5 1.4h10.6a1.5 1.5 0 0 0 1.5-1.4L20 7.5M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2M10 11.5v5M14 11.5v5"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.7"
+  />
+)
+
+const RESTORE_ICON = (
+  <path
+    d="M12 20V8M12 8 7 13M12 8l5 5M5 4h14"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.8"
+  />
+)
+
+// A drop target that only exists mid-drag, pinned to the bottom of the
+// viewport. Dropping a dragged widget on it archives or restores it.
+const DropZone = ({
+  id,
+  icon,
+  idleLabel,
+  overLabel
+}: {
+  id: string
+  icon: ReactNode
+  idleLabel: string
+  overLabel: string
+}) => {
+  const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
     <div
       ref={setNodeRef}
       className={`archive-dropzone${isOver ? " archive-dropzone--over" : ""}`}
       aria-hidden="true">
-      <svg
-        fill="none"
-        height="22"
-        viewBox="0 0 24 24"
-        width="22">
-        <path
-          d="M4 7.5h16M4 7.5 5.2 19a1.5 1.5 0 0 0 1.5 1.4h10.6a1.5 1.5 0 0 0 1.5-1.4L20 7.5M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2M10 11.5v5M14 11.5v5"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.7"
-        />
+      <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
+        {icon}
       </svg>
-      <span>{isOver ? "Release to archive" : "Drag here to archive"}</span>
+      <span>{isOver ? overLabel : idleLabel}</span>
     </div>
   )
 }
@@ -426,7 +449,8 @@ export const BoardList = ({
   renderItemActions,
   onReorder,
   onWidgetChange,
-  onArchive
+  onArchive,
+  onRestore
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -475,6 +499,11 @@ export const BoardList = ({
 
     if (over.id === ARCHIVE_DROP_ID) {
       onArchive?.(String(active.id))
+      return
+    }
+
+    if (over.id === RESTORE_DROP_ID) {
+      onRestore?.(String(active.id))
       return
     }
 
@@ -543,7 +572,22 @@ export const BoardList = ({
             ))}
           </section>
         </SortableContext>
-        {activeId && onArchive ? <ArchiveDropZone /> : null}
+        {activeId && onArchive ? (
+          <DropZone
+            id={ARCHIVE_DROP_ID}
+            icon={ARCHIVE_ICON}
+            idleLabel="Drag here to archive"
+            overLabel="Release to archive"
+          />
+        ) : null}
+        {activeId && onRestore ? (
+          <DropZone
+            id={RESTORE_DROP_ID}
+            icon={RESTORE_ICON}
+            idleLabel="Drag here to restore"
+            overLabel="Release to restore"
+          />
+        ) : null}
       </DndContext>
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu
