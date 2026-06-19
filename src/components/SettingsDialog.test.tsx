@@ -132,6 +132,22 @@ describe("SettingsDialog", () => {
     expect(onImport).toHaveBeenCalledWith(file)
   })
 
+  it("shows an import error when one is provided", () => {
+    render(
+      <SettingsDialog
+        isOpen
+        settings={DEFAULT_SETTINGS}
+        onChange={() => {}}
+        onClose={() => {}}
+        importError="That file is not a Clockboard board."
+      />
+    )
+
+    expect(
+      screen.getByText("That file is not a Clockboard board.")
+    ).toBeInTheDocument()
+  })
+
   it("closes from the Done button", () => {
     const onClose = vi.fn()
     render(

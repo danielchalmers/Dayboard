@@ -168,6 +168,28 @@ test("exports the board to a file and imports one back", async ({
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
 })
 
+test("a bad import shows an error and leaves the board intact", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Options" }).click()
+
+  // A valid-JSON file that is not a board should be rejected with a message.
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "notaboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ nope: true }))
+  })
+
+  await expect(
+    page.getByText("That file is not a Clockboard board.")
+  ).toBeVisible()
+  // The dialog stays open and the existing board is untouched.
+  await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
+  await expect(page.getByText("Local time")).toBeVisible()
+})
+
 test("global options toggle drag and columns and persist across reloads", async ({
   page,
   extensionId
