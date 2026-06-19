@@ -478,6 +478,49 @@ test("multiple open tabs stay synchronized", async ({
   await thirdPage.close()
 })
 
+test("add note flow saves typed text and persists across reloads", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add note" }).click()
+  await expect(page.getByRole("dialog", { name: "Add note" })).toBeVisible()
+  await expect(page.getByLabel("Time zone")).toHaveCount(0)
+  await page.getByLabel("Name").fill("Reminders")
+  await page.getByRole("button", { name: "Save note" }).click()
+
+  await expect(page.getByRole("heading", { name: "Reminders" })).toBeVisible()
+
+  const field = page.getByLabel("Reminders note")
+  await field.fill("Buy milk")
+  // Blurring flushes the debounced auto-save.
+  await page.getByRole("heading", { name: "Clockboard" }).click()
+
+  await page.reload()
+  await expect(page.getByLabel("Reminders note")).toHaveValue("Buy milk")
+})
+
+test("typing in a note does not start a drag or open the widget menu", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add note" }).click()
+  await page.getByLabel("Name").fill("Scratch")
+  await page.getByRole("button", { name: "Save note" }).click()
+
+  const field = page.getByLabel("Scratch note")
+  await field.click()
+  // A space must land in the note instead of triggering a keyboard drag.
+  await page.keyboard.type("a b c")
+  await expect(field).toHaveValue("a b c")
+  await expect(page.locator(".card-menu")).toHaveCount(0)
+})
+
 test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId

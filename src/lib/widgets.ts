@@ -3,6 +3,7 @@ import {
   DEFAULT_COLOR_PRESET,
   type ClockWidget,
   type CountdownWidget,
+  type NoteWidget,
   type Widget,
   type WidgetKind
 } from "./types"
@@ -42,6 +43,16 @@ const createCountdownWidget = (now = new Date()): CountdownWidget => {
   }
 }
 
+const createNoteWidget = (): NoteWidget => ({
+  id: crypto.randomUUID(),
+  kind: "note",
+  title: "New note",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    text: ""
+  }
+})
+
 export const widgetRegistry: {
   [K in WidgetKind]: WidgetDefinition<K>
 } = {
@@ -61,6 +72,14 @@ export const widgetRegistry: {
       targetLabel: "When"
     },
     createDefault: createCountdownWidget
+  },
+  note: {
+    kind: "note",
+    kindLabel: "Note",
+    editor: {
+      hasTimeZone: false
+    },
+    createDefault: createNoteWidget
   }
 }
 

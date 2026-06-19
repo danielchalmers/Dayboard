@@ -88,6 +88,16 @@ export function NewTabPage() {
     setItemPendingDelete(null)
   }
 
+  // Live update from an interactive widget (e.g. typing into a note), saved in
+  // place without opening the edit dialog.
+  const updateWidget = (widget: Widget) => {
+    void setWidgets(
+      state.widgets.map((current) =>
+        current.id === widget.id ? widget : current
+      )
+    )
+  }
+
   const addItem = (kind: Widget["kind"]) => {
     closeOpenMenus()
     setEditorState({
@@ -191,6 +201,37 @@ export function NewTabPage() {
                   </svg>
                   Add countdown
                 </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("note")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <path
+                      d="M5 4.5h14a1 1 0 0 1 1 1V14l-6 5.5H5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M20 14h-5a1 1 0 0 0-1 1v4.5"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M8 9h8M8 12.5h5"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                  Add note
+                </button>
               </div>
             </details>
           </div>
@@ -201,6 +242,7 @@ export function NewTabPage() {
           draggable={state.settings.dragToMove}
           columns={state.settings.columns}
           onReorder={reorderList}
+          onWidgetChange={updateWidget}
           renderItemActions={(item, index) => (
             <>
               <button
