@@ -28,7 +28,11 @@ const normalizeSettings = (value: unknown): ClockboardSettings => {
     columns: BOARD_COLUMN_CHOICES.includes(stored.columns as never)
       ? (stored.columns as ClockboardSettings["columns"])
       : DEFAULT_SETTINGS.columns,
-    name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name
+    name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name,
+    chimeOnTimerEnd:
+      typeof stored.chimeOnTimerEnd === "boolean"
+        ? stored.chimeOnTimerEnd
+        : DEFAULT_SETTINGS.chimeOnTimerEnd
   }
 }
 

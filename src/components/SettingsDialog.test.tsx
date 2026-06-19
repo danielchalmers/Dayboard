@@ -55,7 +55,7 @@ describe("SettingsDialog", () => {
     render(
       <SettingsDialog
         isOpen
-        settings={{ dragToMove: true, columns: 3, name: "" }}
+        settings={{ dragToMove: true, columns: 3, name: "", chimeOnTimerEnd: false }}
         onChange={onChange}
         onClose={() => {}}
       />
@@ -66,7 +66,27 @@ describe("SettingsDialog", () => {
     expect(onChange).toHaveBeenCalledWith({
       dragToMove: true,
       columns: "auto",
-      name: ""
+      name: "",
+      chimeOnTimerEnd: false
+    })
+  })
+
+  it("toggles the timer chime", () => {
+    const onChange = vi.fn()
+    render(
+      <SettingsDialog
+        isOpen
+        settings={DEFAULT_SETTINGS}
+        onChange={onChange}
+        onClose={() => {}}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch", { name: "Timer chime" }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SETTINGS,
+      chimeOnTimerEnd: true
     })
   })
 

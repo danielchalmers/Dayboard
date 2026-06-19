@@ -41,6 +41,7 @@ interface BoardListProps {
   onWidgetChange?: (widget: Widget) => void
   onArchive?: (id: string) => void
   onRestore?: (id: string) => void
+  timerChime?: boolean
 }
 
 const ARCHIVE_DROP_ID = "clockboard-archive-dropzone"
@@ -313,6 +314,7 @@ interface SortableBoardRowProps {
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
   onWidgetChange?: (widget: Widget) => void
+  timerChime?: boolean
 }
 
 const SortableBoardRow = ({
@@ -325,7 +327,8 @@ const SortableBoardRow = ({
   prefersReducedMotion,
   onCloseMenu,
   onOpenMenu,
-  onWidgetChange
+  onWidgetChange,
+  timerChime
 }: SortableBoardRowProps) => {
   const {
     listeners,
@@ -432,6 +435,7 @@ const SortableBoardRow = ({
       item={item}
       now={now}
       onWidgetChange={onWidgetChange}
+      timerChime={timerChime}
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -450,7 +454,8 @@ export const BoardList = ({
   onReorder,
   onWidgetChange,
   onArchive,
-  onRestore
+  onRestore,
+  timerChime
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -567,6 +572,7 @@ export const BoardList = ({
                 onCloseMenu={closeMenu}
                 onOpenMenu={handleOpenMenu}
                 onWidgetChange={onWidgetChange}
+                timerChime={timerChime}
                 prefersReducedMotion={prefersReducedMotion}
               />
             ))}

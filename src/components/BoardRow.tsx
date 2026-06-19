@@ -23,6 +23,7 @@ import type {
   Widget
 } from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
+import { playChime, primeChime } from "~/lib/chime"
 import { cleanQuotes, dailyQuoteIndex } from "~/lib/quotes"
 import {
   finishTimer,
@@ -45,6 +46,7 @@ interface BoardRowProps {
   className?: string
   style?: CSSProperties
   onWidgetChange?: (widget: Widget) => void
+  timerChime?: boolean
 }
 
 // Auto-save notes a short beat after typing stops to stay well under
@@ -194,11 +196,13 @@ const StopwatchBody = ({
 const TimerBody = ({
   item,
   now,
-  onWidgetChange
+  onWidgetChange,
+  timerChime = false
 }: {
   item: TimerWidget
   now: Date
   onWidgetChange?: (widget: Widget) => void
+  timerChime?: boolean
 }) => {
   const { running, durationMs } = item.settings
   const remaining = timerRemainingMs(item.settings, now.getTime())
@@ -206,12 +210,26 @@ const TimerBody = ({
   const apply = (settings: TimerWidget["settings"]) =>
     onWidgetChange?.({ ...item, settings })
 
-  // Settle the timer the moment it counts down to zero while running.
+  // Settle the timer the moment it counts down to zero while running, and
+  // (optionally) chime once on that transition.
   useEffect(() => {
     if (running && done) {
+      if (timerChime) {
+        playChime()
+      }
+
       onWidgetChange?.({ ...item, settings: finishTimer(item.settings) })
     }
-  }, [running, done, item, onWidgetChange])
+  }, [running, done, item, onWidgetChange, timerChime])
+
+  const handleStart = () => {
+    // Warm up audio from this gesture so the later chime is allowed to sound.
+    if (timerChime) {
+      primeChime()
+    }
+
+    apply(startTimer(item.settings, Date.now()))
+  }
 
   const primaryLabel = running
     ? "Pause"
@@ -234,11 +252,7 @@ const TimerBody = ({
         <button
           className="timer-button timer-button--primary"
           onClick={() =>
-            apply(
-              running
-                ? pauseTimer(item.settings, Date.now())
-                : startTimer(item.settings, Date.now())
-            )
+            running ? apply(pauseTimer(item.settings, Date.now())) : handleStart()
           }
           type="button">
           {primaryLabel}
@@ -256,7 +270,16 @@ const TimerBody = ({
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  { item, now, articleProps, dragHandleProps, className, style, onWidgetChange },
+  {
+    item,
+    now,
+    articleProps,
+    dragHandleProps,
+    className,
+    style,
+    onWidgetChange,
+    timerChime
+  },
   ref
 ) {
   const rowClassName = [
@@ -391,7 +414,12 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
           {item.kind === "stopwatch" ? (
             <StopwatchBody item={item} now={now} onWidgetChange={onWidgetChange} />
           ) : (
-            <TimerBody item={item} now={now} onWidgetChange={onWidgetChange} />
+            <TimerBody
+              item={item}
+              now={now}
+              onWidgetChange={onWidgetChange}
+              timerChime={timerChime}
+            />
           )}
         </div>
       </article>
