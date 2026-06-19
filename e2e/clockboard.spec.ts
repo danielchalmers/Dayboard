@@ -105,6 +105,25 @@ test("anchors the board to the bottom so the omnibox does not cover it", async (
   expect(spaceBelow).toBeGreaterThan(0)
 })
 
+test("shows a time-aware greeting that can be personalized", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const greeting = page.locator(".page-header__greeting")
+  await expect(greeting).toHaveText(/Good (morning|afternoon|evening|night)/)
+
+  // Setting a name in Options personalizes and persists the greeting.
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByLabel("Your name").fill("Sam")
+  await page.getByRole("button", { name: "Done" }).click()
+  await expect(greeting).toHaveText(/, Sam$/)
+
+  await page.reload()
+  await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
+})
+
 test("global options toggle drag and columns and persist across reloads", async ({
   page,
   extensionId

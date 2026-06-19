@@ -111,11 +111,14 @@ export interface ClockboardSettings {
   dragToMove: boolean
   /** Fixed number of board columns, or `auto` for the responsive default. */
   columns: BoardColumns
+  /** Optional name used to personalize the greeting; empty hides it. */
+  name: string
 }
 
 export const DEFAULT_SETTINGS: ClockboardSettings = {
   dragToMove: true,
-  columns: "auto"
+  columns: "auto",
+  name: ""
 }
 
 export interface ClockboardState {

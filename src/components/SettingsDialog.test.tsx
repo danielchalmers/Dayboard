@@ -55,7 +55,7 @@ describe("SettingsDialog", () => {
     render(
       <SettingsDialog
         isOpen
-        settings={{ dragToMove: true, columns: 3 }}
+        settings={{ dragToMove: true, columns: 3, name: "" }}
         onChange={onChange}
         onClose={() => {}}
       />
@@ -63,7 +63,29 @@ describe("SettingsDialog", () => {
 
     fireEvent.change(screen.getByLabelText("Columns"), { target: { value: "auto" } })
 
-    expect(onChange).toHaveBeenCalledWith({ dragToMove: true, columns: "auto" })
+    expect(onChange).toHaveBeenCalledWith({
+      dragToMove: true,
+      columns: "auto",
+      name: ""
+    })
+  })
+
+  it("edits the greeting name", () => {
+    const onChange = vi.fn()
+    render(
+      <SettingsDialog
+        isOpen
+        settings={DEFAULT_SETTINGS}
+        onChange={onChange}
+        onClose={() => {}}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Your name"), {
+      target: { value: "Sam" }
+    })
+
+    expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, name: "Sam" })
   })
 
   it("closes from the Done button", () => {

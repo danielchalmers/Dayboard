@@ -7,6 +7,7 @@ import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
+import { getGreeting } from "~/lib/greeting"
 import {
   archiveWidget,
   createWidget,
@@ -137,6 +138,9 @@ export function NewTabPage() {
         <header className="page-header">
           <div>
             <h1>Clockboard</h1>
+            <p className="page-header__greeting">
+              {getGreeting(now, state.settings.name)}
+            </p>
           </div>
           <div className="page-header__actions">
             <button

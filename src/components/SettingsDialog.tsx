@@ -73,7 +73,20 @@ export const SettingsDialog = ({
           </div>
         </div>
 
-        <div className="options-list">
+        <div className="settings-fields">
+          <label className="form-label-group">
+            <span>Your name</span>
+            <input
+              onChange={(event) =>
+                onChange({ ...settings, name: event.currentTarget.value })
+              }
+              placeholder="Optional, for your greeting"
+              type="text"
+              value={settings.name}
+            />
+          </label>
+
+          <div className="options-list">
           <div className="option-row">
             <div className="option-row__text">
               <label className="option-row__label" htmlFor="settings-drag-to-move">
@@ -118,6 +131,7 @@ export const SettingsDialog = ({
                 </option>
               ))}
             </select>
+          </div>
           </div>
         </div>
 

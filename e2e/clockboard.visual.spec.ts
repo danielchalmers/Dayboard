@@ -65,7 +65,7 @@ const storyState: ClockboardState = {
       settings: { targetAt: "2025-12-25T06:00:00.000Z" }
     }
   ],
-  settings: { dragToMove: true, columns: "auto" }
+  settings: { dragToMove: true, columns: "auto", name: "" }
 }
 
 const freezeTime = async (page: Page) => {
