@@ -335,6 +335,34 @@ describe("BoardRow", () => {
     expect(onWidgetChange.mock.calls[0]![0].settings.running).toBe(true)
   })
 
+  it("announces completion to screen readers when a timer is done", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: { durationMs: 60_000, running: false, remainingMs: 0, endsAt: null }
+    }
+
+    render(<BoardRow item={item} now={new Date(50_000)} />)
+
+    expect(screen.getByRole("status")).toHaveTextContent("Tea timer finished")
+  })
+
+  it("keeps the live region empty while a timer is still running", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: { durationMs: 60_000, running: true, remainingMs: 60_000, endsAt: 60_000 }
+    }
+
+    render(<BoardRow item={item} now={new Date(0)} />)
+
+    expect(screen.getByRole("status").textContent).toBe("")
+  })
+
   it("settles a running timer once it reaches zero", () => {
     const item: Widget = {
       id: "t",

@@ -259,6 +259,12 @@ const TimerBody = ({
       {done && !running ? (
         <p className="board-row__meta board-row__meta--alert">Time&rsquo;s up</p>
       ) : null}
+      {/* A polite live region announces the finish once (the visible text above
+          is decorative for screen readers). It stays mounted and empty until
+          the timer is done so the change is what gets read out. */}
+      <span className="sr-only" role="status">
+        {done && !running ? `${item.title} timer finished` : ""}
+      </span>
       <div className="timer-controls">
         <button
           className="timer-button timer-button--primary"
