@@ -507,8 +507,8 @@ export const BoardList = ({
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <h2>Your board is ready</h2>
-        <p>Add a clock or countdown and it will appear here.</p>
+        <h2>Nothing here yet</h2>
+        <p>Use the + button to add a clock, countdown, note, timer, and more.</p>
       </div>
     )
   }
