@@ -77,6 +77,15 @@ describe("isTimeSensitive", () => {
 })
 
 describe("BoardList", () => {
+  it("shows a kind-agnostic empty state when there are no widgets", () => {
+    render(<BoardList items={[]} now={new Date("2026-01-01T12:30:00.000Z")} />)
+
+    expect(
+      screen.getByRole("heading", { name: "Nothing here yet" })
+    ).toBeInTheDocument()
+    expect(screen.getByText(/add a clock, countdown, note, timer/i)).toBeInTheDocument()
+  })
+
   it("makes each widget card draggable", () => {
     const { container } = render(<BoardList items={widgets} now={new Date("2026-01-01T12:30:00.000Z")} />)
 
