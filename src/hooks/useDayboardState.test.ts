@@ -18,12 +18,12 @@ afterEach(() => {
   vi.resetModules()
 })
 
-describe("useClockboardState save failure handling", () => {
+describe("useDayboardState save failure handling", () => {
   it("rolls back the optimistic update and reports a save error", async () => {
     stubChrome(() => Promise.reject(new Error("QUOTA_BYTES quota exceeded")))
 
-    const { useClockboardState } = await import("./useClockboardState")
-    const { result, unmount } = renderHook(() => useClockboardState())
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
 
     await waitFor(() => expect(result.current.state).not.toBeNull())
     const widgetsBefore = result.current.state!.widgets
@@ -46,8 +46,8 @@ describe("useClockboardState save failure handling", () => {
   it("clears any prior save error on a successful write", async () => {
     stubChrome(() => Promise.resolve())
 
-    const { useClockboardState } = await import("./useClockboardState")
-    const { result, unmount } = renderHook(() => useClockboardState())
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
 
     await waitFor(() => expect(result.current.state).not.toBeNull())
 

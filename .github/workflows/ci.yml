@@ -63,11 +63,11 @@ jobs:
         include:
           - target: chrome
             command: npm run build
-            artifact: clockboard-chrome-build
+            artifact: dayboard-chrome-build
             path: .output/chrome-mv3
           - target: edge
             command: npm run build:edge
-            artifact: clockboard-edge-build
+            artifact: dayboard-edge-build
             path: .output/edge-mv3
 
     steps:

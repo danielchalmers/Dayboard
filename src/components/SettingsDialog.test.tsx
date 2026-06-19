@@ -139,12 +139,12 @@ describe("SettingsDialog", () => {
         settings={DEFAULT_SETTINGS}
         onChange={() => {}}
         onClose={() => {}}
-        importError="That file is not a Clockboard board."
+        importError="That file is not a Dayboard board."
       />
     )
 
     expect(
-      screen.getByText("That file is not a Clockboard board.")
+      screen.getByText("That file is not a Dayboard board.")
     ).toBeInTheDocument()
   })
 

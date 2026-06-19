@@ -59,7 +59,7 @@ test("new tab page renders the default widgets and editing controls", async ({
     "href",
     /icon32\.png$/
   )
-  await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Dayboard" })).toBeVisible()
   await expect(page.getByText("Local time")).toBeVisible()
   await expect(page.getByText("Tomorrow morning")).toBeVisible()
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
@@ -138,7 +138,7 @@ test("exports the board to a file and imports one back", async ({
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Export" }).click()
   ])
-  expect(download.suggestedFilename()).toBe("clockboard.json")
+  expect(download.suggestedFilename()).toBe("dayboard.json")
   const path = await download.path()
   expect(readFileSync(path, "utf8")).toContain("Local time")
 
@@ -183,7 +183,7 @@ test("a bad import shows an error and leaves the board intact", async ({
   })
 
   await expect(
-    page.getByText("That file is not a Clockboard board.")
+    page.getByText("That file is not a Dayboard board.")
   ).toBeVisible()
   // The dialog stays open and the existing board is untouched.
   await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
@@ -520,14 +520,14 @@ test("dropdowns close when clicking outside them", async ({
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
-  await page.getByRole("heading", { name: "Clockboard" }).click()
+  await page.getByRole("heading", { name: "Dayboard" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
 
   await openWidgetMenu(page, "Tomorrow morning")
   await expect(
     page.getByRole("menuitem", { name: "Move Tomorrow morning up" })
   ).toBeVisible()
-  await page.getByRole("heading", { name: "Clockboard" }).click()
+  await page.getByRole("heading", { name: "Dayboard" }).click()
   await expect(
     page.getByRole("menuitem", { name: "Move Tomorrow morning up" })
   ).not.toBeVisible()
@@ -624,7 +624,7 @@ test("add note flow saves typed text and persists across reloads", async ({
   const field = page.getByLabel("Reminders note")
   await field.fill("Buy milk")
   // Blurring flushes the debounced auto-save.
-  await page.getByRole("heading", { name: "Clockboard" }).click()
+  await page.getByRole("heading", { name: "Dayboard" }).click()
 
   await page.reload()
   await expect(page.getByLabel("Reminders note")).toHaveValue("Buy milk")

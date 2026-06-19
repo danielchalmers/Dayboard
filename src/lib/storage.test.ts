@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { ClockboardState } from "./types"
+import type { DayboardState } from "./types"
 
-const STORAGE_KEY = "clockboard-state"
+const STORAGE_KEY = "dayboard-state"
 
-const sampleState: ClockboardState = {
+const sampleState: DayboardState = {
   widgets: [
     {
       id: "clock-1",
@@ -24,6 +24,8 @@ const sampleState: ClockboardState = {
   }
 }
 
+const LEGACY_STORAGE_KEY = "clockboard-state"
+
 const stubChromeStorage = () => {
   const store = new Map<string, unknown>()
   const addListener = vi.fn()
@@ -32,9 +34,15 @@ const stubChromeStorage = () => {
   vi.stubGlobal("chrome", {
     storage: {
       sync: {
-        get: vi.fn(async (key: string) => ({ [key]: store.get(key) })),
+        get: vi.fn(async (keys: string | string[]) => {
+          const requested = Array.isArray(keys) ? keys : [keys]
+          return Object.fromEntries(requested.map((key) => [key, store.get(key)]))
+        }),
         set: vi.fn(async (items: Record<string, unknown>) => {
           Object.entries(items).forEach(([key, value]) => store.set(key, value))
+        }),
+        remove: vi.fn(async (key: string) => {
+          store.delete(key)
         })
       },
       onChanged: {
@@ -52,12 +60,12 @@ afterEach(() => {
   vi.resetModules()
 })
 
-describe("readClockboardState", () => {
+describe("readDayboardState", () => {
   it("returns the default widgets when nothing is stored", async () => {
     stubChromeStorage()
 
-    const { readClockboardState } = await import("./storage")
-    const state = await readClockboardState()
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
 
     expect(state.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
@@ -69,17 +77,17 @@ describe("readClockboardState", () => {
     const { store } = stubChromeStorage()
     store.set(STORAGE_KEY, sampleState)
 
-    const { readClockboardState } = await import("./storage")
+    const { readDayboardState } = await import("./storage")
 
-    expect(await readClockboardState()).toEqual(sampleState)
+    expect(await readDayboardState()).toEqual(sampleState)
   })
 
   it("falls back to defaults when the stored value is malformed", async () => {
     const { store } = stubChromeStorage()
     store.set(STORAGE_KEY, "not-an-object")
 
-    const { readClockboardState } = await import("./storage")
-    const state = await readClockboardState()
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
 
     expect(state.widgets).toHaveLength(2)
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
@@ -89,11 +97,35 @@ describe("readClockboardState", () => {
     const { store } = stubChromeStorage()
     store.set(STORAGE_KEY, { widgets: sampleState.widgets })
 
-    const { readClockboardState } = await import("./storage")
-    const state = await readClockboardState()
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
 
     expect(state.widgets).toEqual(sampleState.widgets)
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
+  })
+
+  it("migrates a board saved under the legacy Clockboard key", async () => {
+    const { store } = stubChromeStorage()
+    store.set(LEGACY_STORAGE_KEY, sampleState)
+
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+
+    expect(state).toEqual(sampleState)
+    // It moves to the new key and clears the old one.
+    expect(store.get(STORAGE_KEY)).toEqual(sampleState)
+    expect(store.has(LEGACY_STORAGE_KEY)).toBe(false)
+  })
+
+  it("prefers the new key over a leftover legacy key", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, sampleState)
+    store.set(LEGACY_STORAGE_KEY, { widgets: [] })
+
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+
+    expect(state).toEqual(sampleState)
   })
 
   it("drops malformed widget entries while keeping valid ones", async () => {
@@ -107,8 +139,8 @@ describe("readClockboardState", () => {
       ]
     })
 
-    const { readClockboardState } = await import("./storage")
-    const state = await readClockboardState()
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
 
     expect(state.widgets).toEqual(sampleState.widgets)
   })
@@ -120,28 +152,28 @@ describe("readClockboardState", () => {
       settings: { dragToMove: "nope", columns: 7 }
     })
 
-    const { readClockboardState } = await import("./storage")
-    const state = await readClockboardState()
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
 
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
   })
 })
 
-describe("serializeClockboardState / parseClockboardState", () => {
+describe("serializeDayboardState / parseDayboardState", () => {
   it("round-trips a board through JSON", async () => {
-    const { serializeClockboardState, parseClockboardState } = await import(
+    const { serializeDayboardState, parseDayboardState } = await import(
       "./storage"
     )
 
-    expect(parseClockboardState(serializeClockboardState(sampleState))).toEqual(
+    expect(parseDayboardState(serializeDayboardState(sampleState))).toEqual(
       sampleState
     )
   })
 
   it("fills defaults for a board missing settings", async () => {
-    const { parseClockboardState } = await import("./storage")
+    const { parseDayboardState } = await import("./storage")
 
-    const parsed = parseClockboardState(
+    const parsed = parseDayboardState(
       JSON.stringify({ widgets: sampleState.widgets })
     )
 
@@ -150,31 +182,31 @@ describe("serializeClockboardState / parseClockboardState", () => {
   })
 
   it("rejects invalid JSON and non-board payloads", async () => {
-    const { parseClockboardState } = await import("./storage")
+    const { parseDayboardState } = await import("./storage")
 
-    expect(() => parseClockboardState("{ not json")).toThrow()
-    expect(() => parseClockboardState(JSON.stringify({ nope: true }))).toThrow()
+    expect(() => parseDayboardState("{ not json")).toThrow()
+    expect(() => parseDayboardState(JSON.stringify({ nope: true }))).toThrow()
   })
 })
 
-describe("writeClockboardState", () => {
+describe("writeDayboardState", () => {
   it("stores the state object under the storage key", async () => {
     const { store } = stubChromeStorage()
 
-    const { writeClockboardState } = await import("./storage")
-    await writeClockboardState(sampleState)
+    const { writeDayboardState } = await import("./storage")
+    await writeDayboardState(sampleState)
 
     expect(store.get(STORAGE_KEY)).toEqual(sampleState)
   })
 })
 
-describe("watchClockboardState", () => {
+describe("watchDayboardState", () => {
   it("notifies on sync changes and unsubscribes on stop", async () => {
     const { addListener, removeListener } = stubChromeStorage()
 
-    const { watchClockboardState } = await import("./storage")
+    const { watchDayboardState } = await import("./storage")
     const handleChange = vi.fn()
-    const stopWatching = watchClockboardState(handleChange)
+    const stopWatching = watchDayboardState(handleChange)
 
     const listener = addListener.mock.calls[0]?.[0]
     expect(listener).toBeTypeOf("function")

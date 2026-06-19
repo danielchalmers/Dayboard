@@ -5,10 +5,10 @@ import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
 import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
-import { useClockboardState } from "~/hooks/useClockboardState"
+import { useDayboardState } from "~/hooks/useDayboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting } from "~/lib/greeting"
-import { parseClockboardState, serializeClockboardState } from "~/lib/storage"
+import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
   archiveWidget,
   createWidget,
@@ -58,7 +58,7 @@ export function NewTabPage() {
     replaceState,
     saveError,
     dismissSaveError
-  } = useClockboardState()
+  } = useDayboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
@@ -79,7 +79,7 @@ export function NewTabPage() {
   }
 
   if (error || !state) {
-    return <ErrorView message={error || "Unable to load Clockboard"} />
+    return <ErrorView message={error || "Unable to load Dayboard"} />
   }
 
   const saveItem = (item: Widget) => {
@@ -132,13 +132,13 @@ export function NewTabPage() {
   }
 
   const exportBoard = () => {
-    const blob = new Blob([serializeClockboardState(state)], {
+    const blob = new Blob([serializeDayboardState(state)], {
       type: "application/json"
     })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = "clockboard.json"
+    link.download = "dayboard.json"
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -146,7 +146,7 @@ export function NewTabPage() {
   const importBoard = async (file: File) => {
     setImportError(null)
     try {
-      const imported = parseClockboardState(await file.text())
+      const imported = parseDayboardState(await file.text())
       await replaceState(imported)
       setIsSettingsOpen(false)
     } catch (cause) {
@@ -169,7 +169,7 @@ export function NewTabPage() {
       <main className="page">
         <header className="page-header">
           <div>
-            <h1>Clockboard</h1>
+            <h1>Dayboard</h1>
             <p className="page-header__greeting">
               {getGreeting(now, state.settings.name)}
             </p>

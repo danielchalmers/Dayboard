@@ -14,10 +14,10 @@ export default defineConfig({
   srcDir: "src",
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: "Clockboard",
-    short_name: "Clockboard",
+    name: "Dayboard",
+    short_name: "Dayboard",
     version: process.env.RELEASE_VERSION ?? "0.0.0",
-    description: "Live digital clocks and countdowns for your new tab page.",
+    description: "A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.",
     minimum_chrome_version: "116",
     permissions: ["storage"],
     // The new tab page doubles as the options page so the browser's "Options"
