@@ -152,11 +152,15 @@ a {
 .page {
   inline-size: min(1300px, calc(100% - 64px));
   margin: 0 auto;
-  /* `auto` top margin pushes the board down to the bottom when it is shorter
-     than the viewport, and collapses to 0 so the top stays reachable when it
-     overflows. */
-  margin-block-start: auto;
   padding: 80px 0 100px;
+}
+
+/* Opt-in: anchor the board to the bottom of the screen so it stays clear of the
+   omnibox suggestions that drop over the top while typing. The `auto` top margin
+   claims the free space when the board is shorter than the viewport, and
+   collapses to 0 so the top stays reachable when it overflows. */
+.page--dock-bottom {
+  margin-block-start: auto;
 }
 
 .page--narrow {

@@ -81,7 +81,7 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
 })
 
-test("anchors the board to the bottom so the omnibox does not cover it", async ({
+test("docks to the top by default and can be moved to the bottom", async ({
   page,
   extensionId
 }) => {
@@ -90,21 +90,40 @@ test("anchors the board to the bottom so the omnibox does not cover it", async (
   await openNewTab(page, extensionId)
 
   const viewport = page.viewportSize()
-  const header = await page.locator(".page-header").boundingBox()
-  const board = await page.locator(".board-list").boundingBox()
-
-  if (!viewport || !header || !board) {
-    throw new Error("Unable to measure board layout")
+  if (!viewport) {
+    throw new Error("Unable to determine viewport size")
   }
 
-  const spaceAbove = header.y
-  const spaceBelow = viewport.height - (board.y + board.height)
+  const weighting = async () => {
+    const header = await page.locator(".page-header").boundingBox()
+    const board = await page.locator(".board-list").boundingBox()
+    if (!header || !board) {
+      throw new Error("Unable to measure board layout")
+    }
+    return {
+      above: header.y,
+      below: viewport.height - (board.y + board.height)
+    }
+  }
 
-  // The content is weighted toward the bottom: more empty room sits above the
-  // header (where the omnibox suggestions drop down) than below the board.
-  expect(spaceAbove).toBeGreaterThan(spaceBelow)
-  // And the board still ends a comfortable distance from the very bottom edge.
-  expect(spaceBelow).toBeGreaterThan(0)
+  // By default the board sits at the top — more empty room below than above.
+  const top = await weighting()
+  expect(top.above).toBeLessThan(top.below)
+
+  // Turning on "Dock to bottom" weights the content toward the bottom, clear of
+  // where the omnibox suggestions drop down.
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByRole("switch", { name: "Dock to bottom" }).click()
+  await page.getByRole("button", { name: "Done" }).click()
+
+  const docked = await weighting()
+  expect(docked.above).toBeGreaterThan(docked.below)
+  expect(docked.below).toBeGreaterThan(0)
+
+  // The preference persists across a reload.
+  await page.reload()
+  const afterReload = await weighting()
+  expect(afterReload.above).toBeGreaterThan(afterReload.below)
 })
 
 test("shows a time-aware greeting that can be personalized", async ({
