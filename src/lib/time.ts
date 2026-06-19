@@ -129,6 +129,29 @@ const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
 const pluralize = (value: number, unit: string): string =>
   `${value} ${unit}${value === 1 ? "" : "s"}`
 
+// Fraction (0..1) of the way from the widget's start to its target, for the
+// progress display. Falls back gracefully when no usable start span exists.
+export const getCountdownProgress = (
+  widget: CountdownWidget,
+  now = new Date()
+): number => {
+  const target = new Date(widget.settings.targetAt).getTime()
+  const start = widget.settings.startAt
+    ? new Date(widget.settings.startAt).getTime()
+    : Number.NaN
+
+  if (Number.isNaN(target)) {
+    return 0
+  }
+
+  if (Number.isNaN(start) || start >= target) {
+    return now.getTime() >= target ? 1 : 0
+  }
+
+  const fraction = (now.getTime() - start) / (target - start)
+  return Math.min(1, Math.max(0, fraction))
+}
+
 export const formatCountdownTarget = (widget: CountdownWidget): string => {
   const target = new Date(widget.settings.targetAt)
 

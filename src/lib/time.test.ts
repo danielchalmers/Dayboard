@@ -4,6 +4,7 @@ import {
   dateTimeInputValueToIsoInstant,
   formatRelativeCountdown,
   getCountdownParts,
+  getCountdownProgress,
   isoInstantToDateTimeInputValue
 } from "./time"
 import type { CountdownWidget } from "./types"
@@ -16,6 +17,45 @@ const countdownWidget = (targetAt: string): CountdownWidget => ({
   settings: {
     targetAt
   }
+})
+
+describe("getCountdownProgress", () => {
+  const progressWidget: CountdownWidget = {
+    id: "year",
+    kind: "countdown",
+    title: "Year",
+    colorPreset: "slate",
+    settings: {
+      display: "progress",
+      startAt: "2026-01-01T00:00:00.000Z",
+      targetAt: "2026-01-11T00:00:00.000Z"
+    }
+  }
+
+  it("is the fraction of the span elapsed", () => {
+    expect(
+      getCountdownProgress(progressWidget, new Date("2026-01-06T00:00:00.000Z"))
+    ).toBeCloseTo(0.5)
+  })
+
+  it("clamps before the start and after the target", () => {
+    expect(
+      getCountdownProgress(progressWidget, new Date("2025-12-01T00:00:00.000Z"))
+    ).toBe(0)
+    expect(
+      getCountdownProgress(progressWidget, new Date("2027-01-01T00:00:00.000Z"))
+    ).toBe(1)
+  })
+
+  it("falls back when no start is set", () => {
+    const noStart = countdownWidget("2026-01-11T00:00:00.000Z")
+    expect(
+      getCountdownProgress(noStart, new Date("2026-01-01T00:00:00.000Z"))
+    ).toBe(0)
+    expect(
+      getCountdownProgress(noStart, new Date("2026-02-01T00:00:00.000Z"))
+    ).toBe(1)
+  })
 })
 
 describe("datetime-local countdown conversions", () => {

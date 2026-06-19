@@ -12,7 +12,8 @@ import {
   formatClockTime,
   formatCountdownTarget,
   formatTimeZoneName,
-  getCountdownParts
+  getCountdownParts,
+  getCountdownProgress
 } from "~/lib/time"
 import type {
   NoteWidget,
@@ -398,6 +399,54 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   }
 
   const countdown = getCountdownParts(item, now)
+
+  if (item.settings.display === "progress") {
+    const fraction = getCountdownProgress(item, now)
+    const percent = Math.round(fraction * 100)
+    const status =
+      fraction >= 1
+        ? "Complete"
+        : countdown.label.replace(/ from now$/, " left")
+
+    return (
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
+        {frame}
+        <div className="board-row__header">
+          <div className="board-row__identity">
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
+            <p className="board-row__detail">{formatCountdownTarget(item)}</p>
+          </div>
+        </div>
+        <div className="board-row__body">
+          <p className="board-row__value board-row__value--countdown">
+            {percent}%
+          </p>
+          <div
+            className="progress-bar"
+            role="progressbar"
+            aria-label={`${item.title} progress`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}>
+            <div
+              className="progress-bar__fill"
+              style={{ inlineSize: `${percent}%` }}
+            />
+          </div>
+          <p className="board-row__meta">{status}</p>
+        </div>
+      </article>
+    )
+  }
+
   const value =
     countdown.status === "due"
       ? "right now"
