@@ -700,6 +700,34 @@ test("timer chime setting persists and the timer still finishes", async ({
   await expect(page.getByRole("switch", { name: "Timer chime" })).toBeChecked()
 })
 
+test("add habit flow tracks a streak and persists", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add habit" }).click()
+  await page.getByLabel("Name").fill("Read")
+  await page.getByRole("button", { name: "Save habit" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Read" }) })
+
+  await expect(card.getByLabel("0 day streak")).toBeVisible()
+  await card.getByRole("button", { name: "Mark today" }).click()
+  await expect(card.getByLabel("1 day streak")).toBeVisible()
+  await expect(card.getByRole("button", { name: "Done today ✓" })).toBeVisible()
+
+  // The streak persists across a reload.
+  await page.reload()
+  const reloaded = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Read" }) })
+  await expect(reloaded.getByLabel("1 day streak")).toBeVisible()
+})
+
 test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId

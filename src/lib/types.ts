@@ -5,6 +5,7 @@ export type WidgetKind =
   | "quote"
   | "stopwatch"
   | "timer"
+  | "habit"
 
 export type QuoteRotation = "daily" | "open"
 
@@ -102,6 +103,14 @@ export interface TimerWidget extends WidgetBase {
   }
 }
 
+export interface HabitWidget extends WidgetBase {
+  kind: "habit"
+  settings: {
+    /** Local day keys (YYYY-MM-DD) on which the habit was marked done. */
+    history: string[]
+  }
+}
+
 export type Widget =
   | ClockWidget
   | CountdownWidget
@@ -109,6 +118,7 @@ export type Widget =
   | QuoteWidget
   | StopwatchWidget
   | TimerWidget
+  | HabitWidget
 
 export type BoardColumns = "auto" | 1 | 2 | 3 | 4
 

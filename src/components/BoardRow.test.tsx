@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { BoardRow } from "./BoardRow"
+import { toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
 import type { Widget } from "~/lib/types"
 
@@ -125,6 +126,49 @@ describe("BoardRow", () => {
     )
 
     expect(container.querySelector("article")).toHaveClass("board-row--wide")
+  })
+
+  it("marks today on a habit and reports the streak", () => {
+    const now = new Date("2026-03-04T09:00:00.000Z")
+    const item: Widget = {
+      id: "habit",
+      kind: "habit",
+      title: "Read",
+      colorPreset: "emerald",
+      settings: { history: [] }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
+
+    expect(screen.getByLabelText("0 day streak")).toBeInTheDocument()
+    const button = screen.getByRole("button", { name: "Mark today" })
+    expect(button).toHaveAttribute("aria-pressed", "false")
+
+    fireEvent.click(button)
+
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: { history: [toDayKey(now)] }
+    })
+  })
+
+  it("shows a completed habit as done with its streak", () => {
+    const now = new Date("2026-03-04T09:00:00.000Z")
+    const item: Widget = {
+      id: "habit",
+      kind: "habit",
+      title: "Read",
+      colorPreset: "emerald",
+      settings: { history: [toDayKey(now)] }
+    }
+
+    render(<BoardRow item={item} now={now} />)
+
+    expect(screen.getByLabelText("1 day streak")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Done today ✓" })
+    ).toHaveAttribute("aria-pressed", "true")
   })
 
   it("renders a note card with an editable text area", () => {

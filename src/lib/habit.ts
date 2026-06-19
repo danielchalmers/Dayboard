@@ -1,0 +1,56 @@
+// Helpers for the habit widget. History is a list of local day keys
+// (YYYY-MM-DD) on which the habit was marked done.
+
+const pad = (value: number) => String(value).padStart(2, "0")
+
+export const toDayKey = (date: Date): string =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+
+const addDays = (date: Date, days: number): Date => {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
+
+export const isDoneOn = (history: string[], date: Date): boolean =>
+  history.includes(toDayKey(date))
+
+export const isDoneToday = (history: string[], now: Date): boolean =>
+  isDoneOn(history, now)
+
+// Mark or unmark today.
+export const toggleToday = (history: string[], now: Date): string[] => {
+  const key = toDayKey(now)
+  return history.includes(key)
+    ? history.filter((entry) => entry !== key)
+    : [...history, key]
+}
+
+// Consecutive completed days counting back from today. Today still counts as
+// part of the streak until it ends, so a streak built through yesterday stays
+// alive until the user either completes today or the day passes.
+export const currentStreak = (history: string[], now: Date): number => {
+  const done = new Set(history)
+  let cursor = new Date(now)
+
+  if (!done.has(toDayKey(cursor))) {
+    cursor = addDays(cursor, -1)
+  }
+
+  let streak = 0
+  while (done.has(toDayKey(cursor))) {
+    streak += 1
+    cursor = addDays(cursor, -1)
+  }
+
+  return streak
+}
+
+// The last `count` days, oldest first, for the at-a-glance dot row.
+export const recentDays = (now: Date, count: number): Date[] => {
+  const days: Date[] = []
+  for (let offset = count - 1; offset >= 0; offset -= 1) {
+    days.push(addDays(now, -offset))
+  }
+  return days
+}

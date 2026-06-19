@@ -348,6 +348,12 @@ export const ItemDialog = ({
               </p>
             ) : null}
 
+            {draft.kind === "habit" ? (
+              <p className="form-note">
+                Mark it done each day on the card to build your streak.
+              </p>
+            ) : null}
+
             {draft.kind === "timer" ? (
               <div className="form-label-group">
                 <span>Length</span>

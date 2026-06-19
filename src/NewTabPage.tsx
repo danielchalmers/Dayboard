@@ -339,6 +339,25 @@ export function NewTabPage() {
                   </svg>
                   Add timer
                 </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("habit")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <path
+                      d="m12 4.5 2.1 4.6 5 .5-3.7 3.4 1 4.9L12 16l-4.4 2.4 1-4.9L4.9 9.6l5-.5z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.7"
+                    />
+                  </svg>
+                  Add habit
+                </button>
               </div>
             </details>
           </div>
