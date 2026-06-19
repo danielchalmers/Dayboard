@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import { BoardList, isTimeSensitive } from "./BoardList"
-import type { Widget } from "~/lib/types"
+import type { Widget, WidgetKind } from "~/lib/types"
 
 const widgets: Widget[] = [
   {
@@ -68,10 +68,11 @@ beforeAll(() => {
 
 describe("isTimeSensitive", () => {
   it("marks only the widgets that need the per-second tick", () => {
-    expect(["clock", "countdown", "stopwatch", "timer"].every(isTimeSensitive)).toBe(
-      true
-    )
-    expect(["note", "quote", "habit"].some(isTimeSensitive)).toBe(false)
+    const live: WidgetKind[] = ["clock", "countdown", "stopwatch", "timer"]
+    const still: WidgetKind[] = ["note", "quote", "habit"]
+
+    expect(live.every(isTimeSensitive)).toBe(true)
+    expect(still.some(isTimeSensitive)).toBe(false)
   })
 })
 
