@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react"
+import { useRef } from "react"
 
+import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   BOARD_COLUMN_CHOICES,
   type BoardColumns,
@@ -27,21 +28,9 @@ export const SettingsDialog = ({
   onImport
 }: SettingsDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+  const dialogRef = useRef<HTMLElement>(null)
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onClose()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose])
+  useModalFocus(isOpen, dialogRef, onClose)
 
   if (!isOpen) {
     return null
@@ -66,7 +55,9 @@ export const SettingsDialog = ({
         aria-labelledby="settings-dialog-title"
         aria-modal="true"
         className="modal-dialog modal-dialog--narrow"
-        role="dialog">
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}>
         <div className="modal-dialog__header">
           <div>
             <h2 className="modal-dialog__title" id="settings-dialog-title">

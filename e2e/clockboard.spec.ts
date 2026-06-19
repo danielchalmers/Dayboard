@@ -205,6 +205,34 @@ test("global options toggle drag and columns and persist across reloads", async 
   await expect(page.getByLabel("Columns")).toHaveValue("2")
 })
 
+test("the options dialog moves, traps, and restores focus", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const gear = page.getByRole("button", { name: "Options" })
+  await gear.click()
+  await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
+
+  // Focus moves into the dialog (the first control).
+  await expect(page.getByLabel("Your name")).toBeFocused()
+
+  // Tab is trapped: from the last control it wraps to the first.
+  await page.getByRole("button", { name: "Done" }).focus()
+  await page.keyboard.press("Tab")
+  await expect(page.getByLabel("Your name")).toBeFocused()
+
+  // ...and Shift+Tab from the first wraps to the last.
+  await page.keyboard.press("Shift+Tab")
+  await expect(page.getByRole("button", { name: "Done" })).toBeFocused()
+
+  // Escape closes the dialog and returns focus to the opener.
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
+  await expect(gear).toBeFocused()
+})
+
 test("opening the page as the options view shows the overlay", async ({
   page,
   extensionId
