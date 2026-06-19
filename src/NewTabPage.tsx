@@ -166,7 +166,10 @@ export function NewTabPage() {
 
   return (
     <>
-      <main className="page">
+      <main
+        className={`page${
+          state.settings.dockToBottom ? " page--dock-bottom" : ""
+        }`}>
         <header className="page-header">
           <div>
             <h1>Dayboard</h1>

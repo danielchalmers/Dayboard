@@ -42,7 +42,11 @@ const normalizeSettings = (value: unknown): DayboardSettings => {
     chimeOnTimerEnd:
       typeof stored.chimeOnTimerEnd === "boolean"
         ? stored.chimeOnTimerEnd
-        : DEFAULT_SETTINGS.chimeOnTimerEnd
+        : DEFAULT_SETTINGS.chimeOnTimerEnd,
+    dockToBottom:
+      typeof stored.dockToBottom === "boolean"
+        ? stored.dockToBottom
+        : DEFAULT_SETTINGS.dockToBottom
   }
 }
 

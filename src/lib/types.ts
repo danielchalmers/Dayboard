@@ -133,13 +133,16 @@ export interface DayboardSettings {
   name: string
   /** Play a soft chime when a timer reaches zero. */
   chimeOnTimerEnd: boolean
+  /** Anchor the board to the bottom of the screen (clear of the omnibox). */
+  dockToBottom: boolean
 }
 
 export const DEFAULT_SETTINGS: DayboardSettings = {
   dragToMove: true,
   columns: "auto",
   name: "",
-  chimeOnTimerEnd: false
+  chimeOnTimerEnd: false,
+  dockToBottom: false
 }
 
 export interface DayboardState {

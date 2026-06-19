@@ -55,7 +55,7 @@ describe("SettingsDialog", () => {
     render(
       <SettingsDialog
         isOpen
-        settings={{ dragToMove: true, columns: 3, name: "", chimeOnTimerEnd: false }}
+        settings={{ dragToMove: true, columns: 3, name: "", chimeOnTimerEnd: false, dockToBottom: false }}
         onChange={onChange}
         onClose={() => {}}
       />
@@ -67,7 +67,8 @@ describe("SettingsDialog", () => {
       dragToMove: true,
       columns: "auto",
       name: "",
-      chimeOnTimerEnd: false
+      chimeOnTimerEnd: false,
+      dockToBottom: false
     })
   })
 
@@ -87,6 +88,25 @@ describe("SettingsDialog", () => {
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_SETTINGS,
       chimeOnTimerEnd: true
+    })
+  })
+
+  it("toggles dock to bottom", () => {
+    const onChange = vi.fn()
+    render(
+      <SettingsDialog
+        isOpen
+        settings={DEFAULT_SETTINGS}
+        onChange={onChange}
+        onClose={() => {}}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch", { name: "Dock to bottom" }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SETTINGS,
+      dockToBottom: true
     })
   })
 

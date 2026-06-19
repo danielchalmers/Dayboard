@@ -133,6 +133,31 @@ export const SettingsDialog = ({
 
           <div className="option-row">
             <div className="option-row__text">
+              <label className="option-row__label" htmlFor="settings-dock-bottom">
+                Dock to bottom
+              </label>
+              <span className="option-row__hint">
+                Sit the board near the bottom, clear of the address bar&rsquo;s
+                suggestions.
+              </span>
+            </div>
+            <label className="switch">
+              <input
+                checked={settings.dockToBottom}
+                className="switch__input"
+                id="settings-dock-bottom"
+                onChange={(event) =>
+                  onChange({ ...settings, dockToBottom: event.currentTarget.checked })
+                }
+                role="switch"
+                type="checkbox"
+              />
+              <span aria-hidden="true" className="switch__track" />
+            </label>
+          </div>
+
+          <div className="option-row">
+            <div className="option-row__text">
               <label className="option-row__label" htmlFor="settings-chime">
                 Timer chime
               </label>
