@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import {
   BOARD_COLUMN_CHOICES,
@@ -11,6 +11,8 @@ interface SettingsDialogProps {
   settings: ClockboardSettings
   onChange: (settings: ClockboardSettings) => void
   onClose: () => void
+  onExport?: () => void
+  onImport?: (file: File) => void
 }
 
 const columnLabel = (columns: BoardColumns): string =>
@@ -20,8 +22,11 @@ export const SettingsDialog = ({
   isOpen,
   settings,
   onChange,
-  onClose
+  onClose,
+  onExport,
+  onImport
 }: SettingsDialogProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (!isOpen) {
       return
@@ -159,6 +164,38 @@ export const SettingsDialog = ({
               <span aria-hidden="true" className="switch__track" />
             </label>
           </div>
+          </div>
+
+          <div className="form-label-group">
+            <span>Board</span>
+            <div className="settings-actions">
+              <button
+                className="secondary-button"
+                onClick={onExport}
+                type="button">
+                Export
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => fileInputRef.current?.click()}
+                type="button">
+                Import
+              </button>
+              <input
+                accept="application/json,.json"
+                aria-label="Import board file"
+                hidden
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0]
+                  if (file) {
+                    onImport?.(file)
+                  }
+                  event.currentTarget.value = ""
+                }}
+                ref={fileInputRef}
+                type="file"
+              />
+            </div>
           </div>
         </div>
 

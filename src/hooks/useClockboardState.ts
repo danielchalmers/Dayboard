@@ -13,6 +13,7 @@ interface UseClockboardStateResult {
   error: string | null
   setWidgets: (widgets: Widget[]) => Promise<void>
   setSettings: (settings: ClockboardSettings) => Promise<void>
+  replaceState: (state: ClockboardState) => Promise<void>
 }
 
 export const useClockboardState = (): UseClockboardStateResult => {
@@ -81,6 +82,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
     isLoading,
     error,
     setWidgets,
-    setSettings
+    setSettings,
+    replaceState: saveState
   }
 }

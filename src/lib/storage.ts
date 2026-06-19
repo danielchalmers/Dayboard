@@ -53,6 +53,23 @@ export const readClockboardState = async (): Promise<ClockboardState> => {
   return normalizeState(result[STORAGE_KEY])
 }
 
+// Pretty-printed JSON for the Export option.
+export const serializeClockboardState = (state: ClockboardState): string =>
+  JSON.stringify(state, null, 2)
+
+// Parse an exported file back into state for the Import option. Throws on
+// invalid JSON or a payload that is not a board, so callers can reject the file
+// rather than silently replacing the board with defaults.
+export const parseClockboardState = (text: string): ClockboardState => {
+  const parsed: unknown = JSON.parse(text)
+
+  if (!hasWidgets(parsed)) {
+    throw new Error("That file is not a Clockboard board.")
+  }
+
+  return normalizeState(parsed)
+}
+
 export const writeClockboardState = async (
   state: ClockboardState
 ): Promise<void> => {

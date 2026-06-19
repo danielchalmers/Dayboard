@@ -108,6 +108,30 @@ describe("SettingsDialog", () => {
     expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, name: "Sam" })
   })
 
+  it("exports from the Export button and imports a chosen file", () => {
+    const onExport = vi.fn()
+    const onImport = vi.fn()
+    render(
+      <SettingsDialog
+        isOpen
+        settings={DEFAULT_SETTINGS}
+        onChange={() => {}}
+        onClose={() => {}}
+        onExport={onExport}
+        onImport={onImport}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    expect(onExport).toHaveBeenCalledTimes(1)
+
+    const file = new File(["{}"], "board.json", { type: "application/json" })
+    fireEvent.change(screen.getByLabelText("Import board file"), {
+      target: { files: [file] }
+    })
+    expect(onImport).toHaveBeenCalledWith(file)
+  })
+
   it("closes from the Done button", () => {
     const onClose = vi.fn()
     render(

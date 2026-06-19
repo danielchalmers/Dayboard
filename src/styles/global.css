@@ -1055,6 +1055,12 @@ select:focus {
   gap: 24px;
 }
 
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .options-list {
   display: grid;
   gap: 8px;

@@ -8,6 +8,7 @@ import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting } from "~/lib/greeting"
+import { parseClockboardState, serializeClockboardState } from "~/lib/storage"
 import {
   archiveWidget,
   createWidget,
@@ -47,7 +48,7 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
 
 export function NewTabPage() {
   const now = useNow()
-  const { state, isLoading, error, setWidgets, setSettings } =
+  const { state, isLoading, error, setWidgets, setSettings, replaceState } =
     useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
@@ -127,6 +128,28 @@ export function NewTabPage() {
   const openSettings = () => {
     closeOpenMenus()
     setIsSettingsOpen(true)
+  }
+
+  const exportBoard = () => {
+    const blob = new Blob([serializeClockboardState(state)], {
+      type: "application/json"
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "clockboard.json"
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const importBoard = async (file: File) => {
+    try {
+      const imported = parseClockboardState(await file.text())
+      await replaceState(imported)
+      setIsSettingsOpen(false)
+    } catch {
+      // Ignore files that are not a valid Clockboard board.
+    }
   }
 
   const activeWidgets = state.widgets.filter((widget) => !widget.archived)
@@ -460,6 +483,8 @@ export function NewTabPage() {
         settings={state.settings}
         onChange={(settings) => void setSettings(settings)}
         onClose={() => setIsSettingsOpen(false)}
+        onExport={exportBoard}
+        onImport={(file) => void importBoard(file)}
       />
     </>
   )
