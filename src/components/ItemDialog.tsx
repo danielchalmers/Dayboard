@@ -9,6 +9,7 @@ import { quotesToText, textToQuotes } from "~/lib/quotes"
 import { msToParts, partsToMs, type DurationParts } from "~/lib/timers"
 import type {
   CountdownDisplay,
+  CountdownRepeat,
   QuoteRotation,
   Widget,
   WidgetColorPreset,
@@ -140,6 +141,17 @@ export const ItemDialog = ({
     })
   }
 
+  const updateRepeat = (value: string) => {
+    setDraft((current) =>
+      current?.kind === "countdown"
+        ? {
+            ...current,
+            settings: { ...current.settings, repeat: value as CountdownRepeat }
+          }
+        : current
+    )
+  }
+
   const updateStartAt = (value: string) => {
     const startAt = dateTimeInputValueToIsoInstant(value)
 
@@ -269,6 +281,19 @@ export const ItemDialog = ({
                     type="datetime-local"
                     value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
                   />
+                </label>
+
+                <label className="form-label-group">
+                  <span>Repeats</span>
+                  <select
+                    onChange={(event) => updateRepeat(event.currentTarget.value)}
+                    value={draft.settings.repeat ?? "none"}>
+                    <option value="none">Never</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
                 </label>
 
                 <label className="form-label-group">

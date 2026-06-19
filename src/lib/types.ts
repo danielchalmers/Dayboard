@@ -44,6 +44,8 @@ export interface ClockWidget extends WidgetBase {
 
 export type CountdownDisplay = "text" | "progress"
 
+export type CountdownRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly"
+
 export interface CountdownWidget extends WidgetBase {
   kind: "countdown"
   settings: {
@@ -52,6 +54,8 @@ export interface CountdownWidget extends WidgetBase {
     display?: CountdownDisplay
     /** Span start for the progress bar (the target is the span end). */
     startAt?: string
+    /** When set, the target rolls forward to the next occurrence as it passes. */
+    repeat?: CountdownRepeat
   }
 }
 

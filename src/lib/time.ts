@@ -1,4 +1,9 @@
-import { toDateTimeInputValue, type ClockWidget, type CountdownWidget } from "./types"
+import {
+  toDateTimeInputValue,
+  type ClockWidget,
+  type CountdownRepeat,
+  type CountdownWidget
+} from "./types"
 
 export interface CountdownParts {
   status: "future" | "due" | "past"
@@ -63,6 +68,46 @@ export const formatTimeZoneName = (date: Date, timeZone: string): string => {
   }).formatToParts(date)
 
   return parts.find((part) => part.type === "timeZoneName")?.value || timeZone
+}
+
+// For a repeating countdown, roll the target forward (in calendar steps, so the
+// time of day is preserved across DST) to the next occurrence at or after now.
+// Non-repeating or still-future targets are returned unchanged.
+export const nextCountdownTarget = (
+  targetAt: string,
+  repeat: CountdownRepeat | undefined,
+  now = new Date()
+): string => {
+  const base = new Date(targetAt)
+
+  if (
+    Number.isNaN(base.getTime()) ||
+    !repeat ||
+    repeat === "none" ||
+    base.getTime() > now.getTime()
+  ) {
+    return targetAt
+  }
+
+  const next = new Date(base)
+  const nowMs = now.getTime()
+  let guard = 0
+
+  while (next.getTime() <= nowMs && guard < 6000) {
+    if (repeat === "daily") {
+      next.setDate(next.getDate() + 1)
+    } else if (repeat === "weekly") {
+      next.setDate(next.getDate() + 7)
+    } else if (repeat === "monthly") {
+      next.setMonth(next.getMonth() + 1)
+    } else {
+      next.setFullYear(next.getFullYear() + 1)
+    }
+
+    guard += 1
+  }
+
+  return next.toISOString()
 }
 
 export const getCountdownParts = (

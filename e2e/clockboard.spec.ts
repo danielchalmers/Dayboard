@@ -787,6 +787,31 @@ test("a countdown can be shown as a progress bar", async ({
   ).toBeVisible()
 })
 
+test("a recurring countdown rolls forward to its next occurrence", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await page.getByLabel("Name").fill("Standup")
+  // A target well in the past; weekly repeat should surface a future occurrence.
+  await page.getByLabel("When").fill("2020-01-06T09:00")
+  await page.getByLabel("Repeats").selectOption("weekly")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Standup" }) })
+
+  // It reads as upcoming (not "ago") and notes the cadence.
+  await expect(card.getByText("from now")).toBeVisible()
+  await expect(card.locator(".board-row__detail")).toContainText(
+    "repeats weekly"
+  )
+})
+
 test("edit dialog opens for an existing clock", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 

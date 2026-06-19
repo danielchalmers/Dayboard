@@ -13,9 +13,11 @@ import {
   formatCountdownTarget,
   formatTimeZoneName,
   getCountdownParts,
-  getCountdownProgress
+  getCountdownProgress,
+  nextCountdownTarget
 } from "~/lib/time"
 import type {
+  CountdownWidget,
   NoteWidget,
   QuoteWidget,
   StopwatchWidget,
@@ -427,10 +429,28 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     )
   }
 
-  const countdown = getCountdownParts(item, now)
+  // A repeating countdown shows the next occurrence, computed on the fly so the
+  // stored target stays the anchor and every tab stays in sync without writes.
+  const resolvedTargetAt = nextCountdownTarget(
+    item.settings.targetAt,
+    item.settings.repeat,
+    now
+  )
+  const countdownItem: CountdownWidget =
+    resolvedTargetAt === item.settings.targetAt
+      ? item
+      : { ...item, settings: { ...item.settings, targetAt: resolvedTargetAt } }
+
+  const repeatLabel =
+    item.settings.repeat && item.settings.repeat !== "none"
+      ? ` · repeats ${item.settings.repeat}`
+      : ""
+  const countdownDetail = `${formatCountdownTarget(countdownItem)}${repeatLabel}`
+
+  const countdown = getCountdownParts(countdownItem, now)
 
   if (item.settings.display === "progress") {
-    const fraction = getCountdownProgress(item, now)
+    const fraction = getCountdownProgress(countdownItem, now)
     const percent = Math.round(fraction * 100)
     const status =
       fraction >= 1
@@ -451,7 +471,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
               {colorDot}
               {item.title}
             </h2>
-            <p className="board-row__detail">{formatCountdownTarget(item)}</p>
+            <p className="board-row__detail">{countdownDetail}</p>
           </div>
         </div>
         <div className="board-row__body">
@@ -501,7 +521,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
             {colorDot}
             {item.title}
           </h2>
-          <p className="board-row__detail">{formatCountdownTarget(item)}</p>
+          <p className="board-row__detail">{countdownDetail}</p>
         </div>
       </div>
       <div className="board-row__body">

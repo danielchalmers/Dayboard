@@ -5,7 +5,8 @@ import {
   formatRelativeCountdown,
   getCountdownParts,
   getCountdownProgress,
-  isoInstantToDateTimeInputValue
+  isoInstantToDateTimeInputValue,
+  nextCountdownTarget
 } from "./time"
 import type { CountdownWidget } from "./types"
 
@@ -17,6 +18,48 @@ const countdownWidget = (targetAt: string): CountdownWidget => ({
   settings: {
     targetAt
   }
+})
+
+describe("nextCountdownTarget", () => {
+  const now = new Date(2026, 5, 19, 12, 0, 0)
+  const DAY = 24 * 60 * 60 * 1000
+
+  it("leaves a non-repeating or still-future target unchanged", () => {
+    const past = new Date(2020, 0, 1, 9, 0, 0).toISOString()
+    const future = new Date(2026, 11, 25, 9, 0, 0).toISOString()
+
+    expect(nextCountdownTarget(past, "none", now)).toBe(past)
+    expect(nextCountdownTarget(past, undefined, now)).toBe(past)
+    expect(nextCountdownTarget(future, "weekly", now)).toBe(future)
+  })
+
+  it("rolls a daily target to the next future day, keeping the time", () => {
+    const target = new Date(2026, 5, 17, 9, 0, 0).toISOString()
+    const next = new Date(nextCountdownTarget(target, "daily", now))
+
+    expect(next.getTime()).toBeGreaterThan(now.getTime())
+    expect(next.getHours()).toBe(9)
+    expect(next.getTime() - now.getTime()).toBeLessThanOrEqual(DAY)
+  })
+
+  it("rolls a weekly target to within a week", () => {
+    const target = new Date(2026, 4, 4, 8, 0, 0).toISOString()
+    const next = new Date(nextCountdownTarget(target, "weekly", now))
+
+    expect(next.getTime()).toBeGreaterThan(now.getTime())
+    expect(next.getDay()).toBe(new Date(target).getDay())
+    expect(next.getTime() - now.getTime()).toBeLessThanOrEqual(7 * DAY)
+  })
+
+  it("rolls a yearly target to the same month and day next year", () => {
+    const target = new Date(2025, 11, 25, 9, 0, 0).toISOString()
+    const next = new Date(nextCountdownTarget(target, "yearly", now))
+
+    expect(next.getTime()).toBeGreaterThan(now.getTime())
+    expect(next.getMonth()).toBe(11)
+    expect(next.getDate()).toBe(25)
+    expect(next.getFullYear()).toBe(2026)
+  })
 })
 
 describe("getCountdownProgress", () => {
