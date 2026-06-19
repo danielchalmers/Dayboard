@@ -533,6 +533,21 @@ test("dropdowns close when clicking outside them", async ({
   ).not.toBeVisible()
 })
 
+test("the add menu closes on Escape and returns focus to its button", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const trigger = page.getByRole("button", { name: "Add widget" })
+  await trigger.click()
+  await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
+
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
+  await expect(trigger).toBeFocused()
+})
+
 test("add clock flow works from the new tab page", async ({
   page,
   extensionId

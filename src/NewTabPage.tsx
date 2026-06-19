@@ -195,12 +195,23 @@ export function NewTabPage() {
                 />
               </svg>
             </button>
-            <details className="add-menu">
+            <details
+              className="add-menu"
+              onKeyDown={(event) => {
+                // Native <details> ignores Escape; close it and refocus the
+                // toggle so the disclosure behaves like a real popup.
+                if (event.key === "Escape" && event.currentTarget.open) {
+                  event.currentTarget.removeAttribute("open")
+                  event.currentTarget
+                    .querySelector<HTMLElement>("summary")
+                    ?.focus()
+                }
+              }}>
               <summary
-                aria-haspopup="menu"
                 aria-label="Add widget"
                 className="icon-button"
                 role="button">
+
                 <svg
                   aria-hidden="true"
                   fill="none"
