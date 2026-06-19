@@ -82,6 +82,17 @@ body,
   min-height: 100%;
 }
 
+/* Anchor the page to the bottom of the viewport so the board sits clear of the
+   omnibox suggestions that drop down over the top of the new tab while typing.
+   The flex column lets `.page` claim its bottom margin as free space when the
+   board is short, and collapse it (scrolling from the top) when the board is
+   tall. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+}
+
 body {
   margin: 0;
   background-color: var(--bg);
@@ -128,6 +139,10 @@ a {
 .page {
   inline-size: min(1300px, calc(100% - 64px));
   margin: 0 auto;
+  /* `auto` top margin pushes the board down to the bottom when it is shorter
+     than the viewport, and collapses to 0 so the top stays reachable when it
+     overflows. */
+  margin-block-start: auto;
   padding: 80px 0 100px;
 }
 

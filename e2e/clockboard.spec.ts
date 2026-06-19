@@ -79,6 +79,32 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
 })
 
+test("anchors the board to the bottom so the omnibox does not cover it", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps the short default board well within one screen.
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  const viewport = page.viewportSize()
+  const header = await page.locator(".page-header").boundingBox()
+  const board = await page.locator(".board-list").boundingBox()
+
+  if (!viewport || !header || !board) {
+    throw new Error("Unable to measure board layout")
+  }
+
+  const spaceAbove = header.y
+  const spaceBelow = viewport.height - (board.y + board.height)
+
+  // The content is weighted toward the bottom: more empty room sits above the
+  // header (where the omnibox suggestions drop down) than below the board.
+  expect(spaceAbove).toBeGreaterThan(spaceBelow)
+  // And the board still ends a comfortable distance from the very bottom edge.
+  expect(spaceBelow).toBeGreaterThan(0)
+})
+
 test("widget menu spawns under the cursor and breaks free of the card", async ({
   page,
   extensionId
