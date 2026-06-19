@@ -688,6 +688,91 @@ test("delete flow removes an existing widget", async ({ page, extensionId }) => 
   await expect(page.getByText("Tomorrow morning")).toHaveCount(0)
 })
 
+test("archiving from the menu hides a widget and it can be restored", async ({
+  page,
+  extensionId
+}) => {
+  // A roomy viewport keeps the expanded archive on one screen so revealing it
+  // never has to scroll (scrolling intentionally dismisses an open widget menu).
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  // Archive from the keyboard-accessible context menu.
+  await openWidgetMenu(page, "Tomorrow morning")
+  await page
+    .getByRole("menuitem", { name: "Archive Tomorrow morning" })
+    .click()
+
+  // It leaves the board and the archived section stays collapsed by default.
+  await expect(
+    page.locator(".board-list").first().getByText("Tomorrow morning")
+  ).toHaveCount(0)
+  const toggle = page.getByRole("button", { name: "Show archived (1)" })
+  await expect(toggle).toBeVisible()
+
+  // Reveal it, then restore it back to the board.
+  await toggle.click()
+  await expect(page.getByText("Tomorrow morning")).toBeVisible()
+  await openWidgetMenu(page, "Tomorrow morning")
+  await page
+    .getByRole("menuitem", { name: "Restore Tomorrow morning" })
+    .click()
+
+  await expect(
+    page.locator(".board-list").first().getByText("Tomorrow morning")
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: /Show archived/ })
+  ).toHaveCount(0)
+})
+
+test("dragging a widget onto the archive zone archives it", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const box = await card.boundingBox()
+  const viewport = page.viewportSize()
+
+  if (!box || !viewport) {
+    throw new Error("Unable to measure layout for archive drag")
+  }
+
+  // Grab the draggable frame (top edge) and drag down onto the floating archive
+  // zone pinned near the bottom of the viewport.
+  const grabX = box.x + box.width / 2
+  const grabY = box.y + 12
+  await page.mouse.move(grabX, grabY)
+  await page.mouse.down()
+  await page.mouse.move(grabX, grabY + 24, { steps: 6 })
+
+  const dropzone = page.locator(".archive-dropzone")
+  await expect(dropzone).toBeVisible()
+  const zoneBox = await dropzone.boundingBox()
+
+  if (!zoneBox) {
+    throw new Error("Archive zone has no bounds")
+  }
+
+  await page.mouse.move(
+    zoneBox.x + zoneBox.width / 2,
+    zoneBox.y + zoneBox.height / 2,
+    { steps: 20 }
+  )
+  await expect(page.locator(".archive-dropzone--over")).toBeVisible()
+  await page.mouse.up()
+
+  await expect(
+    page.locator(".board-list").first().getByText("Local time")
+  ).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Show archived (1)" })).toBeVisible()
+})
+
 test("edit and delete controls still work after reordering", async ({
   page,
   extensionId

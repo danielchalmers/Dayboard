@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { moveWidget, moveWidgetToIndex, reorderWidgets, createWidget as createActualWidget } from "./widgets"
+import {
+  archiveWidget,
+  createWidget as createActualWidget,
+  moveWidget,
+  moveWidgetToIndex,
+  reorderWidgets,
+  restoreWidget
+} from "./widgets"
 import type { Widget } from "./types"
 
 const createWidget = (id: string, title: string): Widget => ({
@@ -59,5 +66,44 @@ describe("moveWidget", () => {
     const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta")]
 
     expect(moveWidget(widgets, "alpha", -1)).toBe(widgets)
+  })
+})
+
+describe("archiveWidget / restoreWidget", () => {
+  const widgets = [
+    createWidget("alpha", "Alpha"),
+    createWidget("beta", "Beta"),
+    createWidget("gamma", "Gamma")
+  ]
+
+  it("archives a widget and moves it to the end", () => {
+    const result = archiveWidget(widgets, "alpha")
+
+    expect(result.map((widget) => widget.id)).toEqual(["beta", "gamma", "alpha"])
+    expect(result.find((widget) => widget.id === "alpha")?.archived).toBe(true)
+    expect(result.find((widget) => widget.id === "beta")?.archived).toBeFalsy()
+  })
+
+  it("leaves the list untouched for an unknown or already-archived widget", () => {
+    expect(archiveWidget(widgets, "missing")).toBe(widgets)
+    expect(archiveWidget(archiveWidget(widgets, "alpha"), "alpha")).toEqual(
+      archiveWidget(widgets, "alpha")
+    )
+  })
+
+  it("restores a widget back after the last active one", () => {
+    const archived = archiveWidget(widgets, "alpha")
+    const restored = restoreWidget(archived, "alpha")
+
+    expect(restored.map((widget) => widget.id)).toEqual([
+      "beta",
+      "gamma",
+      "alpha"
+    ])
+    expect(restored.every((widget) => !widget.archived)).toBe(true)
+  })
+
+  it("leaves the list untouched when restoring a non-archived widget", () => {
+    expect(restoreWidget(widgets, "alpha")).toBe(widgets)
   })
 })

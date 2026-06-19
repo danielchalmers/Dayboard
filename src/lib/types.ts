@@ -27,6 +27,8 @@ export interface WidgetBase {
   kind: WidgetKind
   title: string
   colorPreset: WidgetColorPreset
+  /** Tucked away in the Archived section and hidden from the main board. */
+  archived?: boolean
 }
 
 export interface ClockWidget extends WidgetBase {
