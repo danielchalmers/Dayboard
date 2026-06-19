@@ -84,6 +84,47 @@ describe("BoardList", () => {
     })
   })
 
+  it("removes the drag-handle frame when dragging is disabled", () => {
+    const { container } = render(
+      <BoardList
+        items={widgets}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        draggable={false}
+      />
+    )
+
+    expect(container.querySelectorAll(".board-row__frame")).toHaveLength(0)
+    expect(container.querySelectorAll(".board-row--draggable")).toHaveLength(0)
+  })
+
+  it("applies a fixed column count to the board grid", () => {
+    const { container } = render(
+      <BoardList
+        items={widgets}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        columns={3}
+      />
+    )
+
+    const board = container.querySelector(".board-list") as HTMLElement
+    expect(board).toHaveAttribute("data-columns", "3")
+    expect(board.style.getPropertyValue("--board-columns")).toBe("3")
+  })
+
+  it("leaves the responsive grid in place for the auto column setting", () => {
+    const { container } = render(
+      <BoardList
+        items={widgets}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        columns="auto"
+      />
+    )
+
+    const board = container.querySelector(".board-list") as HTMLElement
+    expect(board).not.toHaveAttribute("data-columns")
+    expect(board.style.getPropertyValue("--board-columns")).toBe("")
+  })
+
   it("opens a free-form popover menu under the cursor on right click", () => {
     const { container } = renderBoard()
 

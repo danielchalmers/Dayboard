@@ -5,13 +5,14 @@ import {
   watchClockboardState,
   writeClockboardState
 } from "~/lib/storage"
-import type { ClockboardState, Widget } from "~/lib/types"
+import type { ClockboardSettings, ClockboardState, Widget } from "~/lib/types"
 
 interface UseClockboardStateResult {
   state: ClockboardState | null
   isLoading: boolean
   error: string | null
   setWidgets: (widgets: Widget[]) => Promise<void>
+  setSettings: (settings: ClockboardSettings) => Promise<void>
 }
 
 export const useClockboardState = (): UseClockboardStateResult => {
@@ -64,10 +65,22 @@ export const useClockboardState = (): UseClockboardStateResult => {
     [saveState, state]
   )
 
+  const setSettings = useCallback(
+    async (settings: ClockboardSettings) => {
+      if (!state) {
+        return
+      }
+
+      await saveState({ ...state, settings })
+    },
+    [saveState, state]
+  )
+
   return {
     state,
     isLoading,
     error,
-    setWidgets
+    setWidgets,
+    setSettings
   }
 }

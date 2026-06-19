@@ -15,7 +15,11 @@ const sampleState: ClockboardState = {
         timeZone: "Asia/Tokyo"
       }
     }
-  ]
+  ],
+  settings: {
+    dragToMove: true,
+    columns: "auto"
+  }
 }
 
 const stubChromeStorage = () => {
@@ -76,6 +80,31 @@ describe("readClockboardState", () => {
     const state = await readClockboardState()
 
     expect(state.widgets).toHaveLength(2)
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto" })
+  })
+
+  it("fills in default settings for state stored before settings existed", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, { widgets: sampleState.widgets })
+
+    const { readClockboardState } = await import("./storage")
+    const state = await readClockboardState()
+
+    expect(state.widgets).toEqual(sampleState.widgets)
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto" })
+  })
+
+  it("sanitizes malformed settings fields back to their defaults", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, {
+      widgets: sampleState.widgets,
+      settings: { dragToMove: "nope", columns: 7 }
+    })
+
+    const { readClockboardState } = await import("./storage")
+    const state = await readClockboardState()
+
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto" })
   })
 })
 

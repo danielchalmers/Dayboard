@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
+import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
@@ -12,6 +13,19 @@ import type { Widget } from "~/lib/types"
 interface EditorState {
   mode: "add" | "edit"
   item: Widget
+}
+
+// The new tab page doubles as the extension's options page. When the browser
+// opens it as options it appends `?view=settings`, so the overlay shows itself.
+const wantsSettingsView = (): boolean => {
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  return (
+    new URLSearchParams(window.location.search).get("view") === "settings" ||
+    window.location.hash === "#settings"
+  )
 }
 
 const closeOpenMenus = (eventPath?: EventTarget[]) => {
@@ -26,9 +40,11 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
 
 export function NewTabPage() {
   const now = useNow()
-  const { state, isLoading, error, setWidgets } = useClockboardState()
+  const { state, isLoading, error, setWidgets, setSettings } =
+    useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -80,6 +96,11 @@ export function NewTabPage() {
     })
   }
 
+  const openSettings = () => {
+    closeOpenMenus()
+    setIsSettingsOpen(true)
+  }
+
   return (
     <>
       <main className="page">
@@ -88,6 +109,26 @@ export function NewTabPage() {
             <h1>Clockboard</h1>
           </div>
           <div className="page-header__actions">
+            <button
+              aria-label="Options"
+              className="icon-button"
+              onClick={openSettings}
+              type="button">
+              <svg
+                aria-hidden="true"
+                fill="none"
+                height="24"
+                viewBox="0 0 24 24"
+                width="24">
+                <circle cx="12" cy="12" r="3.1" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M19.4 12c0-.5-.05-1-.13-1.46l1.9-1.46-1.9-3.29-2.24.9a7.4 7.4 0 0 0-2.53-1.47L12.93 2h-3.8l-.57 2.72a7.4 7.4 0 0 0-2.53 1.47l-2.24-.9-1.9 3.29 1.9 1.46c-.08.47-.13.96-.13 1.46s.05 1 .13 1.46l-1.9 1.46 1.9 3.29 2.24-.9c.74.63 1.6 1.13 2.53 1.47L9.13 22h3.8l.57-2.72a7.4 7.4 0 0 0 2.53-1.47l2.24.9 1.9-3.29-1.9-1.46c.08-.47.13-.96.13-1.46Z"
+                  stroke="currentColor"
+                  strokeLinejoin="round"
+                  strokeWidth="1.6"
+                />
+              </svg>
+            </button>
             <details className="add-menu">
               <summary
                 aria-haspopup="menu"
@@ -157,6 +198,8 @@ export function NewTabPage() {
         <BoardList
           items={state.widgets}
           now={now}
+          draggable={state.settings.dragToMove}
+          columns={state.settings.columns}
           onReorder={reorderList}
           renderItemActions={(item, index) => (
             <>
@@ -216,6 +259,12 @@ export function NewTabPage() {
         item={itemPendingDelete}
         onCancel={() => setItemPendingDelete(null)}
         onConfirm={deleteItem}
+      />
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        settings={state.settings}
+        onChange={(settings) => void setSettings(settings)}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </>
   )

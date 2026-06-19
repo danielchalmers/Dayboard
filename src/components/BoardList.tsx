@@ -20,6 +20,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEventHandler,
@@ -27,11 +28,13 @@ import {
 } from "react"
 
 import { BoardRow } from "~/components/BoardRow"
-import type { Widget } from "~/lib/types"
+import type { BoardColumns, Widget } from "~/lib/types"
 
 interface BoardListProps {
   items: Widget[]
   now: Date
+  draggable?: boolean
+  columns?: BoardColumns
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
 }
@@ -236,6 +239,7 @@ interface SortableBoardRowProps {
   activeId: string | null
   isMenuOpen: boolean
   hasActions: boolean
+  draggable: boolean
   prefersReducedMotion: boolean
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
@@ -247,6 +251,7 @@ const SortableBoardRow = ({
   activeId,
   isMenuOpen,
   hasActions,
+  draggable,
   prefersReducedMotion,
   onCloseMenu,
   onOpenMenu
@@ -259,12 +264,13 @@ const SortableBoardRow = ({
     transform,
     transition
   } = useSortable({
-    id: item.id
+    id: item.id,
+    disabled: !draggable
   })
 
   const className = [
     "board-row--sortable",
-    "board-row--draggable",
+    draggable ? "board-row--draggable" : "",
     isMenuOpen ? "board-row--menu-open" : "",
     isDragging ? "board-row--dragging" : "",
     activeId && activeId !== item.id && isOver ? "board-row--drop-target" : ""
@@ -281,9 +287,17 @@ const SortableBoardRow = ({
     onOpenMenu(item.id, event.clientX, event.clientY)
   }
 
+  // Keyboard dragging is only offered when the card is draggable; otherwise the
+  // sortable's key listener is skipped so arrow keys do nothing surprising.
+  const deferToDragKeys = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (draggable) {
+      listeners?.onKeyDown?.(event)
+    }
+  }
+
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (!hasActions) {
-      listeners?.onKeyDown?.(event)
+      deferToDragKeys(event)
       return
     }
 
@@ -309,13 +323,15 @@ const SortableBoardRow = ({
       return
     }
 
-    listeners?.onKeyDown?.(event)
+    deferToDragKeys(event)
   }
 
   // Only the pointer activator moves to the frame so dragging starts from the
   // border; keyboard dragging stays on the focusable card via handleKeyDown,
   // which still defers to the sortable's onKeyDown listener. dnd-kit types its
   // listeners loosely as `Function`, so narrow the pointer-down handler here.
+  // When dragging is turned off there is no frame at all, leaving the whole
+  // card selectable.
   const onPointerDown = listeners?.onPointerDown as
     | PointerEventHandler<HTMLDivElement>
     | undefined
@@ -328,7 +344,7 @@ const SortableBoardRow = ({
         onKeyDown: handleKeyDown,
         tabIndex: 0
       }}
-      dragHandleProps={{ onPointerDown }}
+      dragHandleProps={draggable ? { onPointerDown } : undefined}
       className={className}
       item={item}
       now={now}
@@ -344,6 +360,8 @@ const SortableBoardRow = ({
 export const BoardList = ({
   items,
   now,
+  draggable = true,
+  columns = "auto",
   renderItemActions,
   onReorder
 }: BoardListProps) => {
@@ -412,6 +430,20 @@ export const BoardList = ({
     : null
   const activeMenuIndex = activeMenuItem ? items.indexOf(activeMenuItem) : -1
 
+  const sectionClassName = [
+    "board-list",
+    activeId ? "board-list--dragging" : ""
+  ]
+    .filter(Boolean)
+    .join(" ")
+
+  // A fixed column count is driven by a CSS variable; `auto` keeps the
+  // responsive grid that fits as many cards as the width allows.
+  const sectionStyle =
+    columns === "auto"
+      ? undefined
+      : ({ "--board-columns": String(columns) } as CSSProperties)
+
   return (
     <>
       <DndContext
@@ -422,16 +454,14 @@ export const BoardList = ({
         sensors={sensors}>
         <SortableContext items={itemIds} strategy={rectSortingStrategy}>
           <section
-            className={[
-              "board-list",
-              activeId ? "board-list--dragging" : ""
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className={sectionClassName}
+            data-columns={columns === "auto" ? undefined : columns}
+            style={sectionStyle}
             aria-label="Clockboard widgets">
             {items.map((item) => (
               <SortableBoardRow
                 activeId={activeId}
+                draggable={draggable}
                 hasActions={hasActions}
                 isMenuOpen={openMenu?.id === item.id}
                 item={item}
