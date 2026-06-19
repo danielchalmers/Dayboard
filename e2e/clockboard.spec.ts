@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+
 import type { Page } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
@@ -122,6 +124,48 @@ test("shows a time-aware greeting that can be personalized", async ({
 
   await page.reload()
   await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
+})
+
+test("exports the board to a file and imports one back", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Options" }).click()
+
+  // Export downloads the current board as JSON.
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export" }).click()
+  ])
+  expect(download.suggestedFilename()).toBe("clockboard.json")
+  const path = await download.path()
+  expect(readFileSync(path, "utf8")).toContain("Local time")
+
+  // Importing a different board replaces what is on screen.
+  const board = {
+    widgets: [
+      {
+        id: "imp",
+        kind: "clock",
+        title: "Imported City",
+        colorPreset: "slate",
+        settings: { timeZone: "UTC" }
+      }
+    ],
+    settings: { dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false }
+  }
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "board.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(board))
+  })
+
+  await expect(
+    page.getByRole("heading", { name: "Imported City" })
+  ).toBeVisible()
+  await expect(page.getByText("Local time")).toHaveCount(0)
+  await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
 })
 
 test("global options toggle drag and columns and persist across reloads", async ({

@@ -110,6 +110,36 @@ describe("readClockboardState", () => {
   })
 })
 
+describe("serializeClockboardState / parseClockboardState", () => {
+  it("round-trips a board through JSON", async () => {
+    const { serializeClockboardState, parseClockboardState } = await import(
+      "./storage"
+    )
+
+    expect(parseClockboardState(serializeClockboardState(sampleState))).toEqual(
+      sampleState
+    )
+  })
+
+  it("fills defaults for a board missing settings", async () => {
+    const { parseClockboardState } = await import("./storage")
+
+    const parsed = parseClockboardState(
+      JSON.stringify({ widgets: sampleState.widgets })
+    )
+
+    expect(parsed.widgets).toEqual(sampleState.widgets)
+    expect(parsed.settings).toEqual(sampleState.settings)
+  })
+
+  it("rejects invalid JSON and non-board payloads", async () => {
+    const { parseClockboardState } = await import("./storage")
+
+    expect(() => parseClockboardState("{ not json")).toThrow()
+    expect(() => parseClockboardState(JSON.stringify({ nope: true }))).toThrow()
+  })
+})
+
 describe("writeClockboardState", () => {
   it("stores the state object under the storage key", async () => {
     const { store } = stubChromeStorage()
