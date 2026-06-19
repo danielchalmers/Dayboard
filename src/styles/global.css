@@ -330,6 +330,10 @@ details > summary::-webkit-details-marker {
 .add-menu__panel {
   inset-block-start: calc(100% + 8px);
   inset-inline-end: 0;
+  /* Stay on screen and scroll if the list of widget kinds is taller than the
+     viewport (e.g. a short window). */
+  max-block-size: calc(100vh - 120px);
+  overflow-y: auto;
 }
 
 .card-menu__panel {
