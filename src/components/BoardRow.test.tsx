@@ -87,6 +87,29 @@ describe("BoardRow", () => {
     expect(article).toHaveAttribute("data-color-preset", "amber")
   })
 
+  it("renders a countdown as a progress bar when configured", () => {
+    const item: Widget = {
+      id: "year",
+      kind: "countdown",
+      title: "Year",
+      colorPreset: "sky",
+      settings: {
+        display: "progress",
+        startAt: "2026-01-01T00:00:00.000Z",
+        targetAt: "2026-01-11T00:00:00.000Z"
+      }
+    }
+
+    render(<BoardRow item={item} now={new Date("2026-01-06T00:00:00.000Z")} />)
+
+    expect(screen.getByText("50%")).toBeInTheDocument()
+    const bar = screen.getByRole("progressbar", { name: "Year progress" })
+    expect(bar).toHaveAttribute("aria-valuenow", "50")
+    expect(bar.querySelector(".progress-bar__fill")).toHaveStyle({
+      inlineSize: "50%"
+    })
+  })
+
   it("renders a note card with an editable text area", () => {
     const item: Widget = {
       id: "scratch",

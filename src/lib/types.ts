@@ -36,10 +36,16 @@ export interface ClockWidget extends WidgetBase {
   }
 }
 
+export type CountdownDisplay = "text" | "progress"
+
 export interface CountdownWidget extends WidgetBase {
   kind: "countdown"
   settings: {
     targetAt: string
+    /** How to present the countdown; defaults to the remaining-time text. */
+    display?: CountdownDisplay
+    /** Span start for the progress bar (the target is the span end). */
+    startAt?: string
   }
 }
 

@@ -580,6 +580,23 @@ details > summary::-webkit-details-marker {
   font-size: clamp(2.4rem, 4vw, 3.2rem);
 }
 
+/* Countdown progress bar */
+.progress-bar {
+  background: color-mix(in srgb, var(--card-accent-resolved) 14%, transparent);
+  border-radius: 999px;
+  block-size: 12px;
+  inline-size: 100%;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  background: var(--card-accent-resolved);
+  block-size: 100%;
+  border-radius: inherit;
+  min-inline-size: 0;
+  transition: inline-size var(--t-normal);
+}
+
 .board-row__value--timer-done {
   color: var(--card-accent-resolved);
 }

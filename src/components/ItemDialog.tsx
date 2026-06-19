@@ -7,7 +7,12 @@ import {
 } from "~/lib/time"
 import { quotesToText, textToQuotes } from "~/lib/quotes"
 import { msToParts, partsToMs, type DurationParts } from "~/lib/timers"
-import type { QuoteRotation, Widget, WidgetColorPreset } from "~/lib/types"
+import type {
+  CountdownDisplay,
+  QuoteRotation,
+  Widget,
+  WidgetColorPreset
+} from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 import { ColorPresetPicker } from "~/components/ColorPresetPicker"
 
@@ -103,6 +108,39 @@ export const ItemDialog = ({
               targetAt
             }
           }
+        : current
+    )
+  }
+
+  const updateDisplay = (value: string) => {
+    const display = value as CountdownDisplay
+
+    setDraft((current) => {
+      if (current?.kind !== "countdown") {
+        return current
+      }
+
+      return {
+        ...current,
+        settings: {
+          ...current.settings,
+          display,
+          // Progress needs a span start; default it to now if none is set yet.
+          startAt:
+            display === "progress" && !current.settings.startAt
+              ? new Date().toISOString()
+              : current.settings.startAt
+        }
+      }
+    })
+  }
+
+  const updateStartAt = (value: string) => {
+    const startAt = dateTimeInputValueToIsoInstant(value)
+
+    setDraft((current) =>
+      current?.kind === "countdown" && startAt
+        ? { ...current, settings: { ...current.settings, startAt } }
         : current
     )
   }
@@ -205,15 +243,48 @@ export const ItemDialog = ({
             ) : null}
 
             {draft.kind === "countdown" ? (
-              <label className="form-label-group">
-                <span>{widgetDefinition.editor.targetLabel}</span>
-                <input
-                  onChange={(event) => updateTargetAt(event.currentTarget.value)}
-                  required
-                  type="datetime-local"
-                  value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
-                />
-              </label>
+              <>
+                <label className="form-label-group">
+                  <span>{widgetDefinition.editor.targetLabel}</span>
+                  <input
+                    onChange={(event) => updateTargetAt(event.currentTarget.value)}
+                    required
+                    type="datetime-local"
+                    value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
+                  />
+                </label>
+
+                <label className="form-label-group">
+                  <span>Display</span>
+                  <select
+                    onChange={(event) => updateDisplay(event.currentTarget.value)}
+                    value={draft.settings.display ?? "text"}>
+                    <option value="text">Time remaining</option>
+                    <option value="progress">Progress bar</option>
+                  </select>
+                </label>
+
+                {draft.settings.display === "progress" ? (
+                  <>
+                    <label className="form-label-group">
+                      <span>Starting from</span>
+                      <input
+                        onChange={(event) =>
+                          updateStartAt(event.currentTarget.value)
+                        }
+                        required
+                        type="datetime-local"
+                        value={isoInstantToDateTimeInputValue(
+                          draft.settings.startAt ?? ""
+                        )}
+                      />
+                    </label>
+                    <p className="form-note">
+                      The bar fills from this date to the target.
+                    </p>
+                  </>
+                ) : null}
+              </>
             ) : null}
 
             {draft.kind === "clock" ? (

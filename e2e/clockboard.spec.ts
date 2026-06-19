@@ -632,6 +632,39 @@ test("add and edit countdown works without a time-zone field", async ({
   await expect(page.getByRole("heading", { name: "Launch day" })).toBeVisible()
 })
 
+test("a countdown can be shown as a progress bar", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await page.getByLabel("Name").fill("Project")
+  await page.getByLabel("When").fill("2026-12-31T00:00")
+  await page.getByLabel("Display").selectOption("progress")
+  await page.getByLabel("Starting from").fill("2026-01-01T00:00")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Project" }) })
+
+  await expect(
+    card.getByRole("progressbar", { name: "Project progress" })
+  ).toBeVisible()
+  await expect(card.locator(".board-row__value")).toContainText("%")
+
+  // The progress display persists across a reload.
+  await page.reload()
+  await expect(
+    page
+      .locator(".board-row")
+      .filter({ has: page.getByRole("heading", { name: "Project" }) })
+      .getByRole("progressbar")
+  ).toBeVisible()
+})
+
 test("edit dialog opens for an existing clock", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
