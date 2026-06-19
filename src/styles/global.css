@@ -815,8 +815,11 @@ details > summary::-webkit-details-marker {
   margin: 0;
 }
 
+/* Secondary meta (e.g. the clock's time-zone abbreviation) is set apart by
+   weight rather than fading toward transparent, which kept it fully opaque for
+   contrast. */
 .board-row__meta span {
-  color: color-mix(in srgb, var(--card-tint-resolved) 60%, transparent);
+  font-weight: 500;
 }
 
 /* The frame overlay is the only draggable surface. It fills the padded edge
@@ -851,6 +854,12 @@ details > summary::-webkit-details-marker {
 .board-row--menu-open {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 35%, var(--card-border-resolved));
   box-shadow: var(--shadow-card-hover);
+}
+
+/* When dragging is turned off there is no frame to light up, so give the card a
+   calm border tint on hover (no lift, to avoid implying it can be dragged). */
+.board-row:not(.board-row--draggable):hover {
+  border-color: color-mix(in srgb, var(--card-accent-resolved) 22%, var(--card-border-resolved));
 }
 
 .board-row--dragging {

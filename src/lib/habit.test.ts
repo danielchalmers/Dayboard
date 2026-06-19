@@ -15,6 +15,14 @@ describe("toggleToday", () => {
     expect(added).toEqual([key(0)])
     expect(toggleToday(added, now)).toEqual([])
   })
+
+  it("prunes history older than the retention window", () => {
+    const result = toggleToday([key(-500), key(-10)], now)
+
+    expect(result).toContain(key(-10))
+    expect(result).toContain(key(0))
+    expect(result).not.toContain(key(-500))
+  })
 })
 
 describe("currentStreak", () => {

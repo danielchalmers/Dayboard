@@ -16,9 +16,7 @@ const DEFAULT_TIMER_DURATION_MS = 5 * 60 * 1000
 
 export interface WidgetDefinition<K extends WidgetKind> {
   kind: K
-  kindLabel: string
   editor: {
-    hasTimeZone: boolean
     targetLabel?: string
   }
   createDefault: (now?: Date) => Extract<Widget, { kind: K }>
@@ -114,59 +112,39 @@ export const widgetRegistry: {
 } = {
   clock: {
     kind: "clock",
-    kindLabel: "Clock",
-    editor: {
-      hasTimeZone: true
-    },
+    editor: {},
     createDefault: createClockWidget
   },
   countdown: {
     kind: "countdown",
-    kindLabel: "Countdown",
     editor: {
-      hasTimeZone: false,
       targetLabel: "When"
     },
     createDefault: createCountdownWidget
   },
   note: {
     kind: "note",
-    kindLabel: "Note",
-    editor: {
-      hasTimeZone: false
-    },
+    editor: {},
     createDefault: createNoteWidget
   },
   quote: {
     kind: "quote",
-    kindLabel: "Quote",
-    editor: {
-      hasTimeZone: false
-    },
+    editor: {},
     createDefault: createQuoteWidget
   },
   stopwatch: {
     kind: "stopwatch",
-    kindLabel: "Stopwatch",
-    editor: {
-      hasTimeZone: false
-    },
+    editor: {},
     createDefault: createStopwatchWidget
   },
   timer: {
     kind: "timer",
-    kindLabel: "Timer",
-    editor: {
-      hasTimeZone: false
-    },
+    editor: {},
     createDefault: createTimerWidget
   },
   habit: {
     kind: "habit",
-    kindLabel: "Habit",
-    editor: {
-      hasTimeZone: false
-    },
+    editor: {},
     createDefault: createHabitWidget
   }
 }

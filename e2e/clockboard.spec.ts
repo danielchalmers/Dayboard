@@ -905,6 +905,38 @@ test("a recurring countdown rolls forward to its next occurrence", async ({
   )
 })
 
+test("editing a recurring countdown's time keeps its other settings", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await page.getByLabel("Name").fill("Standup")
+  await page.getByLabel("When").fill("2020-01-06T09:00")
+  await page.getByLabel("Repeats").selectOption("weekly")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Standup" }) })
+  await expect(card.locator(".board-row__detail")).toContainText("repeats weekly")
+
+  // Changing only the time must not wipe the repeat setting.
+  await openWidgetMenu(page, "Standup")
+  await page.getByRole("menuitem", { name: "Edit Standup" }).click()
+  await page.getByLabel("When").fill("2020-01-07T08:30")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  await expect(
+    page
+      .locator(".board-row")
+      .filter({ has: page.getByRole("heading", { name: "Standup" }) })
+      .locator(".board-row__detail")
+  ).toContainText("repeats weekly")
+})
+
 test("edit dialog opens for an existing clock", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 

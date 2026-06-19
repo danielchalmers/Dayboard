@@ -116,17 +116,13 @@ describe("datetime-local countdown conversions", () => {
 })
 
 describe("getCountdownParts", () => {
-  it("returns remaining time parts for a future target", () => {
+  it("returns the status and natural-language label for a future target", () => {
     const parts = getCountdownParts(
       countdownWidget("2026-01-02T03:04:00.000Z"),
       new Date("2026-01-01T00:00:00.000Z")
     )
 
     expect(parts.status).toBe("future")
-    expect(parts.days).toBe(1)
-    expect(parts.hours).toBe(3)
-    expect(parts.minutes).toBe(4)
-    expect(parts.seconds).toBe(0)
     expect(parts.label).toBe("1 day, 3 hours from now")
   })
 

@@ -3,8 +3,10 @@ import {
   DEFAULT_SETTINGS,
   createDefaultState,
   type ClockboardSettings,
-  type ClockboardState
+  type ClockboardState,
+  type Widget
 } from "./types"
+import { widgetRegistry } from "./widgets"
 
 export const STORAGE_KEY = "clockboard-state"
 
@@ -12,6 +14,14 @@ const hasWidgets = (value: unknown): value is { widgets: unknown[] } =>
   typeof value === "object" &&
   value !== null &&
   Array.isArray((value as { widgets?: unknown }).widgets)
+
+// Keep only entries that look like widgets of a known kind, so a hand-edited or
+// imported file with junk rows renders the valid widgets instead of blank cards.
+const isValidWidget = (value: unknown): value is Widget =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as Widget).id === "string" &&
+  (value as Widget).kind in widgetRegistry
 
 // Settings were added after the first widgets shipped, so fill any missing or
 // malformed fields with their defaults rather than discarding the whole board.
@@ -42,7 +52,7 @@ const normalizeState = (value: unknown): ClockboardState => {
   }
 
   return {
-    widgets: (value as ClockboardState).widgets,
+    widgets: value.widgets.filter(isValidWidget),
     settings: normalizeSettings((value as { settings?: unknown }).settings)
   }
 }
