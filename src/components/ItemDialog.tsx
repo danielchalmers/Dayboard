@@ -11,7 +11,8 @@ import type {
   CountdownDisplay,
   QuoteRotation,
   Widget,
-  WidgetColorPreset
+  WidgetColorPreset,
+  WidgetSize
 } from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 import { ColorPresetPicker } from "~/components/ColorPresetPicker"
@@ -82,6 +83,10 @@ export const ItemDialog = ({
 
   const updateColorPreset = (colorPreset: WidgetColorPreset) => {
     setDraft((current) => (current ? { ...current, colorPreset } : current))
+  }
+
+  const updateSize = (size: WidgetSize) => {
+    setDraft((current) => (current ? { ...current, size } : current))
   }
 
   const updateTimeZone = (timeZone: string) => {
@@ -227,6 +232,18 @@ export const ItemDialog = ({
               value={draft.colorPreset}
               onChange={updateColorPreset}
             />
+
+            <label className="form-label-group">
+              <span>Size</span>
+              <select
+                onChange={(event) =>
+                  updateSize(event.currentTarget.value as WidgetSize)
+                }
+                value={draft.size ?? "standard"}>
+                <option value="standard">Standard</option>
+                <option value="wide">Wide (two columns)</option>
+              </select>
+            </label>
 
             {draft.kind === "clock" ? (
               <label className="form-label-group">
