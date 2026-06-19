@@ -792,6 +792,57 @@ test("dragging a widget onto the archive zone archives it", async ({
   await expect(page.getByRole("button", { name: "Show archived (1)" })).toBeVisible()
 })
 
+test("dragging an archived widget onto the restore zone brings it back", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  // Archive then reveal the archived section.
+  await openWidgetMenu(page, "Tomorrow morning")
+  await page.getByRole("menuitem", { name: "Archive Tomorrow morning" }).click()
+  await page.getByRole("button", { name: "Show archived (1)" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Tomorrow morning" }) })
+  const box = await card.boundingBox()
+
+  if (!box) {
+    throw new Error("Unable to measure archived card")
+  }
+
+  // Drag the archived card (by its frame) down onto the floating restore zone.
+  await page.mouse.move(box.x + box.width / 2, box.y + 12)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + 36, { steps: 6 })
+
+  const zone = page.locator(".archive-dropzone")
+  await expect(zone).toBeVisible()
+  const zoneBox = await zone.boundingBox()
+
+  if (!zoneBox) {
+    throw new Error("Restore zone has no bounds")
+  }
+
+  await page.mouse.move(
+    zoneBox.x + zoneBox.width / 2,
+    zoneBox.y + zoneBox.height / 2,
+    { steps: 20 }
+  )
+  await expect(page.locator(".archive-dropzone--over")).toBeVisible()
+  await page.mouse.up()
+
+  // It is back on the board, and the archived section is gone.
+  await expect(
+    page.locator(".board-list").first().getByText("Tomorrow morning")
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: /Show archived/ })
+  ).toHaveCount(0)
+})
+
 test("edit and delete controls still work after reordering", async ({
   page,
   extensionId

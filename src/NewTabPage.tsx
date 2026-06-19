@@ -396,9 +396,11 @@ export function NewTabPage() {
               <BoardList
                 items={archivedWidgets}
                 now={now}
-                draggable={false}
+                draggable={state.settings.dragToMove}
                 columns={state.settings.columns}
+                onReorder={reorderList}
                 onWidgetChange={updateWidget}
+                onRestore={(id) => void setWidgets(restoreWidget(state.widgets, id))}
                 renderItemActions={(item) => (
                   <>
                     <button
