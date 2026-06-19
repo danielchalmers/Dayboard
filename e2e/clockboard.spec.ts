@@ -626,6 +626,36 @@ test("timer counts down to a finished state and resets", async ({
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
 })
 
+test("timer chime setting persists and the timer still finishes", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByRole("switch", { name: "Timer chime" }).click()
+  await page.getByRole("button", { name: "Done" }).click()
+
+  // A short timer still reaches the finished state with the chime enabled.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("Name").fill("Steep")
+  await page.getByLabel("minutes").fill("0")
+  await page.getByLabel("seconds").fill("1")
+  await page.getByRole("button", { name: "Save timer" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Steep" }) })
+  await card.getByRole("button", { name: "Start" }).click()
+  await expect(card.getByText("Time’s up")).toBeVisible()
+
+  // The preference persists across a reload.
+  await page.reload()
+  await page.getByRole("button", { name: "Options" }).click()
+  await expect(page.getByRole("switch", { name: "Timer chime" })).toBeChecked()
+})
+
 test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId

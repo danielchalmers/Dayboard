@@ -19,7 +19,8 @@ const sampleState: ClockboardState = {
   settings: {
     dragToMove: true,
     columns: "auto",
-    name: ""
+    name: "",
+    chimeOnTimerEnd: false
   }
 }
 
@@ -81,7 +82,7 @@ describe("readClockboardState", () => {
     const state = await readClockboardState()
 
     expect(state.widgets).toHaveLength(2)
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "" })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
   })
 
   it("fills in default settings for state stored before settings existed", async () => {
@@ -92,7 +93,7 @@ describe("readClockboardState", () => {
     const state = await readClockboardState()
 
     expect(state.widgets).toEqual(sampleState.widgets)
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "" })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
   })
 
   it("sanitizes malformed settings fields back to their defaults", async () => {
@@ -105,7 +106,7 @@ describe("readClockboardState", () => {
     const { readClockboardState } = await import("./storage")
     const state = await readClockboardState()
 
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "" })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
   })
 })
 

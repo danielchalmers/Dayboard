@@ -113,12 +113,15 @@ export interface ClockboardSettings {
   columns: BoardColumns
   /** Optional name used to personalize the greeting; empty hides it. */
   name: string
+  /** Play a soft chime when a timer reaches zero. */
+  chimeOnTimerEnd: boolean
 }
 
 export const DEFAULT_SETTINGS: ClockboardSettings = {
   dragToMove: true,
   columns: "auto",
-  name: ""
+  name: "",
+  chimeOnTimerEnd: false
 }
 
 export interface ClockboardState {
