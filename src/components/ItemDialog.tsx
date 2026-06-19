@@ -37,10 +37,16 @@ export const ItemDialog = ({
   onSave
 }: ItemDialogProps) => {
   const [draft, setDraft] = useState<Widget | null>(item)
+  // Raw strings for the datetime-local fields so a cleared/intermediate value is
+  // shown as typed instead of snapping back to the stored target.
+  const [targetInput, setTargetInput] = useState<string | null>(null)
+  const [startInput, setStartInput] = useState<string | null>(null)
   const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     setDraft(item)
+    setTargetInput(null)
+    setStartInput(null)
   }, [item])
 
   useModalFocus(isOpen, dialogRef, onClose)
@@ -92,15 +98,15 @@ export const ItemDialog = ({
   }
 
   const updateTargetAt = (value: string) => {
+    setTargetInput(value)
     const targetAt = dateTimeInputValueToIsoInstant(value)
 
     setDraft((current) =>
       current?.kind === "countdown" && targetAt
         ? {
+            // Preserve display/startAt/repeat when only the target changes.
             ...current,
-            settings: {
-              targetAt
-            }
+            settings: { ...current.settings, targetAt }
           }
         : current
     )
@@ -141,6 +147,7 @@ export const ItemDialog = ({
   }
 
   const updateStartAt = (value: string) => {
+    setStartInput(value)
     const startAt = dateTimeInputValueToIsoInstant(value)
 
     setDraft((current) =>
@@ -269,7 +276,10 @@ export const ItemDialog = ({
                     onChange={(event) => updateTargetAt(event.currentTarget.value)}
                     required
                     type="datetime-local"
-                    value={isoInstantToDateTimeInputValue(draft.settings.targetAt)}
+                    value={
+                      targetInput ??
+                      isoInstantToDateTimeInputValue(draft.settings.targetAt)
+                    }
                   />
                 </label>
 
@@ -306,13 +316,17 @@ export const ItemDialog = ({
                         }
                         required
                         type="datetime-local"
-                        value={isoInstantToDateTimeInputValue(
-                          draft.settings.startAt ?? ""
-                        )}
+                        value={
+                          startInput ??
+                          isoInstantToDateTimeInputValue(
+                            draft.settings.startAt ?? ""
+                          )
+                        }
                       />
                     </label>
                     <p className="form-note">
-                      The bar fills from this date to the target.
+                      The bar fills from this date (when the countdown began) to
+                      the target.
                     </p>
                   </>
                 ) : null}

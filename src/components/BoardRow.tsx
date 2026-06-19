@@ -4,7 +4,8 @@ import {
   useRef,
   useState,
   type ComponentPropsWithoutRef,
-  type CSSProperties
+  type CSSProperties,
+  type ReactNode
 } from "react"
 
 import {
@@ -342,17 +343,22 @@ const HabitBody = ({
   )
 }
 
-export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
-  {
-    item,
-    now,
-    articleProps,
-    dragHandleProps,
-    className,
-    style,
-    onWidgetChange,
-    timerChime
-  },
+interface CardShellProps {
+  item: Widget
+  articleProps?: ComponentPropsWithoutRef<"article">
+  dragHandleProps?: ComponentPropsWithoutRef<"div">
+  className?: string
+  style?: CSSProperties
+  bodyClassName?: string
+  detail?: ReactNode
+  children: ReactNode
+}
+
+// The shared card frame: a themed article, the drag frame, and the title/detail
+// header. Each widget kind supplies only its body (and an optional detail line),
+// so the wrapper lives in one place instead of being repeated per kind.
+const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
+  { item, articleProps, dragHandleProps, className, style, bodyClassName, detail, children },
   ref
 ) {
   const rowClassName = [
@@ -369,19 +375,62 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     ...getPresetCssVars(item.colorPreset)
   }
 
-  // The frame is an overlay that only covers the padded edge around the
-  // content, so dragging starts from the border while the body stays
-  // selectable. It only renders when a drag handle is wired up.
+  // The frame is an overlay that only covers the padded edge around the content,
+  // so dragging starts from the border while the body stays selectable. It only
+  // renders when a drag handle is wired up.
   const frame = dragHandleProps ? (
     <div className="board-row__frame" aria-hidden="true" {...dragHandleProps} />
   ) : null
 
-  const colorDot = item.colorPreset !== "slate" ? (
-    <span
-      className={`board-row__color-dot board-row__color-dot--${item.colorPreset}`}
-      aria-hidden="true"
-    />
-  ) : null
+  const colorDot =
+    item.colorPreset !== "slate" ? (
+      <span
+        className={`board-row__color-dot board-row__color-dot--${item.colorPreset}`}
+        aria-hidden="true"
+      />
+    ) : null
+
+  return (
+    <article
+      {...articleProps}
+      className={rowClassName}
+      ref={ref}
+      style={combinedStyle}
+      data-color-preset={item.colorPreset}>
+      {frame}
+      <div className="board-row__header">
+        <div className="board-row__identity">
+          <h2 className="board-row__title">
+            {colorDot}
+            {item.title}
+          </h2>
+          {detail !== undefined ? (
+            <p className="board-row__detail">{detail}</p>
+          ) : null}
+        </div>
+      </div>
+      <div
+        className={`board-row__body${bodyClassName ? ` ${bodyClassName}` : ""}`}>
+        {children}
+      </div>
+    </article>
+  )
+})
+
+export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
+  {
+    item,
+    now,
+    articleProps,
+    dragHandleProps,
+    className,
+    style,
+    onWidgetChange,
+    timerChime
+  },
+  ref
+) {
+  const shell = { item, articleProps, dragHandleProps, className, style }
 
   if (item.kind === "clock") {
     const detail =
@@ -390,137 +439,60 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : item.settings.timeZone
 
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-            <p className="board-row__detail">{detail}</p>
-          </div>
-        </div>
-        <div className="board-row__body">
-          <p className="board-row__value" aria-label={`${item.title} time`}>
-            {formatClockTime(now, item)}
-          </p>
-          <p className="board-row__meta">
-            {formatClockDate(now, item.settings.timeZone)}
-            <span>{formatTimeZoneName(now, item.settings.timeZone)}</span>
-          </p>
-        </div>
-      </article>
+      <CardShell {...shell} detail={detail} ref={ref}>
+        <p className="board-row__value" aria-label={`${item.title} time`}>
+          {formatClockTime(now, item)}
+        </p>
+        <p className="board-row__meta">
+          {formatClockDate(now, item.settings.timeZone)}
+          <span>{formatTimeZoneName(now, item.settings.timeZone)}</span>
+        </p>
+      </CardShell>
     )
   }
 
   if (item.kind === "note") {
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-          </div>
-        </div>
-        <div className="board-row__body board-row__body--fill">
-          <NoteField item={item} onWidgetChange={onWidgetChange} />
-        </div>
-      </article>
+      <CardShell {...shell} bodyClassName="board-row__body--fill" ref={ref}>
+        <NoteField item={item} onWidgetChange={onWidgetChange} />
+      </CardShell>
     )
   }
 
   if (item.kind === "quote") {
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-          </div>
-        </div>
-        <div className="board-row__body board-row__body--fill">
-          <QuoteField item={item} now={now} />
-        </div>
-      </article>
+      <CardShell {...shell} bodyClassName="board-row__body--fill" ref={ref}>
+        <QuoteField item={item} now={now} />
+      </CardShell>
     )
   }
 
-  if (item.kind === "stopwatch" || item.kind === "timer") {
+  if (item.kind === "stopwatch") {
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-          </div>
-        </div>
-        <div className="board-row__body">
-          {item.kind === "stopwatch" ? (
-            <StopwatchBody item={item} now={now} onWidgetChange={onWidgetChange} />
-          ) : (
-            <TimerBody
-              item={item}
-              now={now}
-              onWidgetChange={onWidgetChange}
-              timerChime={timerChime}
-            />
-          )}
-        </div>
-      </article>
+      <CardShell {...shell} ref={ref}>
+        <StopwatchBody item={item} now={now} onWidgetChange={onWidgetChange} />
+      </CardShell>
+    )
+  }
+
+  if (item.kind === "timer") {
+    return (
+      <CardShell {...shell} ref={ref}>
+        <TimerBody
+          item={item}
+          now={now}
+          onWidgetChange={onWidgetChange}
+          timerChime={timerChime}
+        />
+      </CardShell>
     )
   }
 
   if (item.kind === "habit") {
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-          </div>
-        </div>
-        <div className="board-row__body">
-          <HabitBody item={item} now={now} onWidgetChange={onWidgetChange} />
-        </div>
-      </article>
+      <CardShell {...shell} ref={ref}>
+        <HabitBody item={item} now={now} onWidgetChange={onWidgetChange} />
+      </CardShell>
     )
   }
 
@@ -548,46 +520,27 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     const fraction = getCountdownProgress(countdownItem, now)
     const percent = Math.round(fraction * 100)
     const status =
-      fraction >= 1
-        ? "Complete"
-        : countdown.label.replace(/ from now$/, " left")
+      fraction >= 1 ? "Complete" : countdown.label.replace(/ from now$/, " left")
 
     return (
-      <article
-        {...articleProps}
-        className={rowClassName}
-        ref={ref}
-        style={combinedStyle}
-        data-color-preset={item.colorPreset}>
-        {frame}
-        <div className="board-row__header">
-          <div className="board-row__identity">
-            <h2 className="board-row__title">
-              {colorDot}
-              {item.title}
-            </h2>
-            <p className="board-row__detail">{countdownDetail}</p>
-          </div>
-        </div>
-        <div className="board-row__body">
-          <p className="board-row__value board-row__value--countdown">
-            {percent}%
-          </p>
+      <CardShell {...shell} detail={countdownDetail} ref={ref}>
+        <p className="board-row__value board-row__value--countdown">
+          {percent}%
+        </p>
+        <div
+          className="progress-bar"
+          role="progressbar"
+          aria-label={`${item.title} progress`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}>
           <div
-            className="progress-bar"
-            role="progressbar"
-            aria-label={`${item.title} progress`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}>
-            <div
-              className="progress-bar__fill"
-              style={{ inlineSize: `${percent}%` }}
-            />
-          </div>
-          <p className="board-row__meta">{status}</p>
+            className="progress-bar__fill"
+            style={{ inlineSize: `${percent}%` }}
+          />
         </div>
-      </article>
+        <p className="board-row__meta">{status}</p>
+      </CardShell>
     )
   }
 
@@ -603,28 +556,9 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         : "from now"
 
   return (
-    <article
-      {...articleProps}
-      className={rowClassName}
-      ref={ref}
-      style={combinedStyle}
-      data-color-preset={item.colorPreset}>
-      {frame}
-      <div className="board-row__header">
-        <div className="board-row__identity">
-          <h2 className="board-row__title">
-            {colorDot}
-            {item.title}
-          </h2>
-          <p className="board-row__detail">{countdownDetail}</p>
-        </div>
-      </div>
-      <div className="board-row__body">
-        <p className="board-row__value board-row__value--countdown">
-          {value}
-        </p>
-        {context ? <p className="board-row__meta">{context}</p> : null}
-      </div>
-    </article>
+    <CardShell {...shell} detail={countdownDetail} ref={ref}>
+      <p className="board-row__value board-row__value--countdown">{value}</p>
+      {context ? <p className="board-row__meta">{context}</p> : null}
+    </CardShell>
   )
 })

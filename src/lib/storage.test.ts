@@ -96,6 +96,23 @@ describe("readClockboardState", () => {
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false })
   })
 
+  it("drops malformed widget entries while keeping valid ones", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, {
+      widgets: [
+        sampleState.widgets[0],
+        { id: "x", kind: "totally-unknown", settings: {} },
+        { kind: "clock" },
+        "nonsense"
+      ]
+    })
+
+    const { readClockboardState } = await import("./storage")
+    const state = await readClockboardState()
+
+    expect(state.widgets).toEqual(sampleState.widgets)
+  })
+
   it("sanitizes malformed settings fields back to their defaults", async () => {
     const { store } = stubChromeStorage()
     store.set(STORAGE_KEY, {

@@ -18,12 +18,25 @@ export const isDoneOn = (history: string[], date: Date): boolean =>
 export const isDoneToday = (history: string[], now: Date): boolean =>
   isDoneOn(history, now)
 
+// History only ever feeds the current streak and the 7-day dot row, so keep a
+// generous recent window and let older days fall off — otherwise the list grows
+// without bound against the shared sync quota.
+const HISTORY_WINDOW_DAYS = 400
+
+const pruneHistory = (history: string[], now: Date): string[] => {
+  const cutoff = toDayKey(addDays(now, -HISTORY_WINDOW_DAYS))
+  // YYYY-MM-DD keys sort chronologically as strings.
+  return history.filter((key) => key >= cutoff)
+}
+
 // Mark or unmark today.
 export const toggleToday = (history: string[], now: Date): string[] => {
   const key = toDayKey(now)
-  return history.includes(key)
+  const next = history.includes(key)
     ? history.filter((entry) => entry !== key)
     : [...history, key]
+
+  return pruneHistory(next, now)
 }
 
 // Consecutive completed days counting back from today. Today still counts as

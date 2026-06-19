@@ -7,11 +7,6 @@ import {
 
 export interface CountdownParts {
   status: "future" | "due" | "past"
-  totalMs: number
-  days: number
-  hours: number
-  minutes: number
-  seconds: number
   label: string
 }
 
@@ -131,22 +126,10 @@ export const getCountdownParts = (
   widget: CountdownWidget,
   now = new Date()
 ): CountdownParts => {
-  const targetMs = new Date(widget.settings.targetAt).getTime()
-  const totalMs = targetMs - now.getTime()
-  const remainingMs = Math.max(0, Number.isNaN(totalMs) ? 0 : totalMs)
-  const totalSeconds = Math.floor(remainingMs / 1000)
-  const days = Math.floor(totalSeconds / 86_400)
-  const hours = Math.floor((totalSeconds % 86_400) / 3_600)
-  const minutes = Math.floor((totalSeconds % 3_600) / 60)
-  const seconds = totalSeconds % 60
+  const totalMs = new Date(widget.settings.targetAt).getTime() - now.getTime()
 
   return {
     status: getCountdownStatus(totalMs),
-    totalMs,
-    days,
-    hours,
-    minutes,
-    seconds,
     label: formatRelativeCountdown(totalMs)
   }
 }

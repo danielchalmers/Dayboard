@@ -28,7 +28,13 @@ export const DeleteDialog = ({
   const widgetDefinition = widgetRegistry[item.kind]
 
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onCancel()
+        }
+      }}>
       <section
         aria-labelledby="delete-dialog-title"
         aria-modal="true"
