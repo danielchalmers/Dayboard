@@ -5,6 +5,7 @@ import {
   type CountdownWidget,
   type NoteWidget,
   type QuoteWidget,
+  type HabitWidget,
   type StopwatchWidget,
   type TimerWidget,
   type Widget,
@@ -85,6 +86,16 @@ const createStopwatchWidget = (): StopwatchWidget => ({
   }
 })
 
+const createHabitWidget = (): HabitWidget => ({
+  id: crypto.randomUUID(),
+  kind: "habit",
+  title: "New habit",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    history: []
+  }
+})
+
 const createTimerWidget = (): TimerWidget => ({
   id: crypto.randomUUID(),
   kind: "timer",
@@ -149,6 +160,14 @@ export const widgetRegistry: {
       hasTimeZone: false
     },
     createDefault: createTimerWidget
+  },
+  habit: {
+    kind: "habit",
+    kindLabel: "Habit",
+    editor: {
+      hasTimeZone: false
+    },
+    createDefault: createHabitWidget
   }
 }
 

@@ -18,6 +18,7 @@ import {
 } from "~/lib/time"
 import type {
   CountdownWidget,
+  HabitWidget,
   NoteWidget,
   QuoteWidget,
   StopwatchWidget,
@@ -26,6 +27,14 @@ import type {
 } from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
 import { playChime, primeChime } from "~/lib/chime"
+import {
+  currentStreak,
+  isDoneOn,
+  isDoneToday,
+  recentDays,
+  toDayKey,
+  toggleToday
+} from "~/lib/habit"
 import { cleanQuotes, dailyQuoteIndex } from "~/lib/quotes"
 import {
   finishTimer,
@@ -271,6 +280,62 @@ const TimerBody = ({
   )
 }
 
+const HabitBody = ({
+  item,
+  now,
+  onWidgetChange
+}: {
+  item: HabitWidget
+  now: Date
+  onWidgetChange?: (widget: Widget) => void
+}) => {
+  const { history } = item.settings
+  const done = isDoneToday(history, now)
+  const streak = currentStreak(history, now)
+  const days = recentDays(now, 7)
+  const todayKey = toDayKey(now)
+
+  const toggle = () =>
+    onWidgetChange?.({
+      ...item,
+      settings: { history: toggleToday(history, now) }
+    })
+
+  return (
+    <>
+      <p
+        className="board-row__value board-row__value--timer"
+        aria-label={`${streak} day streak`}>
+        {streak}
+      </p>
+      <p className="board-row__meta">day streak</p>
+      <div className="habit-days" aria-hidden="true">
+        {days.map((day) => {
+          const key = toDayKey(day)
+          const className = [
+            "habit-day",
+            isDoneOn(history, day) ? "habit-day--done" : "",
+            key === todayKey ? "habit-day--today" : ""
+          ]
+            .filter(Boolean)
+            .join(" ")
+
+          return <span className={className} key={key} />
+        })}
+      </div>
+      <div className="timer-controls">
+        <button
+          aria-pressed={done}
+          className={`timer-button${done ? "" : " timer-button--primary"}`}
+          onClick={toggle}
+          type="button">
+          {done ? "Done today ✓" : "Mark today"}
+        </button>
+      </div>
+    </>
+  )
+}
+
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
   {
     item,
@@ -424,6 +489,30 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
               timerChime={timerChime}
             />
           )}
+        </div>
+      </article>
+    )
+  }
+
+  if (item.kind === "habit") {
+    return (
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
+        {frame}
+        <div className="board-row__header">
+          <div className="board-row__identity">
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
+          </div>
+        </div>
+        <div className="board-row__body">
+          <HabitBody item={item} now={now} onWidgetChange={onWidgetChange} />
         </div>
       </article>
     )

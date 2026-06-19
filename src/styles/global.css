@@ -740,6 +740,30 @@ details > summary::-webkit-details-marker {
   font-weight: 650;
 }
 
+/* Habit streak dots */
+.habit-days {
+  display: flex;
+  gap: 9px;
+  margin-block: 12px 4px;
+}
+
+.habit-day {
+  background: color-mix(in srgb, var(--card-accent-resolved) 16%, transparent);
+  block-size: 14px;
+  border-radius: 50%;
+  inline-size: 14px;
+}
+
+.habit-day--done {
+  background: var(--card-accent-resolved);
+}
+
+.habit-day--today {
+  box-shadow:
+    0 0 0 2px var(--card-bg-resolved),
+    0 0 0 3.5px color-mix(in srgb, var(--card-accent-resolved) 55%, transparent);
+}
+
 /* Timer length editor */
 .duration-field {
   display: flex;
