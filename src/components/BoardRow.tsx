@@ -285,6 +285,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   const rowClassName = [
     "board-row",
     `board-row--theme-${item.colorPreset}`,
+    item.size === "wide" ? "board-row--wide" : "",
     className
   ]
     .filter(Boolean)

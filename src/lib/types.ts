@@ -22,11 +22,15 @@ export type WidgetColorPreset =
 
 export const DEFAULT_COLOR_PRESET: WidgetColorPreset = "slate"
 
+export type WidgetSize = "standard" | "wide"
+
 export interface WidgetBase {
   id: string
   kind: WidgetKind
   title: string
   colorPreset: WidgetColorPreset
+  /** A `wide` widget spans two board columns where the layout allows it. */
+  size?: WidgetSize
   /** Tucked away in the Archived section and hidden from the main board. */
   archived?: boolean
 }
