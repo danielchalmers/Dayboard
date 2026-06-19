@@ -206,3 +206,41 @@ export const reorderWidgets = (
 
   return moveWidgetToIndex(widgets, fromIndex, toIndex)
 }
+
+// Archiving moves the widget to the end so the active widgets stay a contiguous
+// block at the front. That keeps index-based moves (the menu's Move up/down)
+// lined up with what is actually on the board.
+export const archiveWidget = (widgets: Widget[], id: string): Widget[] => {
+  const target = widgets.find((widget) => widget.id === id)
+
+  if (!target || target.archived) {
+    return widgets
+  }
+
+  return [
+    ...widgets.filter((widget) => widget.id !== id),
+    { ...target, archived: true }
+  ]
+}
+
+// Restoring drops the widget back in just after the last active widget, so it
+// rejoins the bottom of the board rather than the top.
+export const restoreWidget = (widgets: Widget[], id: string): Widget[] => {
+  const target = widgets.find((widget) => widget.id === id)
+
+  if (!target || !target.archived) {
+    return widgets
+  }
+
+  const rest = widgets.filter((widget) => widget.id !== id)
+  const restored = { ...target, archived: false }
+
+  let insertAt = 0
+  rest.forEach((widget, index) => {
+    if (!widget.archived) {
+      insertAt = index + 1
+    }
+  })
+
+  return [...rest.slice(0, insertAt), restored, ...rest.slice(insertAt)]
+}

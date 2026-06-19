@@ -379,6 +379,73 @@ details > summary::-webkit-details-marker {
   }
 }
 
+/* ── Archive ───────────────────────────────────────────────────────────── */
+
+/* A floating drop target that only appears mid-drag, pinned to the bottom of
+   the viewport so it is always reachable however tall the board is. */
+.archive-dropzone {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  color: var(--muted);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 600;
+  gap: 10px;
+  inline-size: min(420px, calc(100% - 48px));
+  inset-block-end: 28px;
+  inset-inline: 0;
+  justify-content: center;
+  margin-inline: auto;
+  min-block-size: 64px;
+  position: fixed;
+  z-index: 300;
+  animation: fade-in var(--t-fast) ease;
+}
+
+.archive-dropzone--over {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+}
+
+.archive-section {
+  display: grid;
+  gap: 24px;
+  margin-block-start: 40px;
+}
+
+.archive-toggle {
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  justify-self: center;
+  min-block-size: 38px;
+  padding: 8px 18px;
+  transition: background-color var(--t-fast), color var(--t-fast);
+}
+
+.archive-toggle:hover {
+  background: var(--surface-strong);
+  color: var(--accent);
+}
+
+/* Archived cards sit quietly until you hover them. */
+.archive-section .board-row {
+  opacity: 0.78;
+  transition: opacity var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.archive-section .board-row:hover {
+  opacity: 1;
+}
+
 /* ── Card redesign ─────────────────────────────────────────────────────── */
 
 .board-row {

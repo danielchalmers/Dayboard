@@ -3,6 +3,7 @@ import {
   KeyboardSensor,
   PointerSensor,
   closestCenter,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -38,6 +39,36 @@ interface BoardListProps {
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onReorder?: (activeId: string, overId: string) => void
   onWidgetChange?: (widget: Widget) => void
+  onArchive?: (id: string) => void
+}
+
+const ARCHIVE_DROP_ID = "clockboard-archive-dropzone"
+
+// A drop target that only exists mid-drag: dropping a widget here archives it.
+const ArchiveDropZone = () => {
+  const { setNodeRef, isOver } = useDroppable({ id: ARCHIVE_DROP_ID })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`archive-dropzone${isOver ? " archive-dropzone--over" : ""}`}
+      aria-hidden="true">
+      <svg
+        fill="none"
+        height="22"
+        viewBox="0 0 24 24"
+        width="22">
+        <path
+          d="M4 7.5h16M4 7.5 5.2 19a1.5 1.5 0 0 0 1.5 1.4h10.6a1.5 1.5 0 0 0 1.5-1.4L20 7.5M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2M10 11.5v5M14 11.5v5"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.7"
+        />
+      </svg>
+      <span>{isOver ? "Release to archive" : "Drag here to archive"}</span>
+    </div>
+  )
 }
 
 // Interactive widgets (a note's textarea, a timer's buttons) own their key and
@@ -122,7 +153,10 @@ const WidgetContextMenu = ({
       // Already shown — ignore.
     }
 
-    getMenuItems(panel)[0]?.focus()
+    // Focus without scrolling: a menu opened near the bottom of a scrollable
+    // page would otherwise scroll the focused item into view, and that scroll
+    // trips the close-on-scroll handler below, dismissing the menu instantly.
+    getMenuItems(panel)[0]?.focus({ preventScroll: true })
 
     const handleToggle = (event: Event) => {
       if ((event as ToggleEvent).newState === "closed") {
@@ -193,7 +227,9 @@ const WidgetContextMenu = ({
 
     const current = items.indexOf(document.activeElement as HTMLButtonElement)
     const focusItem = (index: number) =>
-      items[((index % items.length) + items.length) % items.length]?.focus()
+      items[((index % items.length) + items.length) % items.length]?.focus({
+        preventScroll: true
+      })
 
     switch (event.key) {
       case "ArrowDown":
@@ -389,7 +425,8 @@ export const BoardList = ({
   columns = "auto",
   renderItemActions,
   onReorder,
-  onWidgetChange
+  onWidgetChange,
+  onArchive
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -433,6 +470,11 @@ export const BoardList = ({
     setOpenMenu(null)
 
     if (!over || active.id === over.id) {
+      return
+    }
+
+    if (over.id === ARCHIVE_DROP_ID) {
+      onArchive?.(String(active.id))
       return
     }
 
@@ -501,6 +543,7 @@ export const BoardList = ({
             ))}
           </section>
         </SortableContext>
+        {activeId && onArchive ? <ArchiveDropZone /> : null}
       </DndContext>
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu

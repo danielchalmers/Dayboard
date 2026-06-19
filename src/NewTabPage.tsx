@@ -7,7 +7,13 @@ import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView, LoadingView } from "~/components/StatusViews"
 import { useClockboardState } from "~/hooks/useClockboardState"
 import { useNow } from "~/hooks/useNow"
-import { createWidget, moveWidget, reorderWidgets } from "~/lib/widgets"
+import {
+  archiveWidget,
+  createWidget,
+  moveWidget,
+  reorderWidgets,
+  restoreWidget
+} from "~/lib/widgets"
 import type { Widget } from "~/lib/types"
 
 interface EditorState {
@@ -45,6 +51,7 @@ export function NewTabPage() {
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -98,6 +105,16 @@ export function NewTabPage() {
     )
   }
 
+  const archiveItem = (item: Widget) => {
+    closeOpenMenus()
+    void setWidgets(archiveWidget(state.widgets, item.id))
+  }
+
+  const restoreItem = (item: Widget) => {
+    closeOpenMenus()
+    void setWidgets(restoreWidget(state.widgets, item.id))
+  }
+
   const addItem = (kind: Widget["kind"]) => {
     closeOpenMenus()
     setEditorState({
@@ -110,6 +127,9 @@ export function NewTabPage() {
     closeOpenMenus()
     setIsSettingsOpen(true)
   }
+
+  const activeWidgets = state.widgets.filter((widget) => !widget.archived)
+  const archivedWidgets = state.widgets.filter((widget) => widget.archived)
 
   return (
     <>
@@ -297,12 +317,13 @@ export function NewTabPage() {
           </div>
         </header>
         <BoardList
-          items={state.widgets}
+          items={activeWidgets}
           now={now}
           draggable={state.settings.dragToMove}
           columns={state.settings.columns}
           onReorder={reorderList}
           onWidgetChange={updateWidget}
+          onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
           renderItemActions={(item, index) => (
             <>
               <button
@@ -317,7 +338,7 @@ export function NewTabPage() {
               <button
                 aria-label={`Move ${item.title} down`}
                 className="menu-button"
-                disabled={index === state.widgets.length - 1}
+                disabled={index === activeWidgets.length - 1}
                 onClick={() => reorderItem(item.id, 1)}
                 role="menuitem"
                 type="button">
@@ -335,6 +356,14 @@ export function NewTabPage() {
                 Edit
               </button>
               <button
+                aria-label={`Archive ${item.title}`}
+                className="menu-button"
+                onClick={() => archiveItem(item)}
+                role="menuitem"
+                type="button">
+                Archive
+              </button>
+              <button
                 aria-label={`Delete ${item.title}`}
                 className="menu-button menu-button--danger"
                 onClick={() => {
@@ -348,6 +377,62 @@ export function NewTabPage() {
             </>
           )}
         />
+        {archivedWidgets.length > 0 ? (
+          <section className="archive-section">
+            <button
+              aria-expanded={showArchived}
+              className="archive-toggle"
+              onClick={() => setShowArchived((shown) => !shown)}
+              type="button">
+              {showArchived
+                ? "Hide archived"
+                : `Show archived (${archivedWidgets.length})`}
+            </button>
+            {showArchived ? (
+              <BoardList
+                items={archivedWidgets}
+                now={now}
+                draggable={false}
+                columns={state.settings.columns}
+                onWidgetChange={updateWidget}
+                renderItemActions={(item) => (
+                  <>
+                    <button
+                      aria-label={`Restore ${item.title}`}
+                      className="menu-button"
+                      onClick={() => restoreItem(item)}
+                      role="menuitem"
+                      type="button">
+                      Restore
+                    </button>
+                    <button
+                      aria-label={`Edit ${item.title}`}
+                      className="menu-button"
+                      onClick={() => {
+                        closeOpenMenus()
+                        setEditorState({ mode: "edit", item })
+                      }}
+                      role="menuitem"
+                      type="button">
+                      Edit
+                    </button>
+                    <button
+                      aria-label={`Delete ${item.title}`}
+                      className="menu-button menu-button--danger"
+                      onClick={() => {
+                        closeOpenMenus()
+                        setItemPendingDelete(item)
+                      }}
+                      role="menuitem"
+                      type="button">
+                      Delete
+                    </button>
+                  </>
+                )}
+              />
+            ) : null}
+          </section>
+        ) : null}
       </main>
       <ItemDialog
         isOpen={Boolean(editorState)}
