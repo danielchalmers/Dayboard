@@ -521,6 +521,41 @@ details > summary::-webkit-details-marker {
   color: var(--quiet);
 }
 
+/* Quote cards render the chosen line as a styled pull-quote. */
+.quote-text {
+  align-self: center;
+  color: var(--text);
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  margin: 0;
+  position: relative;
+  padding-block-start: 22px;
+}
+
+.quote-text::before {
+  color: var(--card-accent-resolved);
+  content: "\201C";
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 0.6;
+  opacity: 0.5;
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: -2px;
+}
+
+.quote-text--empty {
+  color: var(--card-tint-resolved);
+  font-size: 1rem;
+  font-weight: 550;
+}
+
+.quote-text--empty::before {
+  content: none;
+}
+
 .board-row__value {
   font-size: clamp(2.6rem, 4.5vw, 3.8rem);
   font-variant-numeric: tabular-nums;
@@ -662,6 +697,30 @@ select:focus {
   font-size: 0.88rem;
   line-height: 1.5;
   margin: 8px 0 0;
+}
+
+/* The quote list editor is a multi-line field that matches the other inputs. */
+.quote-list-input {
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: inherit;
+  font: inherit;
+  inline-size: 100%;
+  line-height: 1.5;
+  padding: 12px 16px;
+  resize: vertical;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.quote-list-input:hover {
+  border-color: color-mix(in srgb, var(--text) 25%, transparent);
+}
+
+.quote-list-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+  outline: 0;
 }
 
 /* ── Color Swatch Picker ───────────────────────────────────────────────── */

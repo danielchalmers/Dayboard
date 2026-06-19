@@ -232,6 +232,25 @@ export function NewTabPage() {
                   </svg>
                   Add note
                 </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("quote")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <path
+                      d="M10 7.5C7.5 8.3 6 10.3 6 13v3.5h4.5V12H8.4c.2-1.3 1-2.2 2.3-2.7L10 7.5ZM19 7.5c-2.5.8-4 2.8-4 5.5v3.5h4.5V12h-2.1c.2-1.3 1-2.2 2.3-2.7L19 7.5Z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                  Add quote
+                </button>
               </div>
             </details>
           </div>

@@ -1,4 +1,6 @@
-export type WidgetKind = "clock" | "countdown" | "note"
+export type WidgetKind = "clock" | "countdown" | "note" | "quote"
+
+export type QuoteRotation = "daily" | "open"
 
 export type WidgetColorPreset =
   | "slate"
@@ -42,7 +44,21 @@ export interface NoteWidget extends WidgetBase {
   }
 }
 
-export type Widget = ClockWidget | CountdownWidget | NoteWidget
+export interface QuoteWidget extends WidgetBase {
+  kind: "quote"
+  settings: {
+    /** The master list this widget draws from, one quote per entry. */
+    quotes: string[]
+    /** When to surface a new quote from the list. */
+    rotation: QuoteRotation
+  }
+}
+
+export type Widget =
+  | ClockWidget
+  | CountdownWidget
+  | NoteWidget
+  | QuoteWidget
 
 export type BoardColumns = "auto" | 1 | 2 | 3 | 4
 

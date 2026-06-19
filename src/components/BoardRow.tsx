@@ -14,8 +14,9 @@ import {
   formatTimeZoneName,
   getCountdownParts
 } from "~/lib/time"
-import type { NoteWidget, Widget } from "~/lib/types"
+import type { NoteWidget, QuoteWidget, Widget } from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
+import { cleanQuotes, dailyQuoteIndex } from "~/lib/quotes"
 
 interface BoardRowProps {
   item: Widget
@@ -104,6 +105,29 @@ const NoteField = ({
   )
 }
 
+const QuoteField = ({ item, now }: { item: QuoteWidget; now: Date }) => {
+  const quotes = cleanQuotes(item.settings.quotes)
+
+  // "open" rotation picks once per tab open; the seed is fixed for the mount so
+  // the board's per-second re-render never reshuffles it.
+  const [openSeed] = useState(() => Math.random())
+
+  if (quotes.length === 0) {
+    return (
+      <p className="quote-text quote-text--empty">
+        Add a few quotes to this widget to get started.
+      </p>
+    )
+  }
+
+  const index =
+    item.settings.rotation === "daily"
+      ? dailyQuoteIndex(now, quotes.length)
+      : Math.floor(openSeed * quotes.length) % quotes.length
+
+  return <blockquote className="quote-text">{quotes[index] ?? quotes[0]}</blockquote>
+}
+
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
   { item, now, articleProps, dragHandleProps, className, style, onWidgetChange },
   ref
@@ -190,6 +214,30 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         </div>
         <div className="board-row__body board-row__body--fill">
           <NoteField item={item} onWidgetChange={onWidgetChange} />
+        </div>
+      </article>
+    )
+  }
+
+  if (item.kind === "quote") {
+    return (
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
+        {frame}
+        <div className="board-row__header">
+          <div className="board-row__identity">
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
+          </div>
+        </div>
+        <div className="board-row__body board-row__body--fill">
+          <QuoteField item={item} now={now} />
         </div>
       </article>
     )

@@ -4,6 +4,7 @@ import {
   type ClockWidget,
   type CountdownWidget,
   type NoteWidget,
+  type QuoteWidget,
   type Widget,
   type WidgetKind
 } from "./types"
@@ -53,6 +54,21 @@ const createNoteWidget = (): NoteWidget => ({
   }
 })
 
+const createQuoteWidget = (): QuoteWidget => ({
+  id: crypto.randomUUID(),
+  kind: "quote",
+  title: "Daily quote",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    quotes: [
+      "The secret of getting ahead is getting started.",
+      "Small steps every day.",
+      "Done is better than perfect."
+    ],
+    rotation: "daily"
+  }
+})
+
 export const widgetRegistry: {
   [K in WidgetKind]: WidgetDefinition<K>
 } = {
@@ -80,6 +96,14 @@ export const widgetRegistry: {
       hasTimeZone: false
     },
     createDefault: createNoteWidget
+  },
+  quote: {
+    kind: "quote",
+    kindLabel: "Quote",
+    editor: {
+      hasTimeZone: false
+    },
+    createDefault: createQuoteWidget
   }
 }
 

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { BoardRow } from "./BoardRow"
+import { dailyQuoteIndex } from "~/lib/quotes"
 import type { Widget } from "~/lib/types"
 
 describe("BoardRow", () => {
@@ -129,6 +130,54 @@ describe("BoardRow", () => {
       ...item,
       settings: { text: "Buy milk" }
     })
+  })
+
+  it("renders the deterministic daily quote for a quote widget", () => {
+    const quotes = ["Quote A", "Quote B", "Quote C"]
+    const now = new Date("2026-03-04T09:00:00.000Z")
+    const item: Widget = {
+      id: "q",
+      kind: "quote",
+      title: "Daily quote",
+      colorPreset: "sky",
+      settings: { quotes, rotation: "daily" }
+    }
+
+    render(<BoardRow item={item} now={now} />)
+
+    expect(screen.getByRole("heading", { name: "Daily quote" })).toBeInTheDocument()
+    expect(
+      screen.getByText(quotes[dailyQuoteIndex(now, quotes.length)]!)
+    ).toBeInTheDocument()
+  })
+
+  it("prompts to add quotes when the list is empty", () => {
+    const item: Widget = {
+      id: "q",
+      kind: "quote",
+      title: "Daily quote",
+      colorPreset: "slate",
+      settings: { quotes: [], rotation: "daily" }
+    }
+
+    render(<BoardRow item={item} now={new Date("2026-03-04T09:00:00.000Z")} />)
+
+    expect(screen.getByText(/Add a few quotes/)).toBeInTheDocument()
+  })
+
+  it("shows a quote from the list in open rotation", () => {
+    const quotes = ["Only one here"]
+    const item: Widget = {
+      id: "q",
+      kind: "quote",
+      title: "Shuffle",
+      colorPreset: "slate",
+      settings: { quotes, rotation: "open" }
+    }
+
+    render(<BoardRow item={item} now={new Date("2026-03-04T09:00:00.000Z")} />)
+
+    expect(screen.getByText("Only one here")).toBeInTheDocument()
   })
 
   describe("with fake timers", () => {
