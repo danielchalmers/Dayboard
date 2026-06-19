@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   readClockboardState,
@@ -14,12 +14,19 @@ interface UseClockboardStateResult {
   setWidgets: (widgets: Widget[]) => Promise<void>
   setSettings: (settings: ClockboardSettings) => Promise<void>
   replaceState: (state: ClockboardState) => Promise<void>
+  saveError: string | null
+  dismissSaveError: () => void
 }
 
 export const useClockboardState = (): UseClockboardStateResult => {
   const [state, setState] = useState<ClockboardState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Track the latest state so saveState can roll back without depending on it.
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   const reload = useCallback(async () => {
     setIsLoading(true)
@@ -51,9 +58,24 @@ export const useClockboardState = (): UseClockboardStateResult => {
   }, [])
 
   const saveState = useCallback(async (nextState: ClockboardState) => {
+    const previous = stateRef.current
     setState(nextState)
-    await writeClockboardState(nextState)
+    setSaveError(null)
+
+    try {
+      await writeClockboardState(nextState)
+    } catch {
+      // The optimistic update never persisted (e.g. chrome.storage.sync quota
+      // or write-rate limit). Roll back so the UI matches storage and surface a
+      // calm notice instead of silently diverging.
+      if (previous) {
+        setState(previous)
+      }
+      setSaveError("Couldn’t save — this board may be too large to sync.")
+    }
   }, [])
+
+  const dismissSaveError = useCallback(() => setSaveError(null), [])
 
   const setWidgets = useCallback(
     async (widgets: Widget[]) => {
@@ -83,6 +105,8 @@ export const useClockboardState = (): UseClockboardStateResult => {
     error,
     setWidgets,
     setSettings,
-    replaceState: saveState
+    replaceState: saveState,
+    saveError,
+    dismissSaveError
   }
 }

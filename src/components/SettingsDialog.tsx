@@ -14,6 +14,7 @@ interface SettingsDialogProps {
   onClose: () => void
   onExport?: () => void
   onImport?: (file: File) => void
+  importError?: string | null
 }
 
 const columnLabel = (columns: BoardColumns): string =>
@@ -25,7 +26,8 @@ export const SettingsDialog = ({
   onChange,
   onClose,
   onExport,
-  onImport
+  onImport,
+  importError
 }: SettingsDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
@@ -187,6 +189,11 @@ export const SettingsDialog = ({
                 type="file"
               />
             </div>
+            {importError ? (
+              <p className="form-note form-note--error" role="alert">
+                {importError}
+              </p>
+            ) : null}
           </div>
         </div>
 

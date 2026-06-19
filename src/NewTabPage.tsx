@@ -48,12 +48,21 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
 
 export function NewTabPage() {
   const now = useNow()
-  const { state, isLoading, error, setWidgets, setSettings, replaceState } =
-    useClockboardState()
+  const {
+    state,
+    isLoading,
+    error,
+    setWidgets,
+    setSettings,
+    replaceState,
+    saveError,
+    dismissSaveError
+  } = useClockboardState()
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [itemPendingDelete, setItemPendingDelete] = useState<Widget | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
   const [showArchived, setShowArchived] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -127,6 +136,7 @@ export function NewTabPage() {
 
   const openSettings = () => {
     closeOpenMenus()
+    setImportError(null)
     setIsSettingsOpen(true)
   }
 
@@ -143,13 +153,21 @@ export function NewTabPage() {
   }
 
   const importBoard = async (file: File) => {
+    setImportError(null)
     try {
       const imported = parseClockboardState(await file.text())
       await replaceState(imported)
       setIsSettingsOpen(false)
-    } catch {
-      // Ignore files that are not a valid Clockboard board.
+    } catch (cause) {
+      setImportError(
+        cause instanceof Error ? cause.message : "Couldn’t import that file."
+      )
     }
+  }
+
+  const closeSettings = () => {
+    setIsSettingsOpen(false)
+    setImportError(null)
   }
 
   const activeWidgets = state.widgets.filter((widget) => !widget.archived)
@@ -500,11 +518,24 @@ export function NewTabPage() {
       <SettingsDialog
         isOpen={isSettingsOpen}
         settings={state.settings}
+        importError={importError}
         onChange={(settings) => void setSettings(settings)}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={closeSettings}
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
       />
+      {saveError ? (
+        <div className="board-notice" role="alert">
+          <span className="board-notice__text">{saveError}</span>
+          <button
+            aria-label="Dismiss"
+            className="board-notice__dismiss"
+            onClick={dismissSaveError}
+            type="button">
+            Dismiss
+          </button>
+        </div>
+      ) : null}
     </>
   )
 }
