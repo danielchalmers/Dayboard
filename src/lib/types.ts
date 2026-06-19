@@ -124,7 +124,7 @@ export type BoardColumns = "auto" | 1 | 2 | 3 | 4
 
 export const BOARD_COLUMN_CHOICES: BoardColumns[] = ["auto", 1, 2, 3, 4]
 
-export interface ClockboardSettings {
+export interface DayboardSettings {
   /** Whether widgets can be dragged to rearrange the board. */
   dragToMove: boolean
   /** Fixed number of board columns, or `auto` for the responsive default. */
@@ -135,16 +135,16 @@ export interface ClockboardSettings {
   chimeOnTimerEnd: boolean
 }
 
-export const DEFAULT_SETTINGS: ClockboardSettings = {
+export const DEFAULT_SETTINGS: DayboardSettings = {
   dragToMove: true,
   columns: "auto",
   name: "",
   chimeOnTimerEnd: false
 }
 
-export interface ClockboardState {
+export interface DayboardState {
   widgets: Widget[]
-  settings: ClockboardSettings
+  settings: DayboardSettings
 }
 
 export const DEFAULT_TIME_ZONE =
@@ -177,7 +177,7 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
   ]
 }
 
-export const createDefaultState = (now = new Date()): ClockboardState => ({
+export const createDefaultState = (now = new Date()): DayboardState => ({
   widgets: createDefaultWidgets(now),
   settings: { ...DEFAULT_SETTINGS }
 })

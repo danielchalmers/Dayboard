@@ -1,12 +1,12 @@
 import type { Page, TestInfo } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
-import type { ClockboardState } from "../src/lib/types"
+import type { DayboardState } from "../src/lib/types"
 
-const STORAGE_KEY = "clockboard-state"
+const STORAGE_KEY = "dayboard-state"
 const STORY_NOW = "2025-05-09T15:24:00.000Z"
 
-const storyState: ClockboardState = {
+const storyState: DayboardState = {
   widgets: [
     {
       id: "austin",
@@ -105,7 +105,7 @@ const openStoryBoard = async (page: Page, extensionId: string) => {
     { key: STORAGE_KEY, state: storyState }
   )
   await page.reload()
-  await expect(page.getByRole("heading", { name: "Clockboard" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Dayboard" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Austin" })).toBeVisible()
 }
 
@@ -136,24 +136,24 @@ const openWidgetMenu = async (page: Page, title: string) => {
   await card.click({ button: "right" })
 }
 
-test("captures Clockboard product screenshots", async ({
+test("captures Dayboard product screenshots", async ({
   page,
   extensionId
 }, testInfo) => {
   await openStoryBoard(page, extensionId)
 
-  await attachScreenshot(testInfo, page, "clockboard-main-desktop")
+  await attachScreenshot(testInfo, page, "dayboard-main-desktop")
 
   await openWidgetMenu(page, "New York")
   await expect(page.getByRole("menuitem", { name: "Edit New York" })).toBeVisible()
-  await attachScreenshot(testInfo, page, "clockboard-widget-menu-desktop")
+  await attachScreenshot(testInfo, page, "dayboard-widget-menu-desktop")
   await page.keyboard.press("Escape")
   await expect(
     page.getByRole("menuitem", { name: "Edit New York" })
   ).toHaveCount(0)
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await attachScreenshot(testInfo, page, "clockboard-main-mobile", {
+  await attachScreenshot(testInfo, page, "dayboard-main-mobile", {
     fullPage: true
   })
 
@@ -163,7 +163,7 @@ test("captures Clockboard product screenshots", async ({
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
   await page.getByLabel("Name").fill("Paris")
   await page.getByLabel("Time zone").fill("Europe/Paris")
-  await attachScreenshot(testInfo, page, "clockboard-add-clock-dialog")
+  await attachScreenshot(testInfo, page, "dayboard-add-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -171,13 +171,13 @@ test("captures Clockboard product screenshots", async ({
   await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
   await page.getByLabel("Name").fill("Product launch")
   await page.getByLabel("When").fill("2025-06-12T09:00")
-  await attachScreenshot(testInfo, page, "clockboard-add-countdown-dialog")
+  await attachScreenshot(testInfo, page, "dayboard-add-countdown-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await openWidgetMenu(page, "New York")
   await page.getByRole("menuitem", { name: "Edit New York" }).click()
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
-  await attachScreenshot(testInfo, page, "clockboard-edit-clock-dialog")
+  await attachScreenshot(testInfo, page, "dayboard-edit-clock-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 
   await openWidgetMenu(page, "Summer vacation")
@@ -185,5 +185,5 @@ test("captures Clockboard product screenshots", async ({
   await expect(
     page.getByRole("dialog", { name: "Edit countdown" })
   ).toBeVisible()
-  await attachScreenshot(testInfo, page, "clockboard-edit-countdown-dialog")
+  await attachScreenshot(testInfo, page, "dayboard-edit-countdown-dialog")
 })

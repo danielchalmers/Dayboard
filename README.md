@@ -1,10 +1,10 @@
-# 🕰️ Clockboard
+# ☀️ Dayboard
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/gldaglgodbdhnpjjnoocfnclmdejpaii?label=chrome%20web%20store)](https://chromewebstore.google.com/detail/gldaglgodbdhnpjjnoocfnclmdejpaii)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build Status](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml/badge.svg)](https://github.com/danielchalmers/Clockboard/actions/workflows/ci.yml)
 
-Live clocks and countdowns on your new tab page.
+A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.
 
 ## 📖 Usage
 

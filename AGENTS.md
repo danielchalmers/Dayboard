@@ -2,7 +2,7 @@
 
 ## Project
 
-Clockboard is a WXT, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm, responsive board of widgets — live clocks, natural-language countdowns (with optional progress bars and recurrence), sticky notes, rotating quotes, a stopwatch and timer, and habit streaks — with editing kept on the new tab page itself.
+Dayboard is a WXT, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm, responsive board of widgets — live clocks, natural-language countdowns (with optional progress bars and recurrence), sticky notes, rotating quotes, a stopwatch and timer, and habit streaks — with editing kept on the new tab page itself.
 
 The product should feel polished, quiet, and useful at a glance. Favor clarity and automatic behavior over configuration-heavy UI.
 
@@ -18,7 +18,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - Widgets can be archived — tucked behind a quiet "Show archived" toggle (by drag onto a drop zone, or via the context menu) and restored the same ways. Keep the active board the clear focus.
 - Global options live in an overlay reached from a gear button and from the browser's Options link: a greeting name, drag-to-rearrange, column count, and an opt-in timer chime, plus JSON export/import of the board.
 - Any sound (e.g. the timer chime) must be opt-in and gentle; never autoplay audio.
-- Keep permissions minimal. Clockboard should only need `storage`.
+- Keep permissions minimal. Dayboard should only need `storage`.
 
 ## Architecture
 

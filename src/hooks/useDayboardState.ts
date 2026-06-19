@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
-  readClockboardState,
-  watchClockboardState,
-  writeClockboardState
+  readDayboardState,
+  watchDayboardState,
+  writeDayboardState
 } from "~/lib/storage"
-import type { ClockboardSettings, ClockboardState, Widget } from "~/lib/types"
+import type { DayboardSettings, DayboardState, Widget } from "~/lib/types"
 
-interface UseClockboardStateResult {
-  state: ClockboardState | null
+interface UseDayboardStateResult {
+  state: DayboardState | null
   isLoading: boolean
   error: string | null
   setWidgets: (widgets: Widget[]) => Promise<void>
-  setSettings: (settings: ClockboardSettings) => Promise<void>
+  setSettings: (settings: DayboardSettings) => Promise<void>
   updateWidget: (widget: Widget) => Promise<void>
-  replaceState: (state: ClockboardState) => Promise<void>
+  replaceState: (state: DayboardState) => Promise<void>
   saveError: string | null
   dismissSaveError: () => void
 }
 
-export const useClockboardState = (): UseClockboardStateResult => {
-  const [state, setState] = useState<ClockboardState | null>(null)
+export const useDayboardState = (): UseDayboardStateResult => {
+  const [state, setState] = useState<DayboardState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -34,7 +34,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
     setError(null)
 
     try {
-      setState(await readClockboardState())
+      setState(await readDayboardState())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load data")
     } finally {
@@ -47,7 +47,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
   }, [reload])
 
   useEffect(() => {
-    const stopWatching = watchClockboardState((nextState) => {
+    const stopWatching = watchDayboardState((nextState) => {
       setState(nextState)
       setIsLoading(false)
       setError(null)
@@ -58,13 +58,13 @@ export const useClockboardState = (): UseClockboardStateResult => {
     }
   }, [])
 
-  const saveState = useCallback(async (nextState: ClockboardState) => {
+  const saveState = useCallback(async (nextState: DayboardState) => {
     const previous = stateRef.current
     setState(nextState)
     setSaveError(null)
 
     try {
-      await writeClockboardState(nextState)
+      await writeDayboardState(nextState)
     } catch {
       // The optimistic update never persisted (e.g. chrome.storage.sync quota
       // or write-rate limit). Roll back so the UI matches storage and surface a
@@ -93,7 +93,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
   )
 
   const setSettings = useCallback(
-    async (settings: ClockboardSettings) => {
+    async (settings: DayboardSettings) => {
       const current = stateRef.current
       if (!current) {
         return

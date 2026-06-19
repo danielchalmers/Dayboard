@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
-  <title id="title">Clockboard icon</title>
-  <desc id="desc">A blue and purple gradient clock face with joined white hands.</desc>
+  <title id="title">Dayboard icon</title>
+  <desc id="desc">A blue and purple rounded board tile with a white sun above two content rows.</desc>
   <defs>
-    <linearGradient id="clockboardFace" x1="24" x2="104" y1="22" y2="106" gradientUnits="userSpaceOnUse">
+    <linearGradient id="dayboardFace" x1="24" x2="104" y1="14" y2="114" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0ea5e9"/>
       <stop offset="0.52" stop-color="#2563eb"/>
       <stop offset="1" stop-color="#7c3aed"/>
     </linearGradient>
-    <radialGradient id="clockboardLight" cx="0" cy="0" r="1" gradientTransform="matrix(46 54 -54 46 43 34)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff" stop-opacity="0.24"/>
+    <radialGradient id="dayboardLight" cx="0" cy="0" r="1" gradientTransform="matrix(56 66 -66 56 40 26)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="0.72" stop-color="#ffffff" stop-opacity="0.04"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <circle cx="64" cy="64" r="54" fill="#f8fafc"/>
-  <circle cx="64" cy="64" r="47" fill="url(#clockboardFace)"/>
-  <circle cx="64" cy="64" r="47" fill="url(#clockboardLight)"/>
-  <path d="M64 36v29l23 14" fill="none" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="64" cy="64" r="7" fill="#f8fafc"/>
+  <rect x="12" y="12" width="104" height="104" rx="26" fill="url(#dayboardFace)"/>
+  <rect x="12" y="12" width="104" height="104" rx="26" fill="url(#dayboardLight)"/>
+  <circle cx="64" cy="55" r="19" fill="#f8fafc"/>
+  <path d="M32 87h64" fill="none" stroke="#f8fafc" stroke-width="9" stroke-linecap="round"/>
+  <path d="M44 104h40" fill="none" stroke="#f8fafc" stroke-opacity="0.62" stroke-width="9" stroke-linecap="round"/>
 </svg>

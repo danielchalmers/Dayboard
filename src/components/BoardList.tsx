@@ -46,8 +46,8 @@ interface BoardListProps {
   timerChime?: boolean
 }
 
-const ARCHIVE_DROP_ID = "clockboard-archive-dropzone"
-const RESTORE_DROP_ID = "clockboard-restore-dropzone"
+const ARCHIVE_DROP_ID = "dayboard-archive-dropzone"
+const RESTORE_DROP_ID = "dayboard-restore-dropzone"
 
 const ARCHIVE_ICON = (
   <path
@@ -589,7 +589,7 @@ export const BoardList = ({
             className={sectionClassName}
             data-columns={columns === "auto" ? undefined : columns}
             style={sectionStyle}
-            aria-label="Clockboard widgets">
+            aria-label="Dayboard widgets">
             {items.map((item) => (
               <SortableBoardRow
                 activeId={activeId}

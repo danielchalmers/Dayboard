@@ -1,11 +1,11 @@
 # Privacy Policy
 
-Clockboard replaces the browser new tab page with live clocks and countdowns.
-This policy explains what data Clockboard stores and how it is handled.
+Dayboard replaces the browser new tab page with live clocks and countdowns.
+This policy explains what data Dayboard stores and how it is handled.
 
-## Data Clockboard Stores
+## Data Dayboard Stores
 
-Clockboard stores only the clocks and countdowns you create, including:
+Dayboard stores only the clocks and countdowns you create, including:
 
 - Clock and countdown names
 - Clock time zones
@@ -15,11 +15,11 @@ Clockboard stores only the clocks and countdowns you create, including:
 This data is stored using `chrome.storage.sync`, which Chrome syncs across the
 browsers where you are signed in. It is never sent anywhere else.
 
-## Data Clockboard Does Not Collect
+## Data Dayboard Does Not Collect
 
-Clockboard does not collect, transmit, sell, or share user data.
+Dayboard does not collect, transmit, sell, or share user data.
 
-Clockboard does not use:
+Dayboard does not use:
 
 - Accounts or sign-in
 - Analytics
@@ -30,17 +30,17 @@ Clockboard does not use:
 
 ## Permissions
 
-Clockboard requests the `storage` permission so your clocks and countdowns remain
+Dayboard requests the `storage` permission so your clocks and countdowns remain
 available when you open future new tabs.
 
 ## Third Parties
 
-Clockboard does not send data to third-party services.
+Dayboard does not send data to third-party services.
 
 ## Data Removal
 
-You can remove individual clocks and countdowns from Clockboard. You can remove
-all locally stored Clockboard data by uninstalling the extension or clearing the
+You can remove individual clocks and countdowns from Dayboard. You can remove
+all locally stored Dayboard data by uninstalling the extension or clearing the
 extension's site and storage data in your browser.
 
 ## Changes

@@ -4,13 +4,13 @@ import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   BOARD_COLUMN_CHOICES,
   type BoardColumns,
-  type ClockboardSettings
+  type DayboardSettings
 } from "~/lib/types"
 
 interface SettingsDialogProps {
   isOpen: boolean
-  settings: ClockboardSettings
-  onChange: (settings: ClockboardSettings) => void
+  settings: DayboardSettings
+  onChange: (settings: DayboardSettings) => void
   onClose: () => void
   onExport?: () => void
   onImport?: (file: File) => void
@@ -66,7 +66,7 @@ export const SettingsDialog = ({
               Options
             </h2>
             <p className="modal-dialog__subtitle">
-              These apply to every Clockboard tab.
+              These apply to every Dayboard tab.
             </p>
           </div>
         </div>

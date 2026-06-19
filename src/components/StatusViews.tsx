@@ -1,7 +1,7 @@
 export const LoadingView = () => (
   <div className="status-view" role="status">
     <div className="status-view__spinner" aria-hidden="true" />
-    <span className="status-view__message">Opening Clockboard...</span>
+    <span className="status-view__message">Opening Dayboard...</span>
   </div>
 )
 

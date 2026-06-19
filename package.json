@@ -1,8 +1,8 @@
 {
-  "name": "clockboard",
+  "name": "dayboard",
   "version": "0.0.0",
-  "description": "Live digital clocks and countdowns for the browser new tab page.",
-  "author": "Clockboard contributors",
+  "description": "A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.",
+  "author": "Dayboard contributors",
   "license": "MIT",
   "private": true,
   "type": "module",

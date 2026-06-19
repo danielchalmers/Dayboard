@@ -44,8 +44,8 @@ jobs:
 
       - name: Name release artifacts
         run: |
-          cp .output/*-chrome.zip "clockboard-chrome-${RELEASE_VERSION}.zip"
-          cp .output/*-edge.zip "clockboard-edge-${RELEASE_VERSION}.zip"
+          cp .output/*-chrome.zip "dayboard-chrome-${RELEASE_VERSION}.zip"
+          cp .output/*-edge.zip "dayboard-edge-${RELEASE_VERSION}.zip"
 
       - name: Attach release artifacts
         uses: ncipollo/release-action@v1.21.0
@@ -53,8 +53,8 @@ jobs:
           tag: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_TAG }}
           artifacts: |
-            clockboard-chrome-${{ env.RELEASE_VERSION }}.zip
-            clockboard-edge-${{ env.RELEASE_VERSION }}.zip
+            dayboard-chrome-${{ env.RELEASE_VERSION }}.zip
+            dayboard-edge-${{ env.RELEASE_VERSION }}.zip
           allowUpdates: true
           replacesArtifacts: true
           omitBodyDuringUpdate: true

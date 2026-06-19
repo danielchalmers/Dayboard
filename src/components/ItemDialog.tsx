@@ -258,7 +258,7 @@ export const ItemDialog = ({
               <label className="form-label-group">
                 <span>Time zone</span>
                 <input
-                  list="clockboard-time-zones"
+                  list="dayboard-time-zones"
                   onChange={(event) => updateTimeZone(event.currentTarget.value)}
                   required
                   type="text"
@@ -335,7 +335,7 @@ export const ItemDialog = ({
 
             {draft.kind === "clock" ? (
               <p className="form-note">
-                Clockboard uses your system clock format automatically.
+                Dayboard uses your system clock format automatically.
               </p>
             ) : null}
 
@@ -423,7 +423,7 @@ export const ItemDialog = ({
           </div>
         </form>
 
-        <datalist id="clockboard-time-zones">
+        <datalist id="dayboard-time-zones">
           {timeZones.map((timeZone) => (
             <option key={timeZone} value={timeZone} />
           ))}
