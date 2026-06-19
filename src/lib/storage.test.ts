@@ -62,6 +62,10 @@ describe("readDayboardState", () => {
 
     expect(state.widgets.map((widget) => widget.kind)).toEqual([
       "clock",
+      "countdown",
+      "note",
+      "quote",
+      "habit",
       "countdown"
     ])
   })
@@ -82,7 +86,7 @@ describe("readDayboardState", () => {
     const { readDayboardState } = await import("./storage")
     const state = await readDayboardState()
 
-    expect(state.widgets).toHaveLength(2)
+    expect(state.widgets).toHaveLength(6)
     expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false, dockToBottom: false })
   })
 

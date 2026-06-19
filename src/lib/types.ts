@@ -153,17 +153,29 @@ export interface DayboardState {
 export const DEFAULT_TIME_ZONE =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
+// The first-run board. It is intentionally pre-styled with a varied, calm mix of
+// widget kinds and curated colors so a brand-new tab feels customized at a glance
+// and shows what the board can do — rather than a blank two-card placeholder.
+// Everything here is editable; these are just inviting starting points.
 export const createDefaultWidgets = (now = new Date()): Widget[] => {
-  const tomorrow = new Date(now)
-  tomorrow.setDate(now.getDate() + 1)
-  tomorrow.setHours(9, 0, 0, 0)
+  // Tomorrow at 9am local, repeating daily so this anchor stays evergreen
+  // instead of slipping into the past after the first day.
+  const tomorrowMorning = new Date(now)
+  tomorrowMorning.setDate(now.getDate() + 1)
+  tomorrowMorning.setHours(9, 0, 0, 0)
+
+  // The current calendar year as a fixed span. `now` always sits inside it, so
+  // the progress bar reads as a meaningful fraction on first paint and never
+  // needs to roll forward.
+  const yearStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0)
+  const yearEnd = new Date(now.getFullYear() + 1, 0, 1, 0, 0, 0, 0)
 
   return [
     {
       id: "home-clock",
       kind: "clock",
       title: "Local time",
-      colorPreset: DEFAULT_COLOR_PRESET,
+      colorPreset: "sky",
       settings: {
         timeZone: DEFAULT_TIME_ZONE
       }
@@ -172,9 +184,54 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       id: "tomorrow-countdown",
       kind: "countdown",
       title: "Tomorrow morning",
-      colorPreset: DEFAULT_COLOR_PRESET,
+      colorPreset: "indigo",
       settings: {
-        targetAt: tomorrow.toISOString()
+        targetAt: tomorrowMorning.toISOString(),
+        repeat: "daily"
+      }
+    },
+    {
+      id: "welcome-note",
+      kind: "note",
+      title: "Welcome",
+      colorPreset: "emerald",
+      settings: {
+        text: "Good to have you here. This is your space for the day. Keep what helps, change what doesn't, and let the rest be quiet."
+      }
+    },
+    {
+      id: "reminder-quote",
+      kind: "quote",
+      title: "Today's reminder",
+      colorPreset: "violet",
+      settings: {
+        quotes: [
+          "Begin where you are; that is always enough.",
+          "One small thing, done well.",
+          "Quiet days still count.",
+          "Breathe. The rest can wait a moment."
+        ],
+        rotation: "daily"
+      }
+    },
+    {
+      id: "daily-walk-habit",
+      kind: "habit",
+      title: "Daily walk",
+      colorPreset: "amber",
+      settings: {
+        history: []
+      }
+    },
+    {
+      id: "year-progress",
+      kind: "countdown",
+      title: "This year",
+      colorPreset: "rose",
+      settings: {
+        targetAt: yearEnd.toISOString(),
+        startAt: yearStart.toISOString(),
+        display: "progress"
       }
     }
   ]

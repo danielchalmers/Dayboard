@@ -10,7 +10,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 
 - Keep the primary experience as compact individual cards that stack on narrow screens and flow into multiple columns on wider screens (Auto by default, or a fixed 1–4 via options). A widget may opt into a wide size that spans two columns.
 - Use system theme colors and system accent behavior. Prefer `AccentColor` and `AccentColorText` with `Highlight` and `HighlightText` as fallbacks when Chromium does not expose accent colors.
-- Do not add per-item color, seconds, or 12-hour/24-hour controls.
+- Per-item color is limited to the curated preset picker (`ColorPresetPicker`); the first-run default board uses these presets to feel customized at a glance. Do not add per-item seconds or 12-hour/24-hour controls.
 - Clocks use the user's system time format through `Intl.DateTimeFormat`.
 - Countdowns use natural language such as `5 days, 3 hours from now`.
 - User-facing copy should be concise, warm, and not overly explanatory.

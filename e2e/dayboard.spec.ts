@@ -78,7 +78,14 @@ test("new tab page renders the default widgets and editing controls", async ({
   ).toHaveCount(0)
 
   const titles = page.locator(".board-row h2")
-  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  await expect(titles).toHaveText([
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ])
 })
 
 test("docks to the top by default and can be moved to the bottom", async ({
@@ -216,7 +223,7 @@ test("global options toggle drag and columns and persist across reloads", async 
   await openNewTab(page, extensionId)
 
   // Drag handles exist by default and the grid is responsive (no fixed columns).
-  await expect(page.locator(".board-row__frame")).toHaveCount(2)
+  await expect(page.locator(".board-row__frame")).toHaveCount(6)
   await expect(page.locator(".board-list")).not.toHaveAttribute("data-columns")
 
   await page.getByRole("button", { name: "Options" }).click()
@@ -395,8 +402,15 @@ test("widget menu supports keyboard navigation", async ({
   await expect(menu).toBeVisible()
 
   // Focus lands on the first enabled item, and arrow keys move between items.
+  // "Tomorrow morning" sits among other widgets, so both Move up and Move down
+  // are enabled and arrow keys step through every item in turn.
   await expect(
     page.getByRole("menuitem", { name: "Move Tomorrow morning up" })
+  ).toBeFocused()
+
+  await page.keyboard.press("ArrowDown")
+  await expect(
+    page.getByRole("menuitem", { name: "Move Tomorrow morning down" })
   ).toBeFocused()
 
   await page.keyboard.press("ArrowDown")
@@ -453,14 +467,30 @@ test("reordering changes the visible order and persists after reload", async ({
   await openNewTab(page, extensionId)
 
   const titles = page.locator(".board-row h2")
-  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  const defaultOrder = [
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ]
+  const swappedOrder = [
+    "Tomorrow morning",
+    "Local time",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ]
+  await expect(titles).toHaveText(defaultOrder)
   await dragWidget(page, "Tomorrow morning", "Local time")
 
-  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+  await expect(titles).toHaveText(swappedOrder)
 
   await page.reload()
 
-  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+  await expect(titles).toHaveText(swappedOrder)
 })
 
 test("dragging across a widget body selects text instead of reordering", async ({
@@ -470,7 +500,15 @@ test("dragging across a widget body selects text instead of reordering", async (
   await openNewTab(page, extensionId)
 
   const titles = page.locator(".board-row h2")
-  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  const defaultOrder = [
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ]
+  await expect(titles).toHaveText(defaultOrder)
 
   const heading = page.getByRole("heading", { name: "Local time" })
   const box = await heading.boundingBox()
@@ -479,7 +517,10 @@ test("dragging across a widget body selects text instead of reordering", async (
     throw new Error("Unable to locate widget heading bounds")
   }
 
-  await page.mouse.move(box.x + 2, box.y + box.height / 2)
+  // Start the drag a little in from the edge so the press lands on the title
+  // text rather than the small color-preset dot that now leads the heading;
+  // beginning a selection on that decorative element selects nothing.
+  await page.mouse.move(box.x + 24, box.y + box.height / 2)
   await page.mouse.down()
   await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, {
     steps: 12
@@ -487,7 +528,7 @@ test("dragging across a widget body selects text instead of reordering", async (
   await page.mouse.up()
 
   // The body is not a drag handle, so the order does not change...
-  await expect(titles).toHaveText(["Local time", "Tomorrow morning"])
+  await expect(titles).toHaveText(defaultOrder)
 
   // ...and dragging over the text selects it instead.
   const selection = await page.evaluate(
@@ -588,11 +629,18 @@ test("multiple open tabs stay synchronized", async ({
   page,
   extensionId
 }) => {
+  // A tall viewport keeps the whole board (the default widgets plus the clock
+  // added below) and its context menus on screen, so clicking a menu item never
+  // has to scroll — scrolling intentionally dismisses an open widget menu.
+  const tall = { width: 1280, height: 1600 }
+  await page.setViewportSize(tall)
   await openNewTab(page, extensionId)
 
   const secondPage = await context.newPage()
   const thirdPage = await context.newPage()
 
+  await secondPage.setViewportSize(tall)
+  await thirdPage.setViewportSize(tall)
   await secondPage.goto(`chrome-extension://${extensionId}/newtab.html`)
   await thirdPage.goto(`chrome-extension://${extensionId}/newtab.html`)
 
@@ -684,13 +732,17 @@ test("add quote flow shows a quote and keeps the daily pick across reloads", asy
 
   await expect(page.getByRole("heading", { name: "Mantras" })).toBeVisible()
 
-  const quote = page.locator(".quote-text")
+  // Scope to the Mantras card — the default board ships its own quote widget too.
+  const mantras = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Mantras" }) })
+  const quote = mantras.locator(".quote-text")
   const shown = (await quote.textContent())?.trim() ?? ""
   expect(["Stay curious.", "Keep going."]).toContain(shown)
 
   // Daily rotation is deterministic, so the same quote returns after a reload.
   await page.reload()
-  await expect(page.locator(".quote-text")).toHaveText(shown)
+  await expect(mantras.locator(".quote-text")).toHaveText(shown)
 })
 
 test("stopwatch counts up, keeps running across a reload, and resets", async ({
@@ -816,6 +868,9 @@ test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId
 }) => {
+  // A tall viewport keeps the appended widget and its context menu on screen, so
+  // editing it never has to scroll (scrolling dismisses an open widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -928,6 +983,9 @@ test("editing a recurring countdown's time keeps its other settings", async ({
   page,
   extensionId
 }) => {
+  // A tall viewport keeps the appended widget and its context menu on screen, so
+  // editing it never has to scroll (scrolling dismisses an open widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -983,9 +1041,10 @@ test("archiving from the menu hides a widget and it can be restored", async ({
   page,
   extensionId
 }) => {
-  // A roomy viewport keeps the expanded archive on one screen so revealing it
-  // never has to scroll (scrolling intentionally dismisses an open widget menu).
-  await page.setViewportSize({ width: 1280, height: 1000 })
+  // A roomy viewport keeps the active board and the expanded archive on one
+  // screen, so revealing and acting on an archived card never has to scroll
+  // (scrolling intentionally dismisses an open widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
   // Archive from the keyboard-accessible context menu.
@@ -1068,7 +1127,9 @@ test("dragging an archived widget onto the restore zone brings it back", async (
   page,
   extensionId
 }) => {
-  await page.setViewportSize({ width: 1280, height: 1000 })
+  // A tall viewport keeps the active board plus the revealed archive on screen,
+  // so the archived card and the floating restore zone are both reachable.
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
   // Archive then reveal the archived section.
@@ -1124,7 +1185,14 @@ test("edit and delete controls still work after reordering", async ({
   await dragWidget(page, "Tomorrow morning", "Local time")
 
   const titles = page.locator(".board-row h2")
-  await expect(titles).toHaveText(["Tomorrow morning", "Local time"])
+  await expect(titles).toHaveText([
+    "Tomorrow morning",
+    "Local time",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ])
 
   await openWidgetMenu(page, "Tomorrow morning")
   await page.getByRole("menuitem", { name: "Edit Tomorrow morning" }).click()
