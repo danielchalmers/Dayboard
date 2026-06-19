@@ -1,5 +1,6 @@
-import { useEffect } from "react"
+import { useRef } from "react"
 
+import { useModalFocus } from "~/hooks/useModalFocus"
 import type { Widget } from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 
@@ -16,21 +17,9 @@ export const DeleteDialog = ({
   onCancel,
   onConfirm
 }: DeleteDialogProps) => {
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+  const dialogRef = useRef<HTMLElement>(null)
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onCancel()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onCancel])
+  useModalFocus(isOpen, dialogRef, onCancel)
 
   if (!isOpen || !item) {
     return null
@@ -44,7 +33,9 @@ export const DeleteDialog = ({
         aria-labelledby="delete-dialog-title"
         aria-modal="true"
         className="modal-dialog modal-dialog--narrow"
-        role="dialog">
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}>
         <div className="modal-dialog__header">
           <div>
             <h2 className="modal-dialog__title" id="delete-dialog-title">

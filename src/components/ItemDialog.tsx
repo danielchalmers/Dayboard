@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
+import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   dateTimeInputValueToIsoInstant,
   getTimeZoneOptions,
@@ -36,26 +37,13 @@ export const ItemDialog = ({
   onSave
 }: ItemDialogProps) => {
   const [draft, setDraft] = useState<Widget | null>(item)
+  const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     setDraft(item)
   }, [item])
 
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onClose()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose])
+  useModalFocus(isOpen, dialogRef, onClose)
 
   const title = useMemo(() => {
     if (!draft) {
@@ -213,7 +201,9 @@ export const ItemDialog = ({
         aria-labelledby="item-dialog-title"
         aria-modal="true"
         className="modal-dialog"
-        role="dialog">
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}>
         <div className="modal-dialog__header">
           <div>
             <h2 className="modal-dialog__title" id="item-dialog-title">
