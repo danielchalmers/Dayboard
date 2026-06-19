@@ -546,6 +546,67 @@ test("add quote flow shows a quote and keeps the daily pick across reloads", asy
   await expect(page.locator(".quote-text")).toHaveText(shown)
 })
 
+test("stopwatch counts up, keeps running across a reload, and resets", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add stopwatch" }).click()
+  await page.getByLabel("Name").fill("Focus")
+  await page.getByRole("button", { name: "Save stopwatch" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Focus" }) })
+  const value = card.locator(".board-row__value")
+
+  await expect(value).toHaveText("0:00")
+  await card.getByRole("button", { name: "Start" }).click()
+  await expect.poll(async () => value.textContent()).not.toBe("0:00")
+
+  // The running state is anchored to wall-clock time, so it keeps ticking after
+  // a reload.
+  await page.reload()
+  const reloaded = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Focus" }) })
+  await expect(reloaded.getByRole("button", { name: "Pause" })).toBeVisible()
+  await expect(reloaded.locator(".board-row__value")).not.toHaveText("0:00")
+
+  await reloaded.getByRole("button", { name: "Pause" }).click()
+  await reloaded.getByRole("button", { name: "Reset" }).click()
+  await expect(reloaded.locator(".board-row__value")).toHaveText("0:00")
+})
+
+test("timer counts down to a finished state and resets", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("Name").fill("Steep")
+  await page.getByLabel("minutes").fill("0")
+  await page.getByLabel("seconds").fill("1")
+  await page.getByRole("button", { name: "Save timer" }).click()
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Steep" }) })
+
+  await expect(card.locator(".board-row__value")).toHaveText("0:01")
+
+  await card.getByRole("button", { name: "Start" }).click()
+  await expect(card.getByText("Time’s up")).toBeVisible()
+  await expect(card.locator(".board-row__value")).toHaveText("0:00")
+
+  await card.getByRole("button", { name: "Reset" }).click()
+  await expect(card.locator(".board-row__value")).toHaveText("0:01")
+})
+
 test("add and edit countdown works without a time-zone field", async ({
   page,
   extensionId

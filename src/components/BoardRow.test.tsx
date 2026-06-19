@@ -180,6 +180,103 @@ describe("BoardRow", () => {
     expect(screen.getByText("Only one here")).toBeInTheDocument()
   })
 
+  it("renders a stopwatch and starts it from the button", () => {
+    const item: Widget = {
+      id: "sw",
+      kind: "stopwatch",
+      title: "Focus",
+      colorPreset: "slate",
+      settings: { running: false, elapsedMs: 0, startedAt: null }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(
+      <BoardRow
+        item={item}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+
+    expect(screen.getByText("0:00")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
+    expect(onWidgetChange).toHaveBeenCalledTimes(1)
+    expect(onWidgetChange.mock.calls[0]![0].settings.running).toBe(true)
+  })
+
+  it("shows live stopwatch time while running", () => {
+    const item: Widget = {
+      id: "sw",
+      kind: "stopwatch",
+      title: "Focus",
+      colorPreset: "slate",
+      settings: { running: true, elapsedMs: 0, startedAt: 1000 }
+    }
+
+    render(<BoardRow item={item} now={new Date(1000 + 65_000)} />)
+
+    expect(screen.getByText("1:05")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+  })
+
+  it("renders a timer's remaining time and resumes from the button", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: {
+        durationMs: 300_000,
+        running: false,
+        remainingMs: 120_000,
+        endsAt: null
+      }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(
+      <BoardRow
+        item={item}
+        now={new Date("2026-01-01T12:30:00.000Z")}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+
+    expect(screen.getByText("2:00")).toBeInTheDocument()
+    // Mid-way and paused → the primary control offers to resume.
+    fireEvent.click(screen.getByRole("button", { name: "Resume" }))
+    expect(onWidgetChange.mock.calls[0]![0].settings.running).toBe(true)
+  })
+
+  it("settles a running timer once it reaches zero", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: {
+        durationMs: 60_000,
+        running: true,
+        remainingMs: 60_000,
+        endsAt: 1000
+      }
+    }
+    const onWidgetChange = vi.fn()
+
+    // now is well past endsAt, so the timer is done.
+    render(
+      <BoardRow item={item} now={new Date(50_000)} onWidgetChange={onWidgetChange} />
+    )
+
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: { ...item.settings, running: false, remainingMs: 0, endsAt: null }
+    })
+  })
+
   describe("with fake timers", () => {
     afterEach(() => {
       vi.useRealTimers()

@@ -1,4 +1,10 @@
-export type WidgetKind = "clock" | "countdown" | "note" | "quote"
+export type WidgetKind =
+  | "clock"
+  | "countdown"
+  | "note"
+  | "quote"
+  | "stopwatch"
+  | "timer"
 
 export type QuoteRotation = "daily" | "open"
 
@@ -54,11 +60,39 @@ export interface QuoteWidget extends WidgetBase {
   }
 }
 
+export interface StopwatchWidget extends WidgetBase {
+  kind: "stopwatch"
+  settings: {
+    /** Whether the stopwatch is currently counting up. */
+    running: boolean
+    /** Milliseconds banked from previous runs (the value while paused). */
+    elapsedMs: number
+    /** Epoch ms of the current run's start, or null while paused. */
+    startedAt: number | null
+  }
+}
+
+export interface TimerWidget extends WidgetBase {
+  kind: "timer"
+  settings: {
+    /** The configured countdown length. */
+    durationMs: number
+    /** Whether the timer is currently counting down. */
+    running: boolean
+    /** Milliseconds left while paused or reset. */
+    remainingMs: number
+    /** Epoch ms when the timer will reach zero, or null while paused. */
+    endsAt: number | null
+  }
+}
+
 export type Widget =
   | ClockWidget
   | CountdownWidget
   | NoteWidget
   | QuoteWidget
+  | StopwatchWidget
+  | TimerWidget
 
 export type BoardColumns = "auto" | 1 | 2 | 3 | 4
 

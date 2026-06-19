@@ -5,9 +5,13 @@ import {
   type CountdownWidget,
   type NoteWidget,
   type QuoteWidget,
+  type StopwatchWidget,
+  type TimerWidget,
   type Widget,
   type WidgetKind
 } from "./types"
+
+const DEFAULT_TIMER_DURATION_MS = 5 * 60 * 1000
 
 export interface WidgetDefinition<K extends WidgetKind> {
   kind: K
@@ -69,6 +73,31 @@ const createQuoteWidget = (): QuoteWidget => ({
   }
 })
 
+const createStopwatchWidget = (): StopwatchWidget => ({
+  id: crypto.randomUUID(),
+  kind: "stopwatch",
+  title: "Stopwatch",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    running: false,
+    elapsedMs: 0,
+    startedAt: null
+  }
+})
+
+const createTimerWidget = (): TimerWidget => ({
+  id: crypto.randomUUID(),
+  kind: "timer",
+  title: "Timer",
+  colorPreset: DEFAULT_COLOR_PRESET,
+  settings: {
+    durationMs: DEFAULT_TIMER_DURATION_MS,
+    running: false,
+    remainingMs: DEFAULT_TIMER_DURATION_MS,
+    endsAt: null
+  }
+})
+
 export const widgetRegistry: {
   [K in WidgetKind]: WidgetDefinition<K>
 } = {
@@ -104,6 +133,22 @@ export const widgetRegistry: {
       hasTimeZone: false
     },
     createDefault: createQuoteWidget
+  },
+  stopwatch: {
+    kind: "stopwatch",
+    kindLabel: "Stopwatch",
+    editor: {
+      hasTimeZone: false
+    },
+    createDefault: createStopwatchWidget
+  },
+  timer: {
+    kind: "timer",
+    kindLabel: "Timer",
+    editor: {
+      hasTimeZone: false
+    },
+    createDefault: createTimerWidget
   }
 }
 
