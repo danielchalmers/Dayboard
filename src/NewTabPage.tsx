@@ -251,6 +251,47 @@ export function NewTabPage() {
                   </svg>
                   Add quote
                 </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("stopwatch")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <circle cx="12" cy="13.5" r="7.25" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M12 13.5V9.5M9.5 2.75h5M18.5 7l1.4-1.4"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                  Add stopwatch
+                </button>
+                <button
+                  className="menu-button"
+                  onClick={() => addItem("timer")}
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    width="22">
+                    <circle cx="12" cy="13" r="8" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M12 13 15 10"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                  Add timer
+                </button>
               </div>
             </details>
           </div>

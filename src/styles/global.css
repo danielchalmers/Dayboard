@@ -576,6 +576,83 @@ details > summary::-webkit-details-marker {
   line-height: 1.2;
 }
 
+.board-row__value--timer {
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+}
+
+.board-row__value--timer-done {
+  color: var(--card-accent-resolved);
+}
+
+/* Stopwatch / timer controls */
+.timer-controls {
+  display: flex;
+  gap: 8px;
+  margin-block-start: 14px;
+}
+
+.timer-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--card-bg-resolved) 50%, var(--surface));
+  border: 1.5px solid var(--card-border-resolved);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: inline-flex;
+  font-size: 0.88rem;
+  font-weight: 600;
+  justify-content: center;
+  min-block-size: 36px;
+  padding: 0 16px;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-micro),
+    transform var(--t-micro);
+}
+
+.timer-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--card-accent-resolved) 45%, var(--card-border-resolved));
+}
+
+.timer-button--primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-text);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.timer-button--primary:hover:not(:disabled) {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.board-row__meta--alert {
+  color: var(--card-accent-resolved);
+  font-weight: 650;
+}
+
+/* Timer length editor */
+.duration-field {
+  display: flex;
+  gap: 12px;
+}
+
+.duration-field__part {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.duration-field__part input {
+  inline-size: 84px;
+  text-align: center;
+}
+
+.duration-field__part span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .board-row__meta {
   color: var(--card-tint-resolved);
   display: flex;

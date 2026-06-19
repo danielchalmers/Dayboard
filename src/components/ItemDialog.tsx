@@ -6,6 +6,7 @@ import {
   isoInstantToDateTimeInputValue
 } from "~/lib/time"
 import { quotesToText, textToQuotes } from "~/lib/quotes"
+import { msToParts, partsToMs, type DurationParts } from "~/lib/timers"
 import type { QuoteRotation, Widget, WidgetColorPreset } from "~/lib/types"
 import { widgetRegistry } from "~/lib/widgets"
 import { ColorPresetPicker } from "~/components/ColorPresetPicker"
@@ -125,6 +126,32 @@ export const ItemDialog = ({
     )
   }
 
+  const updateDuration = (part: keyof DurationParts, value: number) => {
+    setDraft((current) => {
+      if (current?.kind !== "timer") {
+        return current
+      }
+
+      const parts = {
+        ...msToParts(current.settings.durationMs),
+        [part]: Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
+      }
+      const durationMs = partsToMs(parts)
+
+      // Changing the length resets the timer so it starts from the new duration.
+      return {
+        ...current,
+        settings: {
+          ...current.settings,
+          durationMs,
+          remainingMs: durationMs,
+          running: false,
+          endsAt: null
+        }
+      }
+    })
+  }
+
   return (
     <div className="modal-backdrop">
       <section
@@ -199,6 +226,42 @@ export const ItemDialog = ({
               <p className="form-note">
                 Type your note directly on the card &mdash; it saves itself.
               </p>
+            ) : null}
+
+            {draft.kind === "stopwatch" ? (
+              <p className="form-note">
+                Start, pause, and reset the stopwatch with the buttons on the
+                card.
+              </p>
+            ) : null}
+
+            {draft.kind === "timer" ? (
+              <div className="form-label-group">
+                <span>Length</span>
+                <div className="duration-field">
+                  {(
+                    [
+                      { part: "hours", label: "hrs", max: 99 },
+                      { part: "minutes", label: "min", max: 59 },
+                      { part: "seconds", label: "sec", max: 59 }
+                    ] as const
+                  ).map(({ part, label, max }) => (
+                    <label className="duration-field__part" key={part}>
+                      <input
+                        aria-label={part}
+                        max={max}
+                        min={0}
+                        onChange={(event) =>
+                          updateDuration(part, event.currentTarget.valueAsNumber)
+                        }
+                        type="number"
+                        value={msToParts(draft.settings.durationMs)[part]}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             {draft.kind === "quote" ? (

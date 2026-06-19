@@ -14,9 +14,27 @@ import {
   formatTimeZoneName,
   getCountdownParts
 } from "~/lib/time"
-import type { NoteWidget, QuoteWidget, Widget } from "~/lib/types"
+import type {
+  NoteWidget,
+  QuoteWidget,
+  StopwatchWidget,
+  TimerWidget,
+  Widget
+} from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
 import { cleanQuotes, dailyQuoteIndex } from "~/lib/quotes"
+import {
+  finishTimer,
+  formatDuration,
+  pauseStopwatch,
+  pauseTimer,
+  resetStopwatch,
+  resetTimer,
+  startStopwatch,
+  startTimer,
+  stopwatchElapsedMs,
+  timerRemainingMs
+} from "~/lib/timers"
 
 interface BoardRowProps {
   item: Widget
@@ -126,6 +144,114 @@ const QuoteField = ({ item, now }: { item: QuoteWidget; now: Date }) => {
       : Math.floor(openSeed * quotes.length) % quotes.length
 
   return <blockquote className="quote-text">{quotes[index] ?? quotes[0]}</blockquote>
+}
+
+const StopwatchBody = ({
+  item,
+  now,
+  onWidgetChange
+}: {
+  item: StopwatchWidget
+  now: Date
+  onWidgetChange?: (widget: Widget) => void
+}) => {
+  const elapsed = stopwatchElapsedMs(item.settings, now.getTime())
+  const { running } = item.settings
+  const apply = (settings: StopwatchWidget["settings"]) =>
+    onWidgetChange?.({ ...item, settings })
+
+  return (
+    <>
+      <p className="board-row__value board-row__value--timer">
+        {formatDuration(elapsed)}
+      </p>
+      <div className="timer-controls">
+        <button
+          className="timer-button timer-button--primary"
+          onClick={() =>
+            apply(
+              running
+                ? pauseStopwatch(item.settings, Date.now())
+                : startStopwatch(item.settings, Date.now())
+            )
+          }
+          type="button">
+          {running ? "Pause" : "Start"}
+        </button>
+        <button
+          className="timer-button"
+          disabled={!running && elapsed === 0}
+          onClick={() => apply(resetStopwatch())}
+          type="button">
+          Reset
+        </button>
+      </div>
+    </>
+  )
+}
+
+const TimerBody = ({
+  item,
+  now,
+  onWidgetChange
+}: {
+  item: TimerWidget
+  now: Date
+  onWidgetChange?: (widget: Widget) => void
+}) => {
+  const { running, durationMs } = item.settings
+  const remaining = timerRemainingMs(item.settings, now.getTime())
+  const done = remaining <= 0
+  const apply = (settings: TimerWidget["settings"]) =>
+    onWidgetChange?.({ ...item, settings })
+
+  // Settle the timer the moment it counts down to zero while running.
+  useEffect(() => {
+    if (running && done) {
+      onWidgetChange?.({ ...item, settings: finishTimer(item.settings) })
+    }
+  }, [running, done, item, onWidgetChange])
+
+  const primaryLabel = running
+    ? "Pause"
+    : remaining > 0 && remaining < durationMs
+      ? "Resume"
+      : "Start"
+
+  return (
+    <>
+      <p
+        className={`board-row__value board-row__value--timer${
+          done && !running ? " board-row__value--timer-done" : ""
+        }`}>
+        {formatDuration(remaining)}
+      </p>
+      {done && !running ? (
+        <p className="board-row__meta board-row__meta--alert">Time&rsquo;s up</p>
+      ) : null}
+      <div className="timer-controls">
+        <button
+          className="timer-button timer-button--primary"
+          onClick={() =>
+            apply(
+              running
+                ? pauseTimer(item.settings, Date.now())
+                : startTimer(item.settings, Date.now())
+            )
+          }
+          type="button">
+          {primaryLabel}
+        </button>
+        <button
+          className="timer-button"
+          disabled={!running && remaining === durationMs}
+          onClick={() => apply(resetTimer(item.settings))}
+          type="button">
+          Reset
+        </button>
+      </div>
+    </>
+  )
 }
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
@@ -238,6 +364,34 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
         </div>
         <div className="board-row__body board-row__body--fill">
           <QuoteField item={item} now={now} />
+        </div>
+      </article>
+    )
+  }
+
+  if (item.kind === "stopwatch" || item.kind === "timer") {
+    return (
+      <article
+        {...articleProps}
+        className={rowClassName}
+        ref={ref}
+        style={combinedStyle}
+        data-color-preset={item.colorPreset}>
+        {frame}
+        <div className="board-row__header">
+          <div className="board-row__identity">
+            <h2 className="board-row__title">
+              {colorDot}
+              {item.title}
+            </h2>
+          </div>
+        </div>
+        <div className="board-row__body">
+          {item.kind === "stopwatch" ? (
+            <StopwatchBody item={item} now={now} onWidgetChange={onWidgetChange} />
+          ) : (
+            <TimerBody item={item} now={now} onWidgetChange={onWidgetChange} />
+          )}
         </div>
       </article>
     )
