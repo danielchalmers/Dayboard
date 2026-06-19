@@ -13,6 +13,7 @@ interface UseClockboardStateResult {
   error: string | null
   setWidgets: (widgets: Widget[]) => Promise<void>
   setSettings: (settings: ClockboardSettings) => Promise<void>
+  updateWidget: (widget: Widget) => Promise<void>
   replaceState: (state: ClockboardState) => Promise<void>
   saveError: string | null
   dismissSaveError: () => void
@@ -77,26 +78,47 @@ export const useClockboardState = (): UseClockboardStateResult => {
 
   const dismissSaveError = useCallback(() => setSaveError(null), [])
 
+  // Read state through the ref so these stay referentially stable across
+  // renders, which lets the memoized board rows skip unrelated re-renders.
   const setWidgets = useCallback(
     async (widgets: Widget[]) => {
-      if (!state) {
+      const current = stateRef.current
+      if (!current) {
         return
       }
 
-      await saveState({ ...state, widgets })
+      await saveState({ ...current, widgets })
     },
-    [saveState, state]
+    [saveState]
   )
 
   const setSettings = useCallback(
     async (settings: ClockboardSettings) => {
-      if (!state) {
+      const current = stateRef.current
+      if (!current) {
         return
       }
 
-      await saveState({ ...state, settings })
+      await saveState({ ...current, settings })
     },
-    [saveState, state]
+    [saveState]
+  )
+
+  const updateWidget = useCallback(
+    async (widget: Widget) => {
+      const current = stateRef.current
+      if (!current) {
+        return
+      }
+
+      await saveState({
+        ...current,
+        widgets: current.widgets.map((existing) =>
+          existing.id === widget.id ? widget : existing
+        )
+      })
+    },
+    [saveState]
   )
 
   return {
@@ -105,6 +127,7 @@ export const useClockboardState = (): UseClockboardStateResult => {
     error,
     setWidgets,
     setSettings,
+    updateWidget,
     replaceState: saveState,
     saveError,
     dismissSaveError

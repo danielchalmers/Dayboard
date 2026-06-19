@@ -17,6 +17,8 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
+  memo,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -317,7 +319,38 @@ interface SortableBoardRowProps {
   timerChime?: boolean
 }
 
-const SortableBoardRow = ({
+// Time-sensitive widgets must re-render on every tick; the rest can skip both
+// the per-second tick and unrelated edits as long as their own props are equal.
+export const isTimeSensitive = (kind: Widget["kind"]) =>
+  kind === "clock" ||
+  kind === "countdown" ||
+  kind === "stopwatch" ||
+  kind === "timer"
+
+const areRowsEqual = (
+  prev: SortableBoardRowProps,
+  next: SortableBoardRowProps
+): boolean => {
+  if (isTimeSensitive(next.item.kind)) {
+    return false
+  }
+
+  // `now` is intentionally excluded: notes/quotes/habits do not show live time.
+  return (
+    prev.item === next.item &&
+    prev.activeId === next.activeId &&
+    prev.isMenuOpen === next.isMenuOpen &&
+    prev.hasActions === next.hasActions &&
+    prev.draggable === next.draggable &&
+    prev.prefersReducedMotion === next.prefersReducedMotion &&
+    prev.onCloseMenu === next.onCloseMenu &&
+    prev.onOpenMenu === next.onOpenMenu &&
+    prev.onWidgetChange === next.onWidgetChange &&
+    prev.timerChime === next.timerChime
+  )
+}
+
+const SortableBoardRow = memo(({
   item,
   now,
   activeId,
@@ -443,7 +476,7 @@ const SortableBoardRow = ({
       }}
     />
   )
-}
+}, areRowsEqual)
 
 export const BoardList = ({
   items,
@@ -483,12 +516,6 @@ export const BoardList = ({
   const itemIds = items.map((item) => item.id)
   const hasActions = Boolean(renderItemActions)
 
-  const closeAddMenu = () => {
-    document.querySelectorAll<HTMLDetailsElement>(".add-menu[open]").forEach((menu) => {
-      menu.removeAttribute("open")
-    })
-  }
-
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(String(active.id))
     setOpenMenu(null)
@@ -520,12 +547,15 @@ export const BoardList = ({
     setOpenMenu(null)
   }
 
-  const closeMenu = () => setOpenMenu(null)
+  // Stable so the memoized rows can skip re-rendering when only the tick changes.
+  const closeMenu = useCallback(() => setOpenMenu(null), [])
 
-  const handleOpenMenu = (id: string, x: number, y: number) => {
-    closeAddMenu()
+  const handleOpenMenu = useCallback((id: string, x: number, y: number) => {
+    document
+      .querySelectorAll<HTMLDetailsElement>(".add-menu[open]")
+      .forEach((menu) => menu.removeAttribute("open"))
     setOpenMenu({ id, x, y })
-  }
+  }, [])
 
   const activeMenuItem = openMenu
     ? items.find((item) => item.id === openMenu.id) ?? null

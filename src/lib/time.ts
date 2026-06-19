@@ -45,15 +45,32 @@ export const isoInstantToDateTimeInputValue = (instant: string): string => {
   return toDateTimeInputValue(date)
 }
 
+// Intl.DateTimeFormat construction parses options on every call and is among the
+// pricier locale operations; format() itself is cheap. Cache instances by their
+// options so repeated renders (and ticking clocks) reuse one formatter.
+const formatterCache = new Map<string, Intl.DateTimeFormat>()
+
+const getFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
+  const key = JSON.stringify(options)
+  let formatter = formatterCache.get(key)
+
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(undefined, options)
+    formatterCache.set(key, formatter)
+  }
+
+  return formatter
+}
+
 export const formatClockTime = (date: Date, widget: ClockWidget): string =>
-  new Intl.DateTimeFormat(undefined, {
+  getFormatter({
     timeZone: widget.settings.timeZone,
     hour: "numeric",
     minute: "2-digit"
   }).format(date)
 
 export const formatClockDate = (date: Date, timeZone: string): string =>
-  new Intl.DateTimeFormat(undefined, {
+  getFormatter({
     timeZone,
     weekday: "short",
     month: "short",
@@ -62,7 +79,7 @@ export const formatClockDate = (date: Date, timeZone: string): string =>
   }).format(date)
 
 export const formatTimeZoneName = (date: Date, timeZone: string): string => {
-  const parts = new Intl.DateTimeFormat(undefined, {
+  const parts = getFormatter({
     timeZone,
     timeZoneName: "short"
   }).formatToParts(date)
@@ -204,7 +221,7 @@ export const formatCountdownTarget = (widget: CountdownWidget): string => {
     return "Invalid target"
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return getFormatter({
     weekday: "short",
     month: "short",
     day: "numeric",

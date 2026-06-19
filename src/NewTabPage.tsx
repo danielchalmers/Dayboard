@@ -54,6 +54,7 @@ export function NewTabPage() {
     error,
     setWidgets,
     setSettings,
+    updateWidget,
     replaceState,
     saveError,
     dismissSaveError
@@ -104,16 +105,6 @@ export function NewTabPage() {
     closeOpenMenus()
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
-  }
-
-  // Live update from an interactive widget (e.g. typing into a note), saved in
-  // place without opening the edit dialog.
-  const updateWidget = (widget: Widget) => {
-    void setWidgets(
-      state.widgets.map((current) =>
-        current.id === widget.id ? widget : current
-      )
-    )
   }
 
   const archiveItem = (item: Widget) => {
