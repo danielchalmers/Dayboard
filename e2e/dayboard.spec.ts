@@ -1070,6 +1070,30 @@ test("edit dialog opens for an existing clock", async ({ page, extensionId }) =>
   await expect(page.getByLabel("Time zone")).toBeVisible()
 })
 
+test("clicking the backdrop saves the edit dialog", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "Local time")
+  await page.getByRole("menuitem", { name: "Edit Local time" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
+
+  await page.getByLabel("Name").fill("Local HQ")
+
+  // Click the backdrop, well clear of the centered dialog. This commits the
+  // edit and closes the dialog rather than doing nothing.
+  await page.mouse.click(8, 8)
+
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Local HQ" })).toBeVisible()
+
+  // The save persists across a reload.
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Local HQ" })).toBeVisible()
+})
+
 test("delete flow removes an existing widget", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 

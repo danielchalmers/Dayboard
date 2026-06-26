@@ -42,6 +42,7 @@ export const ItemDialog = ({
   const [targetInput, setTargetInput] = useState<string | null>(null)
   const [startInput, setStartInput] = useState<string | null>(null)
   const dialogRef = useRef<HTMLElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     setDraft(item)
@@ -203,7 +204,17 @@ export const ItemDialog = ({
   }
 
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      onPointerDown={(event) => {
+        // Clicking the backdrop commits the edit — the same as pressing Save or
+        // Enter — so dismissing the dialog feels fluid instead of throwing the
+        // work away. Native form validation still blocks the save and keeps the
+        // dialog open if a required field is empty.
+        if (event.target === event.currentTarget) {
+          formRef.current?.requestSubmit()
+        }
+      }}>
       <section
         aria-labelledby="item-dialog-title"
         aria-modal="true"
@@ -221,6 +232,7 @@ export const ItemDialog = ({
 
         <form
           className="dialog-form"
+          ref={formRef}
           onSubmit={(event) => {
             event.preventDefault()
             onSave(draft)
