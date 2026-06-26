@@ -1,5 +1,6 @@
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -466,7 +467,11 @@ const SortableBoardRow = memo(({
       onWidgetChange={onWidgetChange}
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
+        // The drag overlay renders the lifted card that follows the cursor, so
+        // the in-list item stays in place as a dimmed placeholder. Translating
+        // it here is what previously made it snap back to its slot when dragged
+        // over the archive zone (a droppable outside the sortable list).
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
         transition: prefersReducedMotion ? undefined : transition
       }}
     />
@@ -556,6 +561,10 @@ export const BoardList = ({
     : null
   const activeMenuIndex = activeMenuItem ? items.indexOf(activeMenuItem) : -1
 
+  const activeItem = activeId
+    ? items.find((item) => item.id === activeId) ?? null
+    : null
+
   const sectionClassName = [
     "board-list",
     activeId ? "board-list--dragging" : ""
@@ -617,6 +626,18 @@ export const BoardList = ({
             overLabel="Release to restore"
           />
         ) : null}
+        {/* The lifted card follows the cursor in a portal, so it keeps tracking
+            the pointer even over the archive/restore zones (which sit outside
+            the sortable list) instead of snapping back to its slot. */}
+        <DragOverlay dropAnimation={null}>
+          {activeItem ? (
+            <BoardRow
+              className="board-row--overlay"
+              item={activeItem}
+              now={now}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu

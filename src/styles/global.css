@@ -879,14 +879,20 @@ details > summary::-webkit-details-marker {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 22%, var(--card-border-resolved));
 }
 
+/* The in-list card while it is being dragged: a calm, dimmed placeholder that
+   holds the slot. The lifted card the cursor carries is the drag overlay. */
 .board-row--dragging {
-  background: var(--card-bg-resolved);
-  border-color: var(--card-accent-resolved);
-  box-shadow: var(--shadow-card-hover);
-  opacity: 0.92;
-  z-index: 50;
+  opacity: 0.4;
   animation: none !important;
   transition: none !important;
+}
+
+/* The drag overlay clone — the actual lifted card that follows the cursor. */
+.board-row--overlay {
+  cursor: grabbing;
+  border-color: var(--card-accent-resolved);
+  box-shadow: var(--shadow-card-hover);
+  animation: none;
 }
 
 /* Disable default transitions and optimize for GPU layers during active drag operations */

@@ -1300,6 +1300,60 @@ test("dragging a widget onto the archive zone archives it", async ({
   await expect(page.getByRole("button", { name: "Show archived (1)" })).toBeVisible()
 })
 
+test("a card dragged toward the archive follows the cursor instead of snapping back", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const box = await card.boundingBox()
+
+  if (!box) {
+    throw new Error("Unable to measure card bounds")
+  }
+
+  const grabX = box.x + box.width / 2
+  await page.mouse.move(grabX, box.y + 12)
+  await page.mouse.down()
+  await page.mouse.move(grabX, box.y + 36, { steps: 6 })
+
+  const dropzone = page.locator(".archive-dropzone")
+  await expect(dropzone).toBeVisible()
+  const zoneBox = await dropzone.boundingBox()
+
+  if (!zoneBox) {
+    throw new Error("Archive zone has no bounds")
+  }
+
+  const cursorY = zoneBox.y + zoneBox.height / 2
+  await page.mouse.move(zoneBox.x + zoneBox.width / 2, cursorY, { steps: 20 })
+  await expect(page.locator(".archive-dropzone--over")).toBeVisible()
+
+  // The lifted card (the drag overlay) tracks the cursor all the way down to the
+  // archive zone rather than snapping back up to the card's original slot.
+  const overlay = page.locator(".board-row--overlay")
+  await expect(overlay).toBeVisible()
+  const overlayBox = await overlay.boundingBox()
+
+  if (!overlayBox) {
+    throw new Error("Overlay has no bounds")
+  }
+
+  const overlayCenterY = overlayBox.y + overlayBox.height / 2
+  expect(Math.abs(overlayCenterY - cursorY)).toBeLessThan(200)
+  // And it has clearly left its origin near the top of the board.
+  expect(overlayBox.y).toBeGreaterThan(box.y + 120)
+
+  await page.mouse.up()
+  await expect(
+    page.locator(".board-list").first().getByText("Local time")
+  ).toHaveCount(0)
+})
+
 test("dragging an archived widget onto the restore zone brings it back", async ({
   page,
   extensionId
