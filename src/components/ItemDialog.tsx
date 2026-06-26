@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
@@ -41,14 +41,22 @@ export const ItemDialog = ({
   // shown as typed instead of snapping back to the stored target.
   const [targetInput, setTargetInput] = useState<string | null>(null)
   const [startInput, setStartInput] = useState<string | null>(null)
+  const [syncedItem, setSyncedItem] = useState(item)
   const dialogRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  useEffect(() => {
+  // Adopt a newly opened item during render (not in an effect) so the dialog
+  // body — and the focusable section that useModalFocus wires into — exist on
+  // the very first open render. Deferring the draft to an effect left the
+  // section null for one render, after which the focus hook's deps never
+  // changed again, so focus-move, the focus trap, and Escape-to-close were
+  // silently never attached.
+  if (item !== syncedItem) {
+    setSyncedItem(item)
     setDraft(item)
     setTargetInput(null)
     setStartInput(null)
-  }, [item])
+  }
 
   useModalFocus(isOpen, dialogRef, onClose)
 

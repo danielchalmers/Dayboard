@@ -43,6 +43,45 @@ describe("ItemDialog", () => {
     })
   })
 
+  it("closes on Escape without saving, even when opened by a prop change", () => {
+    const onClose = vi.fn()
+    const onSave = vi.fn()
+
+    // Mount closed, then open it the way the app does — flipping isOpen and
+    // supplying the item together — so the focus/Escape wiring has to survive
+    // the draft being adopted on open.
+    const { rerender } = render(
+      <ItemDialog
+        isOpen={false}
+        item={null}
+        mode="add"
+        onClose={onClose}
+        onSave={onSave}
+      />
+    )
+    rerender(
+      <ItemDialog
+        isOpen
+        item={clockItem}
+        mode="edit"
+        onClose={onClose}
+        onSave={onSave}
+      />
+    )
+
+    const dialog = screen.getByRole("dialog")
+    // Focus moved into the dialog, proving the modal focus hook wired up.
+    expect(dialog.contains(document.activeElement)).toBe(true)
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Discarded" }
+    })
+    fireEvent.keyDown(dialog, { key: "Escape" })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it("ignores clicks that land inside the dialog", () => {
     const onSave = vi.fn()
     const onClose = vi.fn()
