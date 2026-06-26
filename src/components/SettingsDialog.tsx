@@ -156,32 +156,6 @@ export const SettingsDialog = ({
             </label>
           </div>
 
-          <div className="option-row">
-            <div className="option-row__text">
-              <label className="option-row__label" htmlFor="settings-chime">
-                Timer chime
-              </label>
-              <span className="option-row__hint">
-                Play a soft sound when a timer reaches zero.
-              </span>
-            </div>
-            <label className="switch">
-              <input
-                checked={settings.chimeOnTimerEnd}
-                className="switch__input"
-                id="settings-chime"
-                onChange={(event) =>
-                  onChange({
-                    ...settings,
-                    chimeOnTimerEnd: event.currentTarget.checked
-                  })
-                }
-                role="switch"
-                type="checkbox"
-              />
-              <span aria-hidden="true" className="switch__track" />
-            </label>
-          </div>
           </div>
 
           <div className="form-label-group">

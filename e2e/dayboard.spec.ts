@@ -209,7 +209,7 @@ test("exports the board to a file and imports one back", async ({
         settings: { timeZone: "UTC" }
       }
     ],
-    settings: { dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false }
+    settings: { dragToMove: true, columns: "auto", name: "" }
   }
   await page.locator('input[type="file"]').setInputFiles({
     name: "board.json",
@@ -926,22 +926,31 @@ test("timer counts down to a finished state and resets", async ({
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
 })
 
-test("timer chime setting persists and the timer still finishes", async ({
+test("a timer's per-widget chime is opt-in, persists, and still finishes", async ({
   page,
   extensionId
 }) => {
+  // A tall viewport keeps the appended timer and its context menu on screen, so
+  // re-opening it after a reload never has to scroll (scrolling dismisses the
+  // widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
+  // The chime is set per timer in its dialog — there is no global toggle.
   await page.getByRole("button", { name: "Options" }).click()
-  await page.getByRole("switch", { name: "Timer chime" }).click()
+  await expect(page.getByRole("switch", { name: "Timer chime" })).toHaveCount(0)
   await page.getByRole("button", { name: "Done" }).click()
 
-  // A short timer still reaches the finished state with the chime enabled.
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add timer" }).click()
   await page.getByLabel("Name").fill("Steep")
   await page.getByLabel("minutes").fill("0")
   await page.getByLabel("seconds").fill("1")
+  // Opt this timer into the chime.
+  await expect(
+    page.getByRole("switch", { name: "Chime when it ends" })
+  ).not.toBeChecked()
+  await page.getByRole("switch", { name: "Chime when it ends" }).click()
   await page.getByRole("button", { name: "Save timer" }).click()
 
   const card = page
@@ -950,10 +959,13 @@ test("timer chime setting persists and the timer still finishes", async ({
   await card.getByRole("button", { name: "Start" }).click()
   await expect(card.getByText("Time’s up")).toBeVisible()
 
-  // The preference persists across a reload.
+  // The per-timer choice persists across a reload.
   await page.reload()
-  await page.getByRole("button", { name: "Options" }).click()
-  await expect(page.getByRole("switch", { name: "Timer chime" })).toBeChecked()
+  await openWidgetMenu(page, "Steep")
+  await page.getByRole("menuitem", { name: "Edit Steep" }).click()
+  await expect(
+    page.getByRole("switch", { name: "Chime when it ends" })
+  ).toBeChecked()
 })
 
 test("add habit flow tracks a streak and persists", async ({

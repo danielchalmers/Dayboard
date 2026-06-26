@@ -39,10 +39,6 @@ const normalizeSettings = (value: unknown): DayboardSettings => {
       ? (stored.columns as DayboardSettings["columns"])
       : DEFAULT_SETTINGS.columns,
     name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name,
-    chimeOnTimerEnd:
-      typeof stored.chimeOnTimerEnd === "boolean"
-        ? stored.chimeOnTimerEnd
-        : DEFAULT_SETTINGS.chimeOnTimerEnd,
     dockToBottom:
       typeof stored.dockToBottom === "boolean"
         ? stored.dockToBottom

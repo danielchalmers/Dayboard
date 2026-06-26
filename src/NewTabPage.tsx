@@ -390,7 +390,6 @@ export function NewTabPage() {
           now={now}
           draggable={state.settings.dragToMove}
           columns={state.settings.columns}
-          timerChime={state.settings.chimeOnTimerEnd}
           onReorder={reorderList}
           onWidgetChange={updateWidget}
           onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
@@ -464,7 +463,6 @@ export function NewTabPage() {
                 now={now}
                 draggable={state.settings.dragToMove}
                 columns={state.settings.columns}
-                timerChime={state.settings.chimeOnTimerEnd}
                 onReorder={reorderList}
                 onWidgetChange={updateWidget}
                 onRestore={(id) => void setWidgets(restoreWidget(state.widgets, id))}

@@ -12,6 +12,20 @@ const clockItem: Widget = {
   settings: { timeZone: "UTC" }
 }
 
+const timerItem: Widget = {
+  id: "timer-1",
+  kind: "timer",
+  title: "Tea",
+  colorPreset: "slate",
+  settings: {
+    durationMs: 60_000,
+    running: false,
+    remainingMs: 60_000,
+    endsAt: null,
+    chime: false
+  }
+}
+
 describe("ItemDialog", () => {
   it("saves the current edit when the backdrop is clicked", () => {
     const onSave = vi.fn()
@@ -80,6 +94,29 @@ describe("ItemDialog", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it("toggles the per-timer chime and saves it", () => {
+    const onSave = vi.fn()
+
+    render(
+      <ItemDialog
+        isOpen
+        item={timerItem}
+        mode="edit"
+        onClose={() => {}}
+        onSave={onSave}
+      />
+    )
+
+    const chime = screen.getByRole("switch", { name: "Chime when it ends" })
+    expect(chime).not.toBeChecked()
+
+    fireEvent.click(chime)
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0]![0].settings.chime).toBe(true)
   })
 
   it("ignores clicks that land inside the dialog", () => {

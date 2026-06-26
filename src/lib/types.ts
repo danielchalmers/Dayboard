@@ -100,6 +100,8 @@ export interface TimerWidget extends WidgetBase {
     remainingMs: number
     /** Epoch ms when the timer will reach zero, or null while paused. */
     endsAt: number | null
+    /** Play a soft chime when this timer reaches zero (opt-in, per timer). */
+    chime?: boolean
   }
 }
 
@@ -131,8 +133,6 @@ export interface DayboardSettings {
   columns: BoardColumns
   /** Optional name used to personalize the greeting; empty hides it. */
   name: string
-  /** Play a soft chime when a timer reaches zero. */
-  chimeOnTimerEnd: boolean
   /** Anchor the board to the bottom of the screen (clear of the omnibox). */
   dockToBottom: boolean
 }
@@ -141,7 +141,6 @@ export const DEFAULT_SETTINGS: DayboardSettings = {
   dragToMove: true,
   columns: "auto",
   name: "",
-  chimeOnTimerEnd: false,
   dockToBottom: false
 }
 

@@ -103,7 +103,8 @@ const createTimerWidget = (): TimerWidget => ({
     durationMs: DEFAULT_TIMER_DURATION_MS,
     running: false,
     remainingMs: DEFAULT_TIMER_DURATION_MS,
-    endsAt: null
+    endsAt: null,
+    chime: false
   }
 })
 

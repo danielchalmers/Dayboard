@@ -20,7 +20,6 @@ const sampleState: DayboardState = {
     dragToMove: true,
     columns: "auto",
     name: "",
-    chimeOnTimerEnd: false,
     dockToBottom: false
   }
 }
@@ -87,7 +86,7 @@ describe("readDayboardState", () => {
     const state = await readDayboardState()
 
     expect(state.widgets).toHaveLength(6)
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false, dockToBottom: false })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", dockToBottom: false })
   })
 
   it("fills in default settings for state stored before settings existed", async () => {
@@ -98,7 +97,7 @@ describe("readDayboardState", () => {
     const state = await readDayboardState()
 
     expect(state.widgets).toEqual(sampleState.widgets)
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false, dockToBottom: false })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", dockToBottom: false })
   })
 
   it("drops malformed widget entries while keeping valid ones", async () => {
@@ -128,7 +127,7 @@ describe("readDayboardState", () => {
     const { readDayboardState } = await import("./storage")
     const state = await readDayboardState()
 
-    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false, dockToBottom: false })
+    expect(state.settings).toEqual({ dragToMove: true, columns: "auto", name: "", dockToBottom: false })
   })
 })
 

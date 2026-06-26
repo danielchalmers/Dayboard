@@ -211,6 +211,14 @@ export const ItemDialog = ({
     })
   }
 
+  const updateChime = (chime: boolean) => {
+    setDraft((current) =>
+      current?.kind === "timer"
+        ? { ...current, settings: { ...current.settings, chime } }
+        : current
+    )
+  }
+
   return (
     <div
       className="modal-backdrop"
@@ -379,32 +387,63 @@ export const ItemDialog = ({
             ) : null}
 
             {draft.kind === "timer" ? (
-              <div className="form-label-group">
-                <span>Length</span>
-                <div className="duration-field">
-                  {(
-                    [
-                      { part: "hours", label: "hrs", max: 99 },
-                      { part: "minutes", label: "min", max: 59 },
-                      { part: "seconds", label: "sec", max: 59 }
-                    ] as const
-                  ).map(({ part, label, max }) => (
-                    <label className="duration-field__part" key={part}>
-                      <input
-                        aria-label={part}
-                        max={max}
-                        min={0}
-                        onChange={(event) =>
-                          updateDuration(part, event.currentTarget.valueAsNumber)
-                        }
-                        type="number"
-                        value={msToParts(draft.settings.durationMs)[part]}
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
+              <>
+                <div className="form-label-group">
+                  <span>Length</span>
+                  <div className="duration-field">
+                    {(
+                      [
+                        { part: "hours", label: "hrs", max: 99 },
+                        { part: "minutes", label: "min", max: 59 },
+                        { part: "seconds", label: "sec", max: 59 }
+                      ] as const
+                    ).map(({ part, label, max }) => (
+                      <label className="duration-field__part" key={part}>
+                        <input
+                          aria-label={part}
+                          max={max}
+                          min={0}
+                          onChange={(event) =>
+                            updateDuration(
+                              part,
+                              event.currentTarget.valueAsNumber
+                            )
+                          }
+                          type="number"
+                          value={msToParts(draft.settings.durationMs)[part]}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                <div className="option-row">
+                  <div className="option-row__text">
+                    <label
+                      className="option-row__label"
+                      htmlFor="item-timer-chime">
+                      Chime when it ends
+                    </label>
+                    <span className="option-row__hint">
+                      Play a soft sound when this timer reaches zero.
+                    </span>
+                  </div>
+                  <label className="switch">
+                    <input
+                      checked={draft.settings.chime ?? false}
+                      className="switch__input"
+                      id="item-timer-chime"
+                      onChange={(event) =>
+                        updateChime(event.currentTarget.checked)
+                      }
+                      role="switch"
+                      type="checkbox"
+                    />
+                    <span aria-hidden="true" className="switch__track" />
+                  </label>
+                </div>
+              </>
             ) : null}
 
             {draft.kind === "quote" ? (
