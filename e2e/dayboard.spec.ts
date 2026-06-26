@@ -133,6 +133,36 @@ test("docks to the top by default and can be moved to the bottom", async ({
   expect(afterReload.above).toBeGreaterThan(afterReload.below)
 })
 
+test("keeps the board from shifting when a scrollbar appears", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // A tall viewport: the short default board fits with no vertical scrollbar.
+  await page.setViewportSize({ width: 1000, height: 1600 })
+  const roomy = await page.locator(".page").boundingBox()
+
+  // A short viewport: the same board now overflows and a scrollbar appears.
+  await page.setViewportSize({ width: 1000, height: 400 })
+  const overflows = await page.evaluate(
+    () =>
+      document.documentElement.scrollHeight >
+      document.documentElement.clientHeight
+  )
+  expect(overflows).toBe(true)
+  const scrolled = await page.locator(".page").boundingBox()
+
+  if (!roomy || !scrolled) {
+    throw new Error("Unable to measure the page box")
+  }
+
+  // The reserved gutter keeps the page the same width and in the same place, so
+  // the board doesn't jump sideways when the scrollbar shows up.
+  expect(scrolled.width).toBeCloseTo(roomy.width, 0)
+  expect(scrolled.x).toBeCloseTo(roomy.x, 0)
+})
+
 test("shows a time-aware greeting that can be personalized", async ({
   page,
   extensionId

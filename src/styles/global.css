@@ -82,6 +82,13 @@ body,
   min-height: 100%;
 }
 
+/* Always reserve room for the scrollbar so the centered board keeps its width
+   and position. Without this, revealing the archive or adding enough widgets to
+   overflow the viewport pops a scrollbar in and shifts everything sideways. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Anchor the page to the bottom of the viewport so the board sits clear of the
    omnibox suggestions that drop down over the top of the new tab while typing.
    The flex column lets `.page` claim its bottom margin as free space when the
