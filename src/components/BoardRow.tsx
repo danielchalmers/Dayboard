@@ -58,7 +58,6 @@ interface BoardRowProps {
   className?: string
   style?: CSSProperties
   onWidgetChange?: (widget: Widget) => void
-  timerChime?: boolean
 }
 
 // Auto-save notes a short beat after typing stops to stay well under
@@ -208,35 +207,33 @@ const StopwatchBody = ({
 const TimerBody = ({
   item,
   now,
-  onWidgetChange,
-  timerChime = false
+  onWidgetChange
 }: {
   item: TimerWidget
   now: Date
   onWidgetChange?: (widget: Widget) => void
-  timerChime?: boolean
 }) => {
-  const { running, durationMs } = item.settings
+  const { running, durationMs, chime } = item.settings
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
   const apply = (settings: TimerWidget["settings"]) =>
     onWidgetChange?.({ ...item, settings })
 
-  // Settle the timer the moment it counts down to zero while running, and
-  // (optionally) chime once on that transition.
+  // Settle the timer the moment it counts down to zero while running, and — when
+  // this timer opted into a chime — sound it once on that transition.
   useEffect(() => {
     if (running && done) {
-      if (timerChime) {
+      if (chime) {
         playChime()
       }
 
       onWidgetChange?.({ ...item, settings: finishTimer(item.settings) })
     }
-  }, [running, done, item, onWidgetChange, timerChime])
+  }, [running, done, item, onWidgetChange, chime])
 
   const handleStart = () => {
     // Warm up audio from this gesture so the later chime is allowed to sound.
-    if (timerChime) {
+    if (chime) {
       primeChime()
     }
 
@@ -382,14 +379,6 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
     <div className="board-row__frame" aria-hidden="true" {...dragHandleProps} />
   ) : null
 
-  const colorDot =
-    item.colorPreset !== "slate" ? (
-      <span
-        className={`board-row__color-dot board-row__color-dot--${item.colorPreset}`}
-        aria-hidden="true"
-      />
-    ) : null
-
   return (
     <article
       {...articleProps}
@@ -400,10 +389,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
       {frame}
       <div className="board-row__header">
         <div className="board-row__identity">
-          <h2 className="board-row__title">
-            {colorDot}
-            {item.title}
-          </h2>
+          <h2 className="board-row__title">{item.title}</h2>
           {detail !== undefined ? (
             <p className="board-row__detail">{detail}</p>
           ) : null}
@@ -425,8 +411,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     dragHandleProps,
     className,
     style,
-    onWidgetChange,
-    timerChime
+    onWidgetChange
   },
   ref
 ) {
@@ -478,12 +463,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   if (item.kind === "timer") {
     return (
       <CardShell {...shell} ref={ref}>
-        <TimerBody
-          item={item}
-          now={now}
-          onWidgetChange={onWidgetChange}
-          timerChime={timerChime}
-        />
+        <TimerBody item={item} now={now} onWidgetChange={onWidgetChange} />
       </CardShell>
     )
   }

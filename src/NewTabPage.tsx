@@ -12,7 +12,7 @@ import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
   archiveWidget,
   createWidget,
-  moveWidget,
+  moveActiveWidget,
   reorderWidgets,
   restoreWidget
 } from "~/lib/widgets"
@@ -94,7 +94,7 @@ export function NewTabPage() {
 
   const reorderItem = (id: string, direction: -1 | 1) => {
     closeOpenMenus()
-    void setWidgets(moveWidget(state.widgets, id, direction))
+    void setWidgets(moveActiveWidget(state.widgets, id, direction))
   }
 
   const reorderList = (activeId: string, overId: string) => {
@@ -390,7 +390,6 @@ export function NewTabPage() {
           now={now}
           draggable={state.settings.dragToMove}
           columns={state.settings.columns}
-          timerChime={state.settings.chimeOnTimerEnd}
           onReorder={reorderList}
           onWidgetChange={updateWidget}
           onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
@@ -464,7 +463,6 @@ export function NewTabPage() {
                 now={now}
                 draggable={state.settings.dragToMove}
                 columns={state.settings.columns}
-                timerChime={state.settings.chimeOnTimerEnd}
                 onReorder={reorderList}
                 onWidgetChange={updateWidget}
                 onRestore={(id) => void setWidgets(restoreWidget(state.widgets, id))}

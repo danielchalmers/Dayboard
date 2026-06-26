@@ -133,6 +133,36 @@ test("docks to the top by default and can be moved to the bottom", async ({
   expect(afterReload.above).toBeGreaterThan(afterReload.below)
 })
 
+test("keeps the board from shifting when a scrollbar appears", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // A tall viewport: the short default board fits with no vertical scrollbar.
+  await page.setViewportSize({ width: 1000, height: 1600 })
+  const roomy = await page.locator(".page").boundingBox()
+
+  // A short viewport: the same board now overflows and a scrollbar appears.
+  await page.setViewportSize({ width: 1000, height: 400 })
+  const overflows = await page.evaluate(
+    () =>
+      document.documentElement.scrollHeight >
+      document.documentElement.clientHeight
+  )
+  expect(overflows).toBe(true)
+  const scrolled = await page.locator(".page").boundingBox()
+
+  if (!roomy || !scrolled) {
+    throw new Error("Unable to measure the page box")
+  }
+
+  // The reserved gutter keeps the page the same width and in the same place, so
+  // the board doesn't jump sideways when the scrollbar shows up.
+  expect(scrolled.width).toBeCloseTo(roomy.width, 0)
+  expect(scrolled.x).toBeCloseTo(roomy.x, 0)
+})
+
 test("shows a time-aware greeting that can be personalized", async ({
   page,
   extensionId
@@ -179,7 +209,7 @@ test("exports the board to a file and imports one back", async ({
         settings: { timeZone: "UTC" }
       }
     ],
-    settings: { dragToMove: true, columns: "auto", name: "", chimeOnTimerEnd: false }
+    settings: { dragToMove: true, columns: "auto", name: "" }
   }
   await page.locator('input[type="file"]').setInputFiles({
     name: "board.json",
@@ -493,6 +523,50 @@ test("reordering changes the visible order and persists after reload", async ({
   await expect(titles).toHaveText(swappedOrder)
 })
 
+test("the menu's Move up reorders even after a widget was archived", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps the appended widget and its context menu on screen.
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+
+  // Archive one widget, then add a new one. The new widget lands after the
+  // archived one in storage, so the active widgets are no longer contiguous —
+  // the case where Move up/down used to silently do nothing.
+  await openWidgetMenu(page, "This year")
+  await page.getByRole("menuitem", { name: "Archive This year" }).click()
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.getByLabel("Name").fill("New clock")
+  await page.getByRole("button", { name: "Save clock" }).click()
+
+  const titles = page.locator(".board-list").first().locator("h2")
+  await expect(titles).toHaveText([
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "New clock"
+  ])
+
+  // Moving the freshly added widget up steps above its visible neighbor instead
+  // of no-opping against the hidden archived widget beside it in storage.
+  await openWidgetMenu(page, "New clock")
+  await page.getByRole("menuitem", { name: "Move New clock up" }).click()
+
+  await expect(titles).toHaveText([
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "New clock",
+    "Daily walk"
+  ])
+})
+
 test("dragging across a widget body selects text instead of reordering", async ({
   page,
   extensionId
@@ -517,9 +591,9 @@ test("dragging across a widget body selects text instead of reordering", async (
     throw new Error("Unable to locate widget heading bounds")
   }
 
-  // Start the drag a little in from the edge so the press lands on the title
-  // text rather than the small color-preset dot that now leads the heading;
-  // beginning a selection on that decorative element selects nothing.
+  // Start the drag a little in from the edge so the press lands squarely on the
+  // title text (which is selectable) rather than the card's padded draggable
+  // edge, then drag across the rest of the title.
   await page.mouse.move(box.x + 24, box.y + box.height / 2)
   await page.mouse.down()
   await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, {
@@ -535,6 +609,52 @@ test("dragging across a widget body selects text instead of reordering", async (
     () => window.getSelection()?.toString() ?? ""
   )
   expect(selection.length).toBeGreaterThan(0)
+})
+
+test("the empty middle of a card is not a drag handle", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const titles = page.locator(".board-row h2")
+  const defaultOrder = [
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ]
+  await expect(titles).toHaveText(defaultOrder)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const cardBox = await card.boundingBox()
+  const headerBox = await card.locator(".board-row__header").boundingBox()
+
+  if (!cardBox || !headerBox) {
+    throw new Error("Unable to measure card layout")
+  }
+
+  // A point in the empty gap between the header and the body — interior space
+  // that the drag frame's donut hole now excludes. Pressing and moving here
+  // must not start a drag (only the surrounding edge is a handle).
+  const x = cardBox.x + cardBox.width / 2
+  const y = headerBox.y + headerBox.height + 12
+
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x, y + 80, { steps: 12 })
+
+  // No card entered the dragging state, so the press did not grab anything.
+  await expect(page.locator(".board-row--dragging")).toHaveCount(0)
+
+  await page.mouse.up()
+
+  // And the order is unchanged.
+  await expect(titles).toHaveText(defaultOrder)
 })
 
 test("only the draggable frame lights the card up on hover", async ({
@@ -806,22 +926,31 @@ test("timer counts down to a finished state and resets", async ({
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
 })
 
-test("timer chime setting persists and the timer still finishes", async ({
+test("a timer's per-widget chime is opt-in, persists, and still finishes", async ({
   page,
   extensionId
 }) => {
+  // A tall viewport keeps the appended timer and its context menu on screen, so
+  // re-opening it after a reload never has to scroll (scrolling dismisses the
+  // widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
+  // The chime is set per timer in its dialog — there is no global toggle.
   await page.getByRole("button", { name: "Options" }).click()
-  await page.getByRole("switch", { name: "Timer chime" }).click()
+  await expect(page.getByRole("switch", { name: "Timer chime" })).toHaveCount(0)
   await page.getByRole("button", { name: "Done" }).click()
 
-  // A short timer still reaches the finished state with the chime enabled.
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add timer" }).click()
   await page.getByLabel("Name").fill("Steep")
   await page.getByLabel("minutes").fill("0")
   await page.getByLabel("seconds").fill("1")
+  // Opt this timer into the chime.
+  await expect(
+    page.getByRole("switch", { name: "Chime when it ends" })
+  ).not.toBeChecked()
+  await page.getByRole("switch", { name: "Chime when it ends" }).click()
   await page.getByRole("button", { name: "Save timer" }).click()
 
   const card = page
@@ -830,10 +959,13 @@ test("timer chime setting persists and the timer still finishes", async ({
   await card.getByRole("button", { name: "Start" }).click()
   await expect(card.getByText("Time’s up")).toBeVisible()
 
-  // The preference persists across a reload.
+  // The per-timer choice persists across a reload.
   await page.reload()
-  await page.getByRole("button", { name: "Options" }).click()
-  await expect(page.getByRole("switch", { name: "Timer chime" })).toBeChecked()
+  await openWidgetMenu(page, "Steep")
+  await page.getByRole("menuitem", { name: "Edit Steep" }).click()
+  await expect(
+    page.getByRole("switch", { name: "Chime when it ends" })
+  ).toBeChecked()
 })
 
 test("add habit flow tracks a streak and persists", async ({
@@ -1024,6 +1156,51 @@ test("edit dialog opens for an existing clock", async ({ page, extensionId }) =>
   await expect(page.getByLabel("Time zone")).toBeVisible()
 })
 
+test("clicking the backdrop saves the edit dialog", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "Local time")
+  await page.getByRole("menuitem", { name: "Edit Local time" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
+
+  await page.getByLabel("Name").fill("Local HQ")
+
+  // Click the backdrop, well clear of the centered dialog. This commits the
+  // edit and closes the dialog rather than doing nothing.
+  await page.mouse.click(8, 8)
+
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Local HQ" })).toBeVisible()
+
+  // The save persists across a reload.
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Local HQ" })).toBeVisible()
+})
+
+test("pressing Escape closes the edit dialog and discards changes", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "Local time")
+  await page.getByRole("menuitem", { name: "Edit Local time" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toBeVisible()
+
+  await page.getByLabel("Name").fill("Should not stick")
+  await page.keyboard.press("Escape")
+
+  // The dialog closes and the edit is thrown away.
+  await expect(page.getByRole("dialog", { name: "Edit clock" })).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", { name: "Should not stick" })
+  ).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Local time" })).toBeVisible()
+})
+
 test("delete flow removes an existing widget", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
@@ -1121,6 +1298,60 @@ test("dragging a widget onto the archive zone archives it", async ({
     page.locator(".board-list").first().getByText("Local time")
   ).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Show archived (1)" })).toBeVisible()
+})
+
+test("a card dragged toward the archive follows the cursor instead of snapping back", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const box = await card.boundingBox()
+
+  if (!box) {
+    throw new Error("Unable to measure card bounds")
+  }
+
+  const grabX = box.x + box.width / 2
+  await page.mouse.move(grabX, box.y + 12)
+  await page.mouse.down()
+  await page.mouse.move(grabX, box.y + 36, { steps: 6 })
+
+  const dropzone = page.locator(".archive-dropzone")
+  await expect(dropzone).toBeVisible()
+  const zoneBox = await dropzone.boundingBox()
+
+  if (!zoneBox) {
+    throw new Error("Archive zone has no bounds")
+  }
+
+  const cursorY = zoneBox.y + zoneBox.height / 2
+  await page.mouse.move(zoneBox.x + zoneBox.width / 2, cursorY, { steps: 20 })
+  await expect(page.locator(".archive-dropzone--over")).toBeVisible()
+
+  // The lifted card (the drag overlay) tracks the cursor all the way down to the
+  // archive zone rather than snapping back up to the card's original slot.
+  const overlay = page.locator(".board-row--overlay")
+  await expect(overlay).toBeVisible()
+  const overlayBox = await overlay.boundingBox()
+
+  if (!overlayBox) {
+    throw new Error("Overlay has no bounds")
+  }
+
+  const overlayCenterY = overlayBox.y + overlayBox.height / 2
+  expect(Math.abs(overlayCenterY - cursorY)).toBeLessThan(200)
+  // And it has clearly left its origin near the top of the board.
+  expect(overlayBox.y).toBeGreaterThan(box.y + 120)
+
+  await page.mouse.up()
+  await expect(
+    page.locator(".board-list").first().getByText("Local time")
+  ).toHaveCount(0)
 })
 
 test("dragging an archived widget onto the restore zone brings it back", async ({

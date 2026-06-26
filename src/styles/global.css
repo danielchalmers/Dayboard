@@ -82,6 +82,13 @@ body,
   min-height: 100%;
 }
 
+/* Always reserve room for the scrollbar so the centered board keeps its width
+   and position. Without this, revealing the archive or adding enough widgets to
+   overflow the viewport pops a scrollbar in and shifts everything sideways. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Anchor the page to the bottom of the viewport so the board sits clear of the
    omnibox suggestions that drop down over the top of the new tab while typing.
    The flex column lets `.page` claim its bottom margin as free space when the
@@ -190,6 +197,10 @@ a {
   letter-spacing: -0.04em;
   line-height: 1.1;
   margin: 0;
+  /* Clipping the gradient to the text paints it only within the line box, so a
+     tight line-height shears the descender off the "y". Give the box a little
+     room below the baseline (and balance it above) so glyphs render in full. */
+  padding-block: 0.04em 0.12em;
   background: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--text) 70%, transparent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -572,20 +583,8 @@ details > summary::-webkit-details-marker {
   letter-spacing: -0.02em;
   line-height: 1.25;
   margin: 0;
-  display: flex;
-  align-items: center;
   color: var(--text);
   overflow-wrap: anywhere;
-}
-
-.board-row__color-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-inline-end: 10px;
-  background-color: var(--card-accent-resolved);
-  box-shadow: 0 0 0 2px var(--card-bg-resolved), 0 0 8px var(--card-accent-resolved);
-  flex-shrink: 0;
 }
 
 .board-row__detail {
@@ -826,16 +825,30 @@ details > summary::-webkit-details-marker {
   font-weight: 500;
 }
 
-/* The frame overlay is the only draggable surface. It fills the padded edge
-   around the card but sits beneath the content, so grabbing the border starts
-   a drag while the body text stays selectable. */
+/* The frame overlay is the only draggable surface. It sits beneath the content
+   and a donut clip-path cuts a hole through its middle, leaving just the card's
+   padded outer ring as the drag handle. Grabbing the border starts a drag while
+   the body text — and the empty space between rows — stay non-draggable. */
 .board-row__frame {
+  --frame-ring: 24px;
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: inherit;
   cursor: grab;
   touch-action: none;
+  clip-path: polygon(
+    0 0,
+    0 100%,
+    100% 100%,
+    100% 0,
+    0 0,
+    var(--frame-ring) var(--frame-ring),
+    calc(100% - var(--frame-ring)) var(--frame-ring),
+    calc(100% - var(--frame-ring)) calc(100% - var(--frame-ring)),
+    var(--frame-ring) calc(100% - var(--frame-ring)),
+    var(--frame-ring) var(--frame-ring)
+  );
 }
 
 .board-row__frame:active {
@@ -866,14 +879,20 @@ details > summary::-webkit-details-marker {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 22%, var(--card-border-resolved));
 }
 
+/* The in-list card while it is being dragged: a calm, dimmed placeholder that
+   holds the slot. The lifted card the cursor carries is the drag overlay. */
 .board-row--dragging {
-  background: var(--card-bg-resolved);
-  border-color: var(--card-accent-resolved);
-  box-shadow: var(--shadow-card-hover);
-  opacity: 0.92;
-  z-index: 50;
+  opacity: 0.4;
   animation: none !important;
   transition: none !important;
+}
+
+/* The drag overlay clone — the actual lifted card that follows the cursor. */
+.board-row--overlay {
+  cursor: grabbing;
+  border-color: var(--card-accent-resolved);
+  box-shadow: var(--shadow-card-hover);
+  animation: none;
 }
 
 /* Disable default transitions and optimize for GPU layers during active drag operations */

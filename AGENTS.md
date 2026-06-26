@@ -16,7 +16,7 @@ The product should feel polished, quiet, and useful at a glance. Favor clarity a
 - User-facing copy should be concise, warm, and not overly explanatory.
 - Dialog titles should name the action and kind, such as `Edit countdown`, not the item name.
 - Widgets can be archived — tucked behind a quiet "Show archived" toggle (by drag onto a drop zone, or via the context menu) and restored the same ways. Keep the active board the clear focus.
-- Global options live in an overlay reached from a gear button and from the browser's Options link: a greeting name, drag-to-rearrange, column count, and an opt-in timer chime, plus JSON export/import of the board.
+- Global options live in an overlay reached from a gear button and from the browser's Options link: a greeting name, drag-to-rearrange, and column count, plus JSON export/import of the board. A timer's optional finish chime is opt-in per timer, set in that timer's own dialog rather than globally.
 - Any sound (e.g. the timer chime) must be opt-in and gentle; never autoplay audio.
 - Keep permissions minimal. Dayboard should only need `storage`.
 

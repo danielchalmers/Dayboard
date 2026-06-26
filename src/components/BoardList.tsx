@@ -1,5 +1,6 @@
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -43,7 +44,6 @@ interface BoardListProps {
   onWidgetChange?: (widget: Widget) => void
   onArchive?: (id: string) => void
   onRestore?: (id: string) => void
-  timerChime?: boolean
 }
 
 const ARCHIVE_DROP_ID = "dayboard-archive-dropzone"
@@ -316,7 +316,6 @@ interface SortableBoardRowProps {
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
   onWidgetChange?: (widget: Widget) => void
-  timerChime?: boolean
 }
 
 // Time-sensitive widgets must re-render on every tick; the rest can skip both
@@ -345,8 +344,7 @@ const areRowsEqual = (
     prev.prefersReducedMotion === next.prefersReducedMotion &&
     prev.onCloseMenu === next.onCloseMenu &&
     prev.onOpenMenu === next.onOpenMenu &&
-    prev.onWidgetChange === next.onWidgetChange &&
-    prev.timerChime === next.timerChime
+    prev.onWidgetChange === next.onWidgetChange
   )
 }
 
@@ -360,8 +358,7 @@ const SortableBoardRow = memo(({
   prefersReducedMotion,
   onCloseMenu,
   onOpenMenu,
-  onWidgetChange,
-  timerChime
+  onWidgetChange
 }: SortableBoardRowProps) => {
   const {
     listeners,
@@ -468,10 +465,13 @@ const SortableBoardRow = memo(({
       item={item}
       now={now}
       onWidgetChange={onWidgetChange}
-      timerChime={timerChime}
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
+        // The drag overlay renders the lifted card that follows the cursor, so
+        // the in-list item stays in place as a dimmed placeholder. Translating
+        // it here is what previously made it snap back to its slot when dragged
+        // over the archive zone (a droppable outside the sortable list).
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
         transition: prefersReducedMotion ? undefined : transition
       }}
     />
@@ -487,8 +487,7 @@ export const BoardList = ({
   onReorder,
   onWidgetChange,
   onArchive,
-  onRestore,
-  timerChime
+  onRestore
 }: BoardListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
@@ -562,6 +561,10 @@ export const BoardList = ({
     : null
   const activeMenuIndex = activeMenuItem ? items.indexOf(activeMenuItem) : -1
 
+  const activeItem = activeId
+    ? items.find((item) => item.id === activeId) ?? null
+    : null
+
   const sectionClassName = [
     "board-list",
     activeId ? "board-list--dragging" : ""
@@ -602,7 +605,6 @@ export const BoardList = ({
                 onCloseMenu={closeMenu}
                 onOpenMenu={handleOpenMenu}
                 onWidgetChange={onWidgetChange}
-                timerChime={timerChime}
                 prefersReducedMotion={prefersReducedMotion}
               />
             ))}
@@ -624,6 +626,18 @@ export const BoardList = ({
             overLabel="Release to restore"
           />
         ) : null}
+        {/* The lifted card follows the cursor in a portal, so it keeps tracking
+            the pointer even over the archive/restore zones (which sit outside
+            the sortable list) instead of snapping back to its slot. */}
+        <DragOverlay dropAnimation={null}>
+          {activeItem ? (
+            <BoardRow
+              className="board-row--overlay"
+              item={activeItem}
+              now={now}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu

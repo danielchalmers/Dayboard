@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
@@ -41,13 +41,22 @@ export const ItemDialog = ({
   // shown as typed instead of snapping back to the stored target.
   const [targetInput, setTargetInput] = useState<string | null>(null)
   const [startInput, setStartInput] = useState<string | null>(null)
+  const [syncedItem, setSyncedItem] = useState(item)
   const dialogRef = useRef<HTMLElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
-  useEffect(() => {
+  // Adopt a newly opened item during render (not in an effect) so the dialog
+  // body — and the focusable section that useModalFocus wires into — exist on
+  // the very first open render. Deferring the draft to an effect left the
+  // section null for one render, after which the focus hook's deps never
+  // changed again, so focus-move, the focus trap, and Escape-to-close were
+  // silently never attached.
+  if (item !== syncedItem) {
+    setSyncedItem(item)
     setDraft(item)
     setTargetInput(null)
     setStartInput(null)
-  }, [item])
+  }
 
   useModalFocus(isOpen, dialogRef, onClose)
 
@@ -202,8 +211,26 @@ export const ItemDialog = ({
     })
   }
 
+  const updateChime = (chime: boolean) => {
+    setDraft((current) =>
+      current?.kind === "timer"
+        ? { ...current, settings: { ...current.settings, chime } }
+        : current
+    )
+  }
+
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      onPointerDown={(event) => {
+        // Clicking the backdrop commits the edit — the same as pressing Save or
+        // Enter — so dismissing the dialog feels fluid instead of throwing the
+        // work away. Native form validation still blocks the save and keeps the
+        // dialog open if a required field is empty.
+        if (event.target === event.currentTarget) {
+          formRef.current?.requestSubmit()
+        }
+      }}>
       <section
         aria-labelledby="item-dialog-title"
         aria-modal="true"
@@ -221,6 +248,7 @@ export const ItemDialog = ({
 
         <form
           className="dialog-form"
+          ref={formRef}
           onSubmit={(event) => {
             event.preventDefault()
             onSave(draft)
@@ -359,32 +387,63 @@ export const ItemDialog = ({
             ) : null}
 
             {draft.kind === "timer" ? (
-              <div className="form-label-group">
-                <span>Length</span>
-                <div className="duration-field">
-                  {(
-                    [
-                      { part: "hours", label: "hrs", max: 99 },
-                      { part: "minutes", label: "min", max: 59 },
-                      { part: "seconds", label: "sec", max: 59 }
-                    ] as const
-                  ).map(({ part, label, max }) => (
-                    <label className="duration-field__part" key={part}>
-                      <input
-                        aria-label={part}
-                        max={max}
-                        min={0}
-                        onChange={(event) =>
-                          updateDuration(part, event.currentTarget.valueAsNumber)
-                        }
-                        type="number"
-                        value={msToParts(draft.settings.durationMs)[part]}
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
+              <>
+                <div className="form-label-group">
+                  <span>Length</span>
+                  <div className="duration-field">
+                    {(
+                      [
+                        { part: "hours", label: "hrs", max: 99 },
+                        { part: "minutes", label: "min", max: 59 },
+                        { part: "seconds", label: "sec", max: 59 }
+                      ] as const
+                    ).map(({ part, label, max }) => (
+                      <label className="duration-field__part" key={part}>
+                        <input
+                          aria-label={part}
+                          max={max}
+                          min={0}
+                          onChange={(event) =>
+                            updateDuration(
+                              part,
+                              event.currentTarget.valueAsNumber
+                            )
+                          }
+                          type="number"
+                          value={msToParts(draft.settings.durationMs)[part]}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                <div className="option-row">
+                  <div className="option-row__text">
+                    <label
+                      className="option-row__label"
+                      htmlFor="item-timer-chime">
+                      Chime when it ends
+                    </label>
+                    <span className="option-row__hint">
+                      Play a soft sound when this timer reaches zero.
+                    </span>
+                  </div>
+                  <label className="switch">
+                    <input
+                      checked={draft.settings.chime ?? false}
+                      className="switch__input"
+                      id="item-timer-chime"
+                      onChange={(event) =>
+                        updateChime(event.currentTarget.checked)
+                      }
+                      role="switch"
+                      type="checkbox"
+                    />
+                    <span aria-hidden="true" className="switch__track" />
+                  </label>
+                </div>
+              </>
             ) : null}
 
             {draft.kind === "quote" ? (
