@@ -523,6 +523,50 @@ test("reordering changes the visible order and persists after reload", async ({
   await expect(titles).toHaveText(swappedOrder)
 })
 
+test("the menu's Move up reorders even after a widget was archived", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps the appended widget and its context menu on screen.
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+
+  // Archive one widget, then add a new one. The new widget lands after the
+  // archived one in storage, so the active widgets are no longer contiguous —
+  // the case where Move up/down used to silently do nothing.
+  await openWidgetMenu(page, "This year")
+  await page.getByRole("menuitem", { name: "Archive This year" }).click()
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.getByLabel("Name").fill("New clock")
+  await page.getByRole("button", { name: "Save clock" }).click()
+
+  const titles = page.locator(".board-list").first().locator("h2")
+  await expect(titles).toHaveText([
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "New clock"
+  ])
+
+  // Moving the freshly added widget up steps above its visible neighbor instead
+  // of no-opping against the hidden archived widget beside it in storage.
+  await openWidgetMenu(page, "New clock")
+  await page.getByRole("menuitem", { name: "Move New clock up" }).click()
+
+  await expect(titles).toHaveText([
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "New clock",
+    "Daily walk"
+  ])
+})
+
 test("dragging across a widget body selects text instead of reordering", async ({
   page,
   extensionId

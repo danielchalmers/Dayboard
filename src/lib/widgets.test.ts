@@ -3,18 +3,23 @@ import { describe, expect, it } from "vitest"
 import {
   archiveWidget,
   createWidget as createActualWidget,
-  moveWidget,
+  moveActiveWidget,
   moveWidgetToIndex,
   reorderWidgets,
   restoreWidget
 } from "./widgets"
 import type { Widget } from "./types"
 
-const createWidget = (id: string, title: string): Widget => ({
+const createWidget = (
+  id: string,
+  title: string,
+  archived = false
+): Widget => ({
   id,
   kind: "clock",
   title,
   colorPreset: "slate",
+  archived,
   settings: {
     timeZone: "UTC"
   }
@@ -61,11 +66,72 @@ describe("reorderWidgets", () => {
   })
 })
 
-describe("moveWidget", () => {
-  it("returns the original list when a move would leave the list unchanged", () => {
-    const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta")]
+describe("moveActiveWidget", () => {
+  it("moves an active widget up among the visible widgets", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta"),
+      createWidget("gamma", "Gamma")
+    ]
 
-    expect(moveWidget(widgets, "alpha", -1)).toBe(widgets)
+    expect(moveActiveWidget(widgets, "gamma", -1).map((w) => w.id)).toEqual([
+      "alpha",
+      "gamma",
+      "beta"
+    ])
+  })
+
+  it("moves an active widget down among the visible widgets", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta"),
+      createWidget("gamma", "Gamma")
+    ]
+
+    expect(moveActiveWidget(widgets, "alpha", 1).map((w) => w.id)).toEqual([
+      "beta",
+      "alpha",
+      "gamma"
+    ])
+  })
+
+  it("reorders against the visible neighbor, skipping interleaved archived widgets", () => {
+    // "delta" was added after "charlie" was archived, so it sits past the
+    // archived widget in storage. Moving it up must step over the hidden
+    // archived widget and land above the previous *visible* widget.
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta"),
+      createWidget("charlie", "Charlie", true),
+      createWidget("delta", "Delta")
+    ]
+
+    const moved = moveActiveWidget(widgets, "delta", -1)
+
+    // Full storage order keeps the archived widget; delta hops above beta.
+    expect(moved.map((w) => w.id)).toEqual([
+      "alpha",
+      "delta",
+      "beta",
+      "charlie"
+    ])
+    // What the board shows (the active widgets) reflects the move.
+    expect(moved.filter((w) => !w.archived).map((w) => w.id)).toEqual([
+      "alpha",
+      "delta",
+      "beta"
+    ])
+  })
+
+  it("leaves the list unchanged at the visible edges or for unknown ids", () => {
+    const widgets = [
+      createWidget("alpha", "Alpha"),
+      createWidget("beta", "Beta", true)
+    ]
+
+    expect(moveActiveWidget(widgets, "alpha", -1)).toBe(widgets)
+    expect(moveActiveWidget(widgets, "alpha", 1)).toBe(widgets)
+    expect(moveActiveWidget(widgets, "missing", -1)).toBe(widgets)
   })
 })
 

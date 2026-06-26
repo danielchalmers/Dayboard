@@ -180,13 +180,31 @@ export const moveWidgetToIndex = (
   return nextWidgets
 }
 
-export const moveWidget = (
+// Move an active (non-archived) widget one step up or down relative to the
+// other active widgets. The board only shows active widgets, and archived ones
+// are not guaranteed to sit after them in storage — a widget added once
+// something is archived lands past it — so the menu's Move up/down must reorder
+// against the visible neighbor rather than the raw array neighbor (which could
+// be a hidden archived widget, making the move a silent no-op).
+export const moveActiveWidget = (
   widgets: Widget[],
   id: string,
   direction: -1 | 1
 ): Widget[] => {
-  const index = widgets.findIndex((widget) => widget.id === id)
-  return moveWidgetToIndex(widgets, index, index + direction)
+  const active = widgets.filter((widget) => !widget.archived)
+  const fromIndex = active.findIndex((widget) => widget.id === id)
+
+  if (fromIndex === -1) {
+    return widgets
+  }
+
+  const neighbor = active[fromIndex + direction]
+
+  if (!neighbor) {
+    return widgets
+  }
+
+  return reorderWidgets(widgets, id, neighbor.id)
 }
 
 export const reorderWidgets = (

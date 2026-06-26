@@ -12,7 +12,7 @@ import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
   archiveWidget,
   createWidget,
-  moveWidget,
+  moveActiveWidget,
   reorderWidgets,
   restoreWidget
 } from "~/lib/widgets"
@@ -94,7 +94,7 @@ export function NewTabPage() {
 
   const reorderItem = (id: string, direction: -1 | 1) => {
     closeOpenMenus()
-    void setWidgets(moveWidget(state.widgets, id, direction))
+    void setWidgets(moveActiveWidget(state.widgets, id, direction))
   }
 
   const reorderList = (activeId: string, overId: string) => {
