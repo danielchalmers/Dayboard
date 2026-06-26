@@ -576,20 +576,8 @@ details > summary::-webkit-details-marker {
   letter-spacing: -0.02em;
   line-height: 1.25;
   margin: 0;
-  display: flex;
-  align-items: center;
   color: var(--text);
   overflow-wrap: anywhere;
-}
-
-.board-row__color-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-inline-end: 10px;
-  background-color: var(--card-accent-resolved);
-  box-shadow: 0 0 0 2px var(--card-bg-resolved), 0 0 8px var(--card-accent-resolved);
-  flex-shrink: 0;
 }
 
 .board-row__detail {

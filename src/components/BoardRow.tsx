@@ -382,14 +382,6 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
     <div className="board-row__frame" aria-hidden="true" {...dragHandleProps} />
   ) : null
 
-  const colorDot =
-    item.colorPreset !== "slate" ? (
-      <span
-        className={`board-row__color-dot board-row__color-dot--${item.colorPreset}`}
-        aria-hidden="true"
-      />
-    ) : null
-
   return (
     <article
       {...articleProps}
@@ -400,10 +392,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
       {frame}
       <div className="board-row__header">
         <div className="board-row__identity">
-          <h2 className="board-row__title">
-            {colorDot}
-            {item.title}
-          </h2>
+          <h2 className="board-row__title">{item.title}</h2>
           {detail !== undefined ? (
             <p className="board-row__detail">{detail}</p>
           ) : null}

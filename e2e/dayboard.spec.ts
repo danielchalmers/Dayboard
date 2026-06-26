@@ -517,9 +517,9 @@ test("dragging across a widget body selects text instead of reordering", async (
     throw new Error("Unable to locate widget heading bounds")
   }
 
-  // Start the drag a little in from the edge so the press lands on the title
-  // text rather than the small color-preset dot that now leads the heading;
-  // beginning a selection on that decorative element selects nothing.
+  // Start the drag a little in from the edge so the press lands squarely on the
+  // title text (which is selectable) rather than the card's padded draggable
+  // edge, then drag across the rest of the title.
   await page.mouse.move(box.x + 24, box.y + box.height / 2)
   await page.mouse.down()
   await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, {
