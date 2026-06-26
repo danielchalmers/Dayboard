@@ -537,6 +537,52 @@ test("dragging across a widget body selects text instead of reordering", async (
   expect(selection.length).toBeGreaterThan(0)
 })
 
+test("the empty middle of a card is not a drag handle", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const titles = page.locator(".board-row h2")
+  const defaultOrder = [
+    "Local time",
+    "Tomorrow morning",
+    "Welcome",
+    "Today's reminder",
+    "Daily walk",
+    "This year"
+  ]
+  await expect(titles).toHaveText(defaultOrder)
+
+  const card = page
+    .locator(".board-row")
+    .filter({ has: page.getByRole("heading", { name: "Local time" }) })
+  const cardBox = await card.boundingBox()
+  const headerBox = await card.locator(".board-row__header").boundingBox()
+
+  if (!cardBox || !headerBox) {
+    throw new Error("Unable to measure card layout")
+  }
+
+  // A point in the empty gap between the header and the body — interior space
+  // that the drag frame's donut hole now excludes. Pressing and moving here
+  // must not start a drag (only the surrounding edge is a handle).
+  const x = cardBox.x + cardBox.width / 2
+  const y = headerBox.y + headerBox.height + 12
+
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x, y + 80, { steps: 12 })
+
+  // No card entered the dragging state, so the press did not grab anything.
+  await expect(page.locator(".board-row--dragging")).toHaveCount(0)
+
+  await page.mouse.up()
+
+  // And the order is unchanged.
+  await expect(titles).toHaveText(defaultOrder)
+})
+
 test("only the draggable frame lights the card up on hover", async ({
   page,
   extensionId
