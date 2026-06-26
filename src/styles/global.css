@@ -190,6 +190,10 @@ a {
   letter-spacing: -0.04em;
   line-height: 1.1;
   margin: 0;
+  /* Clipping the gradient to the text paints it only within the line box, so a
+     tight line-height shears the descender off the "y". Give the box a little
+     room below the baseline (and balance it above) so glyphs render in full. */
+  padding-block: 0.04em 0.12em;
   background: linear-gradient(135deg, var(--text) 30%, color-mix(in srgb, var(--text) 70%, transparent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
