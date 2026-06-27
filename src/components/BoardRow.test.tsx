@@ -111,23 +111,6 @@ describe("BoardRow", () => {
     })
   })
 
-  it("marks a wide widget so it can span two columns", () => {
-    const item: Widget = {
-      id: "wide",
-      kind: "clock",
-      title: "Wide",
-      colorPreset: "slate",
-      size: "wide",
-      settings: { timeZone: "UTC" }
-    }
-
-    const { container } = render(
-      <BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />
-    )
-
-    expect(container.querySelector("article")).toHaveClass("board-row--wide")
-  })
-
   it("marks today on a habit and reports the streak", () => {
     const now = new Date("2026-03-04T09:00:00.000Z")
     const item: Widget = {

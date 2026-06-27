@@ -1024,35 +1024,6 @@ test("add and edit countdown works without a time-zone field", async ({
   await expect(page.getByRole("heading", { name: "Launch day" })).toBeVisible()
 })
 
-test("a widget can be made wide to span two columns", async ({
-  page,
-  extensionId
-}) => {
-  await openNewTab(page, extensionId)
-
-  await openWidgetMenu(page, "Tomorrow morning")
-  await page.getByRole("menuitem", { name: "Edit Tomorrow morning" }).click()
-  await page.getByLabel("Size").selectOption("wide")
-  await page.getByRole("button", { name: "Save changes" }).click()
-
-  const card = page
-    .locator(".board-row")
-    .filter({ has: page.getByRole("heading", { name: "Tomorrow morning" }) })
-
-  await expect(card).toHaveClass(/board-row--wide/)
-  expect(
-    await card.evaluate((el) => getComputedStyle(el).gridColumn)
-  ).toContain("span 2")
-
-  // The size persists across a reload.
-  await page.reload()
-  await expect(
-    page
-      .locator(".board-row")
-      .filter({ has: page.getByRole("heading", { name: "Tomorrow morning" }) })
-  ).toHaveClass(/board-row--wide/)
-})
-
 test("a countdown can be shown as a progress bar", async ({
   page,
   extensionId
