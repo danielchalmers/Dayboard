@@ -361,7 +361,6 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
   const rowClassName = [
     "board-row",
     `board-row--theme-${item.colorPreset}`,
-    item.size === "wide" ? "board-row--wide" : "",
     className
   ]
     .filter(Boolean)

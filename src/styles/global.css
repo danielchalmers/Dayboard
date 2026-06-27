@@ -419,24 +419,6 @@ details > summary::-webkit-details-marker {
   }
 }
 
-/* A "wide" widget spans two board columns. Auto-placement clamps the span to
-   the available tracks, so it falls back to full width when the board is a
-   single column; the explicit rules below cover the small-screen and
-   one-column cases too. */
-.board-row--wide {
-  grid-column: span 2;
-}
-
-@media (max-width: 720px) {
-  .board-row--wide {
-    grid-column: auto;
-  }
-}
-
-.board-list[data-columns="1"] .board-row--wide {
-  grid-column: auto;
-}
-
 /* ── Archive ───────────────────────────────────────────────────────────── */
 
 /* A floating drop target that only appears mid-drag, pinned to the bottom of
