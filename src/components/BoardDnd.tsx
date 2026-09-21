@@ -17,6 +17,8 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
 import { useEffect, useState, type ReactNode } from "react"
 
 import { BoardRow } from "~/components/BoardRow"
+import { useNow } from "~/hooks/useNow"
+import { widgetClockGranularity } from "~/lib/clock"
 import { reorderWidgets, restoreWidget } from "~/lib/widgets"
 import type { Widget } from "~/lib/types"
 
@@ -100,10 +102,16 @@ const EndStrandedKeyboardDrag = () => {
   return null
 }
 
+// The lifted card keeps time the same way its in-list twin does, from the shared clock at the granularity its kind needs, so the drag context itself never renders for a tick.
+const OverlayRow = ({ item }: { item: Widget }) => {
+  const now = useNow(widgetClockGranularity(item))
+
+  return <BoardRow className="board-row--overlay" item={item} now={now} />
+}
+
 interface BoardDndProps {
   // The full storage list, both boards' cards, so any dragged id resolves.
   widgets: Widget[]
-  now: Date
   onReorder?: (activeId: string, overId: string) => void
   onArchive?: (id: string) => void
   // `beforeId` is the board card whose slot the restored widget takes; omitted when the drop had no specific target (the empty-board zone).
@@ -115,7 +123,6 @@ interface BoardDndProps {
 // One drag context shared by the active board and the archived list, so a card can travel between them: an archived card drops onto a specific board slot to restore there, while an active card drops onto the floating archive zone.
 export const BoardDnd = ({
   widgets,
-  now,
   onReorder,
   onArchive,
   onRestore,
@@ -266,7 +273,7 @@ export const BoardDnd = ({
       {/* The lifted card follows the cursor in a portal, so it keeps tracking the pointer even over the archive zone and the other list (which sit outside its own sortable context) instead of snapping back to its slot. */}
       <DragOverlay dropAnimation={null}>
         {activeItem ? (
-          <BoardRow className="board-row--overlay" item={activeItem} now={now} />
+          <OverlayRow item={activeItem} />
         ) : null}
       </DragOverlay>
     </DndContext>

@@ -31,13 +31,14 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 
 - WXT entrypoints live in `src/entrypoints` (`newtab` for the new tab page; a minimal `background` service worker that exists so MV3 registers one).
 - The root `NewTabPage` component lives in `src/NewTabPage.tsx`; `src/entrypoints/newtab/main.tsx` mounts it.
-- Shared logic lives in `src/lib`: time and countdowns (`time`), stopwatch/timer (`timers`), quotes (`quotes`), habits (`habit`), todo lists (`todo`), the greeting (`greeting`), the optional Web Audio chime (`chime`), colors (`colors`), the widget registry (`widgets`), `types`, and `chrome.storage.sync` access (`storage`).
+- Shared logic lives in `src/lib`: time and countdowns (`time`), the page's shared clock (`clock`), stopwatch/timer (`timers`), quotes (`quotes`), habits (`habit`), todo lists (`todo`), the greeting (`greeting`), the optional Web Audio chime (`chime`), colors (`colors`), the widget registry (`widgets`), `types`, and `chrome.storage.sync` access (`storage`).
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
 - Do not add Tailwind or a UI component library.
 - The manifest is defined in `wxt.config.ts`, not a root `manifest.json` or `package.json`.
 - Static icons live in `public/` and are copied to the build output as-is.
 - Storage uses `chrome.storage.sync` with a `chrome.storage.onChanged` watch so open tabs and signed-in browsers stay in sync. Global `settings` are normalized to defaults on read (missing or malformed fields fall back) and widgets keep new fields optional for backward compatibility; there is otherwise no heavy versioning or migration layer. Writes are optimistic and roll back with a notice if the `set` fails (e.g. quota).
+- The page keeps time through one shared clock (`src/lib/clock.ts`, read with `useNow`). Cards subscribe at the granularity they can show (clocks and countdowns by the minute, habits and quotes at local midnight, a stopwatch or timer by the second only while running), the store keeps a single timeout aimed at the next boundary of the finest one wanted, and it stops while the tab is hidden. Nothing above a card renders on a tick; do not reintroduce a page-level interval or pass `now` down as a prop.
 - Keep the extension new-tab-only: no popup and no separate options entrypoint. The Options overlay lives on the new tab page itself, which `options_ui` points at (`newtab.html?view=settings`).
 - Keep the checked-in `package.json.version` at `0.0.0`; release builds set the manifest version from the `RELEASE_VERSION` environment variable.
 - Keep support for both Chrome and Edge MV3 builds.
@@ -59,6 +60,7 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
 - `npm run e2e`: run Playwright smoke tests.
+- `npm run perf:idle`: measure what the built new tab page costs while idle (timer wakes, renderer CPU, per-process CPU, DOM mutations) across seeded boards; see `scripts/idle-perf.mjs`.
 - `npm run verify`: run typecheck, unit tests, and Chrome build.
 - `npm run zip`: package the Chrome MV3 production build.
 - `npm run zip:edge`: package the Edge MV3 production build.

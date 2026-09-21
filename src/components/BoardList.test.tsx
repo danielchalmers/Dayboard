@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { createEvent, fireEvent, render, screen } from "@testing-library/react"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { act, createEvent, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
-import { BoardList, isDaySensitive, isTimeSensitive } from "./BoardList"
+import { BoardList } from "./BoardList"
 import { toDayKey } from "~/lib/habit"
-import type { Widget, WidgetKind } from "~/lib/types"
+import type { Widget } from "~/lib/types"
 
 const widgets: Widget[] = [
   {
@@ -28,8 +28,6 @@ const widgets: Widget[] = [
   }
 ]
 
-const now = new Date("2026-01-01T12:30:00.000Z")
-
 const renderActions = (item: Widget) => (
   <>
     <button aria-label={`Move ${item.title} back`} role="menuitem" type="button">
@@ -43,7 +41,7 @@ const renderActions = (item: Widget) => (
 
 const renderBoard = () =>
   render(
-    <BoardList items={widgets} now={now} renderItemActions={renderActions} />
+    <BoardList items={widgets} renderItemActions={renderActions} />
   )
 
 const openMenu = (
@@ -67,34 +65,8 @@ beforeAll(() => {
   })
 })
 
-describe("isTimeSensitive", () => {
-  it("marks only the widgets that need the per-second tick", () => {
-    const live: WidgetKind[] = ["clock", "countdown", "stopwatch", "timer"]
-    const still: WidgetKind[] = ["note", "quote", "habit"]
-
-    expect(live.every(isTimeSensitive)).toBe(true)
-    expect(still.some(isTimeSensitive)).toBe(false)
-  })
-})
-
-describe("isDaySensitive", () => {
-  it("marks only the widgets that must notice local midnight", () => {
-    const daily: WidgetKind[] = ["habit", "quote"]
-    const indifferent: WidgetKind[] = [
-      "clock",
-      "countdown",
-      "note",
-      "stopwatch",
-      "timer"
-    ]
-
-    expect(daily.every(isDaySensitive)).toBe(true)
-    expect(indifferent.some(isDaySensitive)).toBe(false)
-  })
-})
-
 // A new tab can sit open overnight.
-// These rows skip the per-second tick, so they only see a fresh `now` if the memo lets midnight through.
+// These rows never see the minute tick, so the only thing that can bring them a fresh `now` is the shared clock waking them at local midnight.
 describe("a board left open across local midnight", () => {
   const lateMonday = new Date(2026, 2, 2, 23, 59, 0)
   const earlyTuesday = new Date(2026, 2, 3, 0, 1, 0)
@@ -107,23 +79,29 @@ describe("a board left open across local midnight", () => {
     settings: { history: [] }
   }
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // Render at 23:59, then let the clock's own timeout carry the page past midnight, the way a sleeping laptop would.
+  const crossMidnight = (ui: React.ReactElement) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(lateMonday)
+
+    const rendered = render(ui)
+
+    act(() => {
+      vi.setSystemTime(earlyTuesday)
+      vi.advanceTimersByTime(2 * 60_000)
+    })
+
+    return rendered
+  }
+
   it("marks the new day, not the day the tab was opened on", () => {
     const onWidgetChange = vi.fn()
-    const { rerender } = render(
-      <BoardList
-        items={[habit]}
-        now={lateMonday}
-        onWidgetChange={onWidgetChange}
-      />
-    )
+    crossMidnight(<BoardList items={[habit]} onWidgetChange={onWidgetChange} />)
 
-    rerender(
-      <BoardList
-        items={[habit]}
-        now={earlyTuesday}
-        onWidgetChange={onWidgetChange}
-      />
-    )
     fireEvent.click(screen.getByRole("button", { name: "Mark today" }))
 
     expect(onWidgetChange).toHaveBeenCalledWith({
@@ -138,12 +116,15 @@ describe("a board left open across local midnight", () => {
       settings: { history: [toDayKey(lateMonday)] }
     }
 
-    const { container, rerender } = render(
-      <BoardList items={[done]} now={lateMonday} />
-    )
+    vi.useFakeTimers()
+    vi.setSystemTime(lateMonday)
+    const { container } = render(<BoardList items={[done]} />)
     expect(screen.getByRole("button", { name: "Done today ✓" })).toBeInTheDocument()
 
-    rerender(<BoardList items={[done]} now={earlyTuesday} />)
+    act(() => {
+      vi.setSystemTime(earlyTuesday)
+      vi.advanceTimersByTime(2 * 60_000)
+    })
 
     // Yesterday's dot stays lit, but today is unmarked again.
     expect(screen.getByRole("button", { name: "Mark today" })).toBeInTheDocument()
@@ -159,12 +140,15 @@ describe("a board left open across local midnight", () => {
       settings: { quotes: ["First", "Second"], rotation: "daily" }
     }
 
-    const { container, rerender } = render(
-      <BoardList items={[quote]} now={lateMonday} />
-    )
+    vi.useFakeTimers()
+    vi.setSystemTime(lateMonday)
+    const { container } = render(<BoardList items={[quote]} />)
     const monday = container.querySelector(".quote-text")?.textContent
 
-    rerender(<BoardList items={[quote]} now={earlyTuesday} />)
+    act(() => {
+      vi.setSystemTime(earlyTuesday)
+      vi.advanceTimersByTime(2 * 60_000)
+    })
 
     expect(container.querySelector(".quote-text")?.textContent).not.toBe(monday)
   })
@@ -172,7 +156,7 @@ describe("a board left open across local midnight", () => {
 
 describe("BoardList", () => {
   it("shows a kind-agnostic empty state when there are no widgets", () => {
-    render(<BoardList items={[]} now={now} />)
+    render(<BoardList items={[]} />)
 
     expect(
       screen.getByRole("heading", { name: "A fresh start" })
@@ -184,12 +168,12 @@ describe("BoardList", () => {
   // Every hook has to run on that render too: one declared past the empty-state return is a hook fewer than the render before it, and React throws instead of showing the empty state.
   it("swaps to the empty state when the last card goes", () => {
     const { rerender } = render(
-      <BoardList items={widgets} now={now} renderItemActions={renderActions} />
+      <BoardList items={widgets} renderItemActions={renderActions} />
     )
 
     expect(() =>
       rerender(
-        <BoardList items={[]} now={now} renderItemActions={renderActions} />
+        <BoardList items={[]} renderItemActions={renderActions} />
       )
     ).not.toThrow()
 
@@ -199,7 +183,7 @@ describe("BoardList", () => {
   })
 
   it("makes each widget card draggable by its frame", () => {
-    const { container } = render(<BoardList items={widgets} now={now} />)
+    const { container } = render(<BoardList items={widgets} />)
 
     const frames = container.querySelectorAll(".board-row__frame")
     const cards = new Set(

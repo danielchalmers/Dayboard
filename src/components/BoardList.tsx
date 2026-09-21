@@ -20,12 +20,12 @@ import {
 
 import { BOARD_DROP_ID } from "~/components/BoardDnd"
 import { BoardRow } from "~/components/BoardRow"
-import { isSameLocalDay } from "~/lib/time"
+import { useNow } from "~/hooks/useNow"
+import { widgetClockGranularity } from "~/lib/clock"
 import type { Widget } from "~/lib/types"
 
 interface BoardListProps {
   items: Widget[]
-  now: Date
   // Marks this list as the place archived cards land when dragged back: the grid highlights while a foreign card is in flight, and the empty state becomes a drop target of its own.
   restoreTarget?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
@@ -299,7 +299,6 @@ const WidgetContextMenu = ({
 
 interface SortableBoardRowProps {
   item: Widget
-  now: Date
   isMenuOpen: boolean
   hasActions: boolean
   animateEnter: boolean
@@ -309,46 +308,9 @@ interface SortableBoardRowProps {
   onWidgetChange?: (widget: Widget) => void
 }
 
-// Time-sensitive widgets must re-render on every tick; the rest can skip both the per-second tick and unrelated edits as long as their own props are equal.
-export const isTimeSensitive = (kind: Widget["kind"]) =>
-  kind === "clock" ||
-  kind === "countdown" ||
-  kind === "stopwatch" ||
-  kind === "timer"
-
-// Day-sensitive widgets read `now` only to ask which local day it is: the habit widget's dot row and "Mark today" write, and the quote widget's daily rotation.
-// They skip the per-second tick like any still widget, but they must re-render at midnight, or a tab left open overnight would hold yesterday's `now` and mark yesterday when the user marks today.
-export const isDaySensitive = (kind: Widget["kind"]) =>
-  kind === "habit" || kind === "quote"
-
-const areRowsEqual = (
-  prev: SortableBoardRowProps,
-  next: SortableBoardRowProps
-): boolean => {
-  if (isTimeSensitive(next.item.kind)) {
-    return false
-  }
-
-  if (isDaySensitive(next.item.kind) && !isSameLocalDay(prev.now, next.now)) {
-    return false
-  }
-
-  // `now` is otherwise excluded: nothing else on these cards changes within a day.
-  return (
-    prev.item === next.item &&
-    prev.isMenuOpen === next.isMenuOpen &&
-    prev.hasActions === next.hasActions &&
-    prev.animateEnter === next.animateEnter &&
-    prev.prefersReducedMotion === next.prefersReducedMotion &&
-    prev.onCloseMenu === next.onCloseMenu &&
-    prev.onOpenMenu === next.onOpenMenu &&
-    prev.onWidgetChange === next.onWidgetChange
-  )
-}
-
+// Every prop below is stable across a clock tick, so React's shallow compare is the whole memo: a row renders when its own widget, menu state, or callbacks change, and otherwise only when its own clock subscription fires.
 const SortableBoardRow = memo(({
   item,
-  now,
   isMenuOpen,
   hasActions,
   animateEnter,
@@ -357,6 +319,8 @@ const SortableBoardRow = memo(({
   onOpenMenu,
   onWidgetChange
 }: SortableBoardRowProps) => {
+  // Each card keeps its own time at the coarsest step it can show, so a note never wakes for a clock and a clock never wakes for a running stopwatch.
+  const now = useNow(widgetClockGranularity(item))
   const {
     listeners,
     isDragging,
@@ -462,11 +426,10 @@ const SortableBoardRow = memo(({
       }}
     />
   )
-}, areRowsEqual)
+})
 
 export const BoardList = ({
   items,
-  now,
   restoreTarget = false,
   renderItemActions,
   onWidgetChange
@@ -539,7 +502,6 @@ export const BoardList = ({
               isMenuOpen={openMenu?.id === item.id}
               item={item}
               key={item.id}
-              now={now}
               onCloseMenu={closeMenu}
               onOpenMenu={handleOpenMenu}
               onWidgetChange={onWidgetChange}
