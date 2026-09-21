@@ -162,8 +162,9 @@ describe("BoardRow", () => {
     expect(screen.getByText("50%")).toBeInTheDocument()
     const bar = screen.getByRole("progressbar", { name: "Year progress" })
     expect(bar).toHaveAttribute("aria-valuenow", "50")
+    // A full-width fill slid left by what remains, so the update is a compositor transform rather than a layout.
     expect(bar.querySelector(".progress-bar__fill")).toHaveStyle({
-      inlineSize: "50%"
+      transform: "translateX(-50%)"
     })
   })
 

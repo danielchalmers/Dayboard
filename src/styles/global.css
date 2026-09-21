@@ -798,8 +798,10 @@ details > summary::-webkit-details-marker {
   );
   block-size: 100%;
   border-radius: inherit;
-  min-inline-size: 0;
-  transition: inline-size var(--t-normal);
+  /* The fill is drawn at full width and slid left by what is still to come, rather than sized to the percentage: a transform animates on the compositor without relaying out the card, where an `inline-size` transition ran a layout on every frame of every update.
+     Sliding rather than scaling keeps the rounded end its true shape; the track's own rounded overflow clips the other end. */
+  inline-size: 100%;
+  transition: transform var(--t-normal);
 }
 
 .board-row__value--timer-done {

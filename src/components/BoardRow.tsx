@@ -724,7 +724,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
           aria-valuenow={percent}>
           <div
             className="progress-bar__fill"
-            style={{ inlineSize: `${percent}%` }}
+            style={{ transform: `translateX(${percent - 100}%)` }}
           />
         </div>
         <p className="board-row__meta">{status}</p>
