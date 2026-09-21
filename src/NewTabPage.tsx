@@ -75,6 +75,18 @@ const wantsSettingsView = (): boolean => {
   )
 }
 
+// The greeting turns over with the hour and the date at midnight, so the header keeps its own minute subscription: nothing else on the page has a reason to render when the clock moves.
+const PageGreeting = ({ name }: { name: string }) => {
+  const now = useNow("minute")
+
+  return (
+    <div>
+      <h1 className="page-header__greeting">{getGreeting(now, name)}</h1>
+      <p className="page-header__date">{getHeaderDate(now)}</p>
+    </div>
+  )
+}
+
 const closeOpenMenus = (eventPath?: EventTarget[]) => {
   document
     .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
@@ -86,7 +98,6 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
 }
 
 export function NewTabPage() {
-  const now = useNow()
   const {
     state,
     isLoading,
@@ -205,12 +216,7 @@ export function NewTabPage() {
     <>
       <main className="page">
         <header className="page-header">
-          <div>
-            <h1 className="page-header__greeting">
-              {getGreeting(now, state.settings.name)}
-            </h1>
-            <p className="page-header__date">{getHeaderDate(now)}</p>
-          </div>
+          <PageGreeting name={state.settings.name} />
           <div className="page-header__actions">
             <button
               aria-label="Options"
@@ -295,7 +301,6 @@ export function NewTabPage() {
         {/* One drag context spans the board and the archived list, so an archived card can be dragged straight into the exact board slot it should take, while an active card heads for the archive drop zone.
             The lists render from BoardDnd's view of the widgets, which mid-drag previews the restore with the dragged card already sitting in its board slot. */}
         <BoardDnd
-          now={now}
           widgets={state.widgets}
           onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
           onReorder={reorderList}
@@ -314,7 +319,6 @@ export function NewTabPage() {
               <>
                 <BoardList
                   items={activeWidgets}
-                  now={now}
                   restoreTarget
                   onWidgetChange={updateWidget}
                   renderItemActions={(item, index) => (
@@ -406,7 +410,6 @@ export function NewTabPage() {
                     {showArchived ? (
                       <BoardList
                         items={archivedWidgets}
-                        now={now}
                         onWidgetChange={updateWidget}
                         renderItemActions={(item) => (
                           <>
