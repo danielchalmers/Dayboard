@@ -19,7 +19,6 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "perf:idle": "node scripts/idle-perf.mjs",
     "verify": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

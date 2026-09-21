@@ -60,7 +60,6 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
 - `npm run e2e`: run Playwright smoke tests.
-- `npm run perf:idle`: measure what the built new tab page costs while idle (timer wakes, renderer CPU, per-process CPU, DOM mutations) across seeded boards; see `scripts/idle-perf.mjs`.
 - `npm run verify`: run typecheck, unit tests, and Chrome build.
 - `npm run zip`: package the Chrome MV3 production build.
 - `npm run zip:edge`: package the Edge MV3 production build.
