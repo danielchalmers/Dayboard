@@ -16,7 +16,8 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
 import { useEffect, useState, type ReactNode } from "react"
 
-import { BoardRow } from "~/components/BoardRow"
+import { BoardRow, BoardRowFallback } from "~/components/BoardRow"
+import { CardBoundary } from "~/components/CardBoundary"
 import { useNow } from "~/hooks/useNow"
 import { widgetClockGranularity } from "~/lib/clock"
 import { reorderWidgets, restoreWidget } from "~/lib/widgets"
@@ -106,7 +107,13 @@ const EndStrandedKeyboardDrag = () => {
 const OverlayRow = ({ item }: { item: Widget }) => {
   const now = useNow(widgetClockGranularity(item))
 
-  return <BoardRow className="board-row--overlay" item={item} now={now} />
+  return (
+    <CardBoundary
+      fallback={<BoardRowFallback className="board-row--overlay" item={item} />}
+      item={item}>
+      <BoardRow className="board-row--overlay" item={item} now={now} />
+    </CardBoundary>
+  )
 }
 
 interface BoardDndProps {

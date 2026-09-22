@@ -604,6 +604,17 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
   )
 })
 
+// What a card shows when its body threw while rendering: its own frame and title, so it can still be found, dragged, and edited or deleted from its menu, and the rest of the board carries on around it.
+export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange">>(
+  function BoardRowFallback(props, ref) {
+    return (
+      <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
+        {null}
+      </CardShell>
+    )
+  }
+)
+
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
   {
     item,

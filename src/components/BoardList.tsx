@@ -19,7 +19,8 @@ import {
 } from "react"
 
 import { BOARD_DROP_ID } from "~/components/BoardDnd"
-import { BoardRow } from "~/components/BoardRow"
+import { BoardRow, BoardRowFallback } from "~/components/BoardRow"
+import { CardBoundary } from "~/components/CardBoundary"
 import { useNow } from "~/hooks/useNow"
 import { widgetClockGranularity } from "~/lib/clock"
 import type { Widget } from "~/lib/types"
@@ -404,27 +405,29 @@ const SortableBoardRow = memo(({
     | PointerEventHandler<HTMLDivElement>
     | undefined
 
+  const shared = {
+    articleProps: {
+      "aria-haspopup": hasActions ? ("menu" as const) : undefined,
+      onContextMenu: handleContextMenu,
+      onKeyDown: handleKeyDown,
+      tabIndex: 0
+    },
+    dragHandleProps: { onPointerDown },
+    className,
+    item,
+    ref: setNodeRef,
+    style: {
+      // The drag overlay renders the lifted card that follows the cursor, so the in-list item stays in place as a dimmed placeholder.
+      // Translating it here is what previously made it snap back to its slot when dragged over the archive zone (a droppable outside the sortable list).
+      transform: isDragging ? undefined : CSS.Transform.toString(transform),
+      transition: prefersReducedMotion ? undefined : transition
+    }
+  }
+
   return (
-    <BoardRow
-      articleProps={{
-        "aria-haspopup": hasActions ? "menu" : undefined,
-        onContextMenu: handleContextMenu,
-        onKeyDown: handleKeyDown,
-        tabIndex: 0
-      }}
-      dragHandleProps={{ onPointerDown }}
-      className={className}
-      item={item}
-      now={now}
-      onWidgetChange={onWidgetChange}
-      ref={setNodeRef}
-      style={{
-        // The drag overlay renders the lifted card that follows the cursor, so the in-list item stays in place as a dimmed placeholder.
-        // Translating it here is what previously made it snap back to its slot when dragged over the archive zone (a droppable outside the sortable list).
-        transform: isDragging ? undefined : CSS.Transform.toString(transform),
-        transition: prefersReducedMotion ? undefined : transition
-      }}
-    />
+    <CardBoundary fallback={<BoardRowFallback {...shared} />} item={item}>
+      <BoardRow {...shared} now={now} onWidgetChange={onWidgetChange} />
+    </CardBoundary>
   )
 })
 

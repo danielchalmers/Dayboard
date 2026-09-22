@@ -3,7 +3,8 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BoardRow } from "./BoardRow"
+import { BoardRow, BoardRowFallback } from "./BoardRow"
+import { CardBoundary } from "./CardBoundary"
 import { playChime, primeChime } from "~/lib/chime"
 import { formatDayLabel, toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
@@ -775,5 +776,44 @@ describe("BoardRow", () => {
         settings: { text: "Idea" }
       })
     })
+  })
+})
+
+describe("CardBoundary", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const Throws = (): never => {
+    throw new Error("unreadable card")
+  }
+  const note: Widget = {
+    id: "n",
+    kind: "note",
+    title: "Groceries",
+    colorPreset: "mint",
+    settings: { text: "" }
+  }
+
+  it("shows the card's frame in place of a body that threw, and tries again once the widget changes", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const { rerender } = render(
+      <CardBoundary fallback={<BoardRowFallback item={note} />} item={note}>
+        <Throws />
+      </CardBoundary>
+    )
+
+    expect(screen.getByRole("heading", { name: "Groceries" })).toBeInTheDocument()
+    expect(screen.getByText("This card couldn’t be shown")).toBeInTheDocument()
+
+    const edited = { ...note, title: "Shopping" }
+    rerender(
+      <CardBoundary fallback={<BoardRowFallback item={edited} />} item={edited}>
+        <BoardRow item={edited} now={new Date()} />
+      </CardBoundary>
+    )
+
+    expect(screen.getByLabelText("Shopping note")).toBeInTheDocument()
   })
 })
