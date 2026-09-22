@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   readCachedDayboardState,
   readDayboardState,
+  shareUnchanged,
   watchDayboardState,
   writeDayboardState
 } from "~/lib/storage"
@@ -36,9 +37,21 @@ export const useDayboardState = (): UseDayboardStateResult => {
     setState(next)
   }, [])
 
+  // Reads and storage changes keep every widget object that did not change, so the memoized cards only render for the ones that did.
+  const adopt = useCallback(
+    (incoming: DayboardState) => {
+      const next = shareUnchanged(stateRef.current, incoming)
+
+      if (next !== stateRef.current) {
+        commit(next)
+      }
+    },
+    [commit]
+  )
+
   const reload = useCallback(async () => {
     try {
-      commit(await readDayboardState())
+      adopt(await readDayboardState())
       setError(null)
     } catch (cause) {
       // A cached board on screen beats a blocking error page, so only surface the failure when there is nothing to show.
@@ -48,7 +61,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
     } finally {
       setIsLoading(false)
     }
-  }, [commit])
+  }, [adopt])
 
   useEffect(() => {
     void reload()
@@ -56,7 +69,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   useEffect(() => {
     const stopWatching = watchDayboardState((nextState) => {
-      commit(nextState)
+      adopt(nextState)
       setIsLoading(false)
       setError(null)
     })
@@ -64,7 +77,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
     return () => {
       stopWatching()
     }
-  }, [commit])
+  }, [adopt])
 
   const saveState = useCallback(
     async (nextState: DayboardState) => {

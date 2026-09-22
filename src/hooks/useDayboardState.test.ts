@@ -115,6 +115,28 @@ describe("useDayboardState change handling", () => {
     unmount()
   })
 
+  it("leaves the board untouched when storage echoes back what is already shown", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+    const shown = result.current.state
+
+    const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
+    act(() => {
+      listener(
+        { "dayboard-state": { newValue: JSON.parse(JSON.stringify(board)) } },
+        "sync"
+      )
+    })
+
+    expect(result.current.state).toBe(shown)
+
+    unmount()
+  })
+
 })
 
 describe("useDayboardState load failure handling", () => {

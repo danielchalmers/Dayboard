@@ -169,6 +169,59 @@ const normalizeState = (value: unknown): DayboardState => {
   }
 }
 
+// Structural equality over plain JSON data, blind to key order, which differs between a widget built in the page and the same widget read back out of storage.
+const isSameData = (a: unknown, b: unknown): boolean => {
+  if (a === b) {
+    return true
+  }
+
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
+    return false
+  }
+
+  if (Array.isArray(a) !== Array.isArray(b)) {
+    return false
+  }
+
+  const aKeys = Object.keys(a).filter((key) => (a as StoredSettings)[key] !== undefined)
+  const bKeys = Object.keys(b).filter((key) => (b as StoredSettings)[key] !== undefined)
+
+  return (
+    aKeys.length === bKeys.length &&
+    aKeys.every((key) =>
+      isSameData((a as StoredSettings)[key], (b as StoredSettings)[key])
+    )
+  )
+}
+
+// Every read and every storage change arrives as a freshly parsed board, so taken as-is it hands each card a new widget object and every memoized card re-renders, including on the echo of a write this tab just made.
+// Keep the objects that did not change, and the whole previous board when nothing did, so a change only renders the cards it touched and an echo renders nothing.
+export const shareUnchanged = (
+  previous: DayboardState | null,
+  next: DayboardState
+): DayboardState => {
+  if (!previous) {
+    return next
+  }
+
+  const byId = new Map(previous.widgets.map((widget) => [widget.id, widget]))
+  const widgets = next.widgets.map((widget) => {
+    const existing = byId.get(widget.id)
+
+    return existing && isSameData(existing, widget) ? existing : widget
+  })
+  const settings = isSameData(previous.settings, next.settings)
+    ? previous.settings
+    : next.settings
+
+  const isUnchanged =
+    settings === previous.settings &&
+    widgets.length === previous.widgets.length &&
+    widgets.every((widget, index) => widget === previous.widgets[index])
+
+  return isUnchanged ? previous : { widgets, settings }
+}
+
 // chrome.storage.sync reads are async IPC, so every new tab would open blank for a few frames while waiting on them.
 // Mirroring the last-known board into localStorage lets the first render hydrate synchronously; the authoritative sync read then reconciles anything that changed on another device.
 const cacheDayboardState = (state: DayboardState) => {

@@ -309,6 +309,44 @@ describe("normalizing widgets read from storage or an import", () => {
   })
 })
 
+describe("shareUnchanged", () => {
+  it("keeps the previous board when a read or echo carries the same data", async () => {
+    const { shareUnchanged } = await import("./storage")
+    const echo = JSON.parse(JSON.stringify(sampleState)) as DayboardState
+
+    expect(shareUnchanged(sampleState, echo)).toBe(sampleState)
+  })
+
+  it("keeps the widgets that did not change and swaps in the ones that did", async () => {
+    const { shareUnchanged } = await import("./storage")
+    const note = {
+      id: "note-1",
+      kind: "note",
+      title: "Note",
+      colorPreset: "mint",
+      settings: { text: "a" }
+    } as const
+    const previous: DayboardState = { ...sampleState, widgets: [...sampleState.widgets, note] }
+    // Key order differs from the page's own objects once a widget has been round-tripped, so it must not count as a change.
+    const reordered = { settings: { text: "b" }, colorPreset: "mint", title: "Note", kind: "note", id: "note-1" } as const
+    const next = shareUnchanged(previous, {
+      ...previous,
+      widgets: [JSON.parse(JSON.stringify(previous.widgets[0])), reordered]
+    })
+
+    expect(next).not.toBe(previous)
+    expect(next.widgets[0]).toBe(previous.widgets[0])
+    expect(next.widgets[1]).toBe(reordered)
+    expect(next.settings).toBe(previous.settings)
+  })
+
+  it("adopts the incoming board outright when there is nothing to compare with", async () => {
+    const { shareUnchanged } = await import("./storage")
+
+    expect(shareUnchanged(null, sampleState)).toBe(sampleState)
+  })
+})
+
 describe("serializeDayboardState / parseDayboardState", () => {
   it("round-trips a board through JSON", async () => {
     const { serializeDayboardState, parseDayboardState } = await import(
