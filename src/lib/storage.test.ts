@@ -237,6 +237,78 @@ describe("readDayboardState", () => {
   })
 })
 
+describe("normalizing widgets read from storage or an import", () => {
+  const widget = (kind: string, settings: unknown, extra = {}) => ({
+    id: kind,
+    kind,
+    title: "Card",
+    colorPreset: "sky",
+    settings,
+    ...extra
+  })
+
+  const parse = async (widgets: unknown[]) => {
+    const { parseDayboardState } = await import("./storage")
+
+    return parseDayboardState(JSON.stringify({ widgets })).widgets
+  }
+
+  it("rebuilds each field a card reads when it arrives with the wrong type", async () => {
+    const widgets = await parse([
+      widget("clock", { timeZone: 5 }),
+      widget("countdown", { targetAt: 123, startAt: 4, repeat: "fortnightly" }),
+      widget("note", { text: null }),
+      widget("quote", { quotes: ["One", 2, "Three"], rotation: "shuffled" }),
+      widget("stopwatch", { running: true, elapsedMs: "y", startedAt: "x" }),
+      widget("timer", { durationMs: -1, running: true, remainingMs: Number.NaN, endsAt: null })
+    ])
+
+    expect(widgets.map((entry) => entry.settings)).toEqual([
+      { timeZone: "" },
+      { targetAt: "" },
+      { text: "" },
+      { quotes: ["One", "Three"], rotation: "daily" },
+      { running: false, elapsedMs: 0, startedAt: null },
+      { durationMs: 300_000, running: false, remainingMs: 300_000, endsAt: null, chime: false }
+    ])
+  })
+
+  it("falls back on the card's own fields too", async () => {
+    const [entry] = await parse([
+      widget("note", { text: "Hi" }, { title: { x: 1 }, colorPreset: "plaid", archived: "yes" })
+    ])
+
+    expect(entry).toEqual({
+      id: "note",
+      kind: "note",
+      title: "",
+      colorPreset: "slate",
+      settings: { text: "Hi" }
+    })
+  })
+
+  it("keeps fields this build does not know, for the version that wrote them", async () => {
+    const [entry] = await parse([
+      widget("countdown", { targetAt: "2027-01-01T00:00:00.000Z", repeat: "weekly", label: "later" }, { pinned: true })
+    ])
+
+    expect(entry).toMatchObject({
+      pinned: true,
+      settings: { targetAt: "2027-01-01T00:00:00.000Z", repeat: "weekly", label: "later" }
+    })
+  })
+
+  it("drops a widget whose id repeats, and a kind that only exists on Object's prototype", async () => {
+    const widgets = await parse([
+      widget("note", { text: "first" }),
+      widget("note", { text: "second" }),
+      { ...widget("toString", {}), id: "odd" }
+    ])
+
+    expect(widgets.map((entry) => entry.settings)).toEqual([{ text: "first" }])
+  })
+})
+
 describe("serializeDayboardState / parseDayboardState", () => {
   it("round-trips a board through JSON", async () => {
     const { serializeDayboardState, parseDayboardState } = await import(

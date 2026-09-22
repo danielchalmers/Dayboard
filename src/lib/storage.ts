@@ -1,6 +1,8 @@
+import { COLOR_PRESETS } from "./colors"
 import {
   DEFAULT_SETTINGS,
   createDefaultState,
+  type CountdownRepeat,
   type CountdownWidget,
   type DayboardSettings,
   type DayboardState,
@@ -8,7 +10,7 @@ import {
 } from "./types"
 import { normalizeHistory } from "./habit"
 import { normalizeTasks } from "./todo"
-import { widgetRegistry } from "./widgets"
+import { DEFAULT_TIMER_DURATION_MS, widgetRegistry } from "./widgets"
 
 export const STORAGE_KEY = "dayboard-state"
 export const CACHE_KEY = "dayboard-state-cache"
@@ -24,7 +26,8 @@ const isValidWidget = (value: unknown): value is Widget =>
   typeof value === "object" &&
   value !== null &&
   typeof (value as Widget).id === "string" &&
-  (value as Widget).kind in widgetRegistry &&
+  // An own key, not `in`: the registry is a plain object, so `in` also lets through kinds such as "toString" off its prototype.
+  Object.hasOwn(widgetRegistry, (value as Widget).kind) &&
   typeof (value as Widget).settings === "object" &&
   (value as Widget).settings !== null
 
@@ -39,40 +42,120 @@ const normalizeSettings = (value: unknown): DayboardSettings => {
   }
 }
 
+const REPEATS: CountdownRepeat[] = ["none", "hourly", "daily", "weekly", "monthly", "yearly"]
+
+const text = (value: unknown): string => (typeof value === "string" ? value : "")
+
+const span = (value: unknown, fallback: number): number =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : fallback
+
+const instant = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null
+
+type StoredSettings = Record<string, unknown>
+
 // Countdowns used to carry a `display` setting choosing between the remaining time and a progress bar; a start date is now the only switch.
 // Boards written before that still carry the key, so retire it on read, dropping the start alongside it when the card was set to text, which would otherwise come back as a bar the owner never asked for.
-const normalizeCountdown = (widget: CountdownWidget): CountdownWidget => {
-  const { display, startAt, ...settings } = widget.settings as
-    CountdownWidget["settings"] & { display?: string }
+// A repeat this build does not know is dropped rather than stepped by, since stepping by it runs the target off into an invalid date that throws on its way to the screen.
+const normalizeCountdown = ({
+  display,
+  startAt,
+  repeat,
+  ...settings
+}: StoredSettings): CountdownWidget["settings"] => {
+  const known = REPEATS.find((option) => option === repeat)
 
-  if (display === undefined) {
-    return widget
+  return {
+    ...settings,
+    targetAt: text(settings.targetAt),
+    ...(typeof startAt === "string" && (display === undefined || display === "progress")
+      ? { startAt }
+      : {}),
+    ...(known ? { repeat: known } : {})
   }
-
-  return display === "progress"
-    ? { ...widget, settings: { ...settings, startAt } }
-    : { ...widget, settings }
 }
 
-// Habit history used to be stored unbounded, every completed day key, which after a year or two of use is large enough that two habits blow the sync per-item quota and every save of the board fails.
-// Prune to the visible week on read so existing boards shrink the first time they load.
+// Every card reads its settings straight from render, so one field of the wrong type (a hand-edited import, or a board synced in from a different version of Dayboard) would throw there and blank the whole page.
+// So each field a card reads is checked here and falls back to what a new card starts with, while fields this build doesn't know are carried through untouched for the version that wrote them.
+// Habit history is pruned to the visible week: it was once stored unbounded, which after a year or two blew the sync per-item quota and made every save fail.
 // Todo lists are held to the same limits the card enforces, so an imported file cannot arrive carrying more than a board can save.
-const normalizeWidget = (widget: Widget): Widget => {
-  if (widget.kind === "habit") {
-    return {
-      ...widget,
-      settings: { history: normalizeHistory(widget.settings.history) }
-    }
-  }
+const normalizeWidgetSettings = (
+  kind: Widget["kind"],
+  settings: StoredSettings
+): Widget["settings"] => {
+  switch (kind) {
+    case "clock":
+      return { ...settings, timeZone: text(settings.timeZone) }
+    case "countdown":
+      return normalizeCountdown(settings)
+    case "note":
+      return { ...settings, text: text(settings.text) }
+    case "quote":
+      return {
+        ...settings,
+        quotes: Array.isArray(settings.quotes)
+          ? settings.quotes.filter((quote) => typeof quote === "string")
+          : [],
+        rotation: settings.rotation === "open" ? "open" : "daily"
+      }
+    case "stopwatch": {
+      const startedAt = instant(settings.startedAt)
 
-  if (widget.kind === "todo") {
-    return {
-      ...widget,
-      settings: { tasks: normalizeTasks(widget.settings.tasks) }
+      return {
+        ...settings,
+        running: settings.running === true && startedAt !== null,
+        elapsedMs: span(settings.elapsedMs, 0),
+        startedAt
+      }
     }
-  }
+    case "timer": {
+      const durationMs = span(settings.durationMs, 0) || DEFAULT_TIMER_DURATION_MS
+      const endsAt = instant(settings.endsAt)
 
-  return widget.kind === "countdown" ? normalizeCountdown(widget) : widget
+      return {
+        ...settings,
+        durationMs,
+        running: settings.running === true && endsAt !== null,
+        remainingMs: span(settings.remainingMs, durationMs),
+        endsAt,
+        chime: settings.chime === true
+      }
+    }
+    case "habit":
+      return { history: normalizeHistory(settings.history) }
+    case "todo":
+      return { tasks: normalizeTasks(settings.tasks) }
+  }
+}
+
+const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
+  ({
+    ...widget,
+    title: text(widget.title),
+    colorPreset: COLOR_PRESETS.some((preset) => preset.id === widget.colorPreset)
+      ? widget.colorPreset
+      : COLOR_PRESETS[0]!.id,
+    ...(archived === true ? { archived } : {}),
+    settings: normalizeWidgetSettings(
+      widget.kind,
+      widget.settings as unknown as StoredSettings
+    )
+  }) as Widget
+
+// A widget whose id repeats one already seen is dropped: the board keys cards and routes edits by id, so a second card under the same one would render twice and take the first one's edits.
+const uniqueIds = (widgets: Widget[]): Widget[] => {
+  const seen = new Set<string>()
+
+  return widgets.filter((widget) => {
+    if (seen.has(widget.id)) {
+      return false
+    }
+
+    seen.add(widget.id)
+    return true
+  })
 }
 
 const normalizeState = (value: unknown): DayboardState => {
@@ -81,7 +164,7 @@ const normalizeState = (value: unknown): DayboardState => {
   }
 
   return {
-    widgets: value.widgets.filter(isValidWidget).map(normalizeWidget),
+    widgets: uniqueIds(value.widgets.filter(isValidWidget)).map(normalizeWidget),
     settings: normalizeSettings((value as { settings?: unknown }).settings)
   }
 }
