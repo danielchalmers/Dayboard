@@ -741,6 +741,7 @@ describe("BoardRow", () => {
   describe("with fake timers", () => {
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
     it("auto-saves a note a short beat after typing stops", () => {
@@ -773,6 +774,82 @@ describe("BoardRow", () => {
 
       expect(onWidgetChange).toHaveBeenCalledWith({
         ...item,
+        settings: { text: "Idea" }
+      })
+    })
+
+    const scratch: Widget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "" }
+    }
+
+    it("hands a pending note over the moment the page is hidden", () => {
+      vi.useFakeTimers()
+      const onWidgetChange = vi.fn()
+
+      render(
+        <BoardRow item={scratch} now={new Date()} onWidgetChange={onWidgetChange} />
+      )
+      fireEvent.change(screen.getByLabelText("Scratchpad note"), {
+        target: { value: "Closing now" }
+      })
+
+      // Closing a tab hides it before it goes, with no blur and no unmount on the way.
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      document.dispatchEvent(new Event("visibilitychange"))
+
+      expect(onWidgetChange).toHaveBeenCalledTimes(1)
+      expect(onWidgetChange).toHaveBeenCalledWith({
+        ...scratch,
+        settings: { text: "Closing now" }
+      })
+
+      // The timer it replaced does not save the same text a second time.
+      vi.advanceTimersByTime(600)
+      expect(onWidgetChange).toHaveBeenCalledTimes(1)
+    })
+
+    it("saves a pending note when the card unmounts", () => {
+      vi.useFakeTimers()
+      const onWidgetChange = vi.fn()
+
+      const { unmount } = render(
+        <BoardRow item={scratch} now={new Date()} onWidgetChange={onWidgetChange} />
+      )
+      fireEvent.change(screen.getByLabelText("Scratchpad note"), {
+        target: { value: "Last words" }
+      })
+      unmount()
+
+      expect(onWidgetChange).toHaveBeenCalledWith({
+        ...scratch,
+        settings: { text: "Last words" }
+      })
+    })
+
+    it("builds a delayed note save on the widget as it is now, not as it was when typed", () => {
+      vi.useFakeTimers()
+      const onWidgetChange = vi.fn()
+
+      const { rerender } = render(
+        <BoardRow item={scratch} now={new Date()} onWidgetChange={onWidgetChange} />
+      )
+      fireEvent.change(screen.getByLabelText("Scratchpad note"), {
+        target: { value: "Idea" }
+      })
+
+      // Archived from another tab while the save was still waiting.
+      const archived = { ...scratch, archived: true }
+      rerender(
+        <BoardRow item={archived} now={new Date()} onWidgetChange={onWidgetChange} />
+      )
+      vi.advanceTimersByTime(600)
+
+      expect(onWidgetChange).toHaveBeenCalledWith({
+        ...archived,
         settings: { text: "Idea" }
       })
     })

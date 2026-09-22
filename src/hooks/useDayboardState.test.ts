@@ -115,6 +115,23 @@ describe("useDayboardState change handling", () => {
     unmount()
   })
 
+  it("does not write when the changed widget is no longer on the board", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.updateWidget({ ...board.widgets[0]!, id: "gone" })
+    })
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
   it("leaves the board untouched when storage echoes back what is already shown", async () => {
     stubChrome({ get: async (key) => ({ [key]: board }) })
 

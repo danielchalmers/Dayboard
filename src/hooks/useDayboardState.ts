@@ -138,7 +138,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const updateWidget = useCallback(
     async (widget: Widget) => {
       const current = stateRef.current
-      if (!current) {
+
+      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), and writing the board back unchanged would only spend sync quota.
+      if (!current?.widgets.some((existing) => existing.id === widget.id)) {
         return
       }
 

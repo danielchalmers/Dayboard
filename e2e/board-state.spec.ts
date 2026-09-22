@@ -120,6 +120,24 @@ test("a countdown whose span has run out reads as complete", async ({
   await expect(card.getByText(/left|ago/)).toHaveCount(0)
 })
 
+test("a note typed just before its tab closes keeps every keystroke", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await addWidget(page, "note", "Scratch")
+
+  // Typed and closed inside the auto-save's pause, with no blur on the way out: the page being hidden is the last chance to hand the text over.
+  await page.getByLabel("Scratch note").pressSequentially("Last thought")
+  await page.close({ runBeforeUnload: true })
+
+  const reopened = await context.newPage()
+  await reopened.goto(`chrome-extension://${extensionId}/newtab.html`)
+
+  await expect(reopened.getByLabel("Scratch note")).toHaveValue("Last thought")
+})
+
 test("a card carrying data this version can't read leaves the rest of the board standing", async ({
   page,
   extensionId
