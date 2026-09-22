@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   readCachedDayboardState,
   readDayboardState,
+  shareUnchanged,
   watchDayboardState,
   writeDayboardState
 } from "~/lib/storage"
@@ -27,13 +28,30 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const [error, setError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Track the latest state so saveState can roll back without depending on it.
+  // The latest board, for the callbacks below to build on without depending on it.
+  // It moves the moment a change is made rather than on the next render: two changes in one tick (two timers finishing together) would otherwise both start from the board before either, and the second would write the first one back out.
   const stateRef = useRef(state)
-  stateRef.current = state
+
+  const commit = useCallback((next: DayboardState) => {
+    stateRef.current = next
+    setState(next)
+  }, [])
+
+  // Reads and storage changes keep every widget object that did not change, so the memoized cards only render for the ones that did.
+  const adopt = useCallback(
+    (incoming: DayboardState) => {
+      const next = shareUnchanged(stateRef.current, incoming)
+
+      if (next !== stateRef.current) {
+        commit(next)
+      }
+    },
+    [commit]
+  )
 
   const reload = useCallback(async () => {
     try {
-      setState(await readDayboardState())
+      adopt(await readDayboardState())
       setError(null)
     } catch (cause) {
       // A cached board on screen beats a blocking error page, so only surface the failure when there is nothing to show.
@@ -43,7 +61,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [adopt])
 
   useEffect(() => {
     void reload()
@@ -51,7 +69,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   useEffect(() => {
     const stopWatching = watchDayboardState((nextState) => {
-      setState(nextState)
+      adopt(nextState)
       setIsLoading(false)
       setError(null)
     })
@@ -59,24 +77,36 @@ export const useDayboardState = (): UseDayboardStateResult => {
     return () => {
       stopWatching()
     }
-  }, [])
+  }, [adopt])
 
-  const saveState = useCallback(async (nextState: DayboardState) => {
-    const previous = stateRef.current
-    setState(nextState)
-    setSaveError(null)
+  const saveState = useCallback(
+    async (nextState: DayboardState) => {
+      const previous = stateRef.current
+      commit(nextState)
+      setSaveError(null)
 
-    try {
-      await writeDayboardState(nextState)
-    } catch {
-      // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit).
-      // Roll back so the UI matches storage and surface a calm notice instead of silently diverging.
-      if (previous) {
-        setState(previous)
+      try {
+        await writeDayboardState(nextState)
+      } catch {
+        // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit), so put the board back to what storage holds and surface a calm notice instead of silently diverging.
+        // Storage is asked rather than the board from before this change being restored, because a later change made while this write was in flight may have landed, and restoring the snapshot would take it off the screen while it sits in storage.
+        let restored = previous
+
+        try {
+          restored = await readDayboardState()
+        } catch {
+          // Storage can't be read either, so the snapshot is the best there is.
+        }
+
+        if (restored) {
+          adopt(restored)
+        }
+
+        setSaveError("Couldn’t save — this board may be too large to sync.")
       }
-      setSaveError("Couldn’t save — this board may be too large to sync.")
-    }
-  }, [])
+    },
+    [adopt, commit]
+  )
 
   const dismissSaveError = useCallback(() => setSaveError(null), [])
 
@@ -108,7 +138,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const updateWidget = useCallback(
     async (widget: Widget) => {
       const current = stateRef.current
-      if (!current) {
+
+      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), and writing the board back unchanged would only spend sync quota.
+      if (!current?.widgets.some((existing) => existing.id === widget.id)) {
         return
       }
 

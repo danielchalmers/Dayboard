@@ -119,3 +119,48 @@ test("a countdown whose span has run out reads as complete", async ({
   await expect(card.getByText("Complete")).toBeVisible()
   await expect(card.getByText(/left|ago/)).toHaveCount(0)
 })
+
+test("a note typed just before its tab closes keeps every keystroke", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await addWidget(page, "note", "Scratch")
+
+  // Typed and closed inside the auto-save's pause, with no blur on the way out: the page being hidden is the last chance to hand the text over.
+  await page.getByLabel("Scratch note").pressSequentially("Last thought")
+  await page.close({ runBeforeUnload: true })
+
+  const reopened = await context.newPage()
+  await reopened.goto(`chrome-extension://${extensionId}/newtab.html`)
+
+  await expect(reopened.getByLabel("Scratch note")).toHaveValue("Last thought")
+})
+
+test("a card carrying data this version can't read leaves the rest of the board standing", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // What a newer Dayboard on another synced device, or a hand-edited import, can put in front of this one: a repeat it doesn't know and a quote list that isn't a list.
+  await page.evaluate(() =>
+    chrome.storage.sync.set({
+      "dayboard-state": {
+        widgets: [
+          { id: "a", kind: "note", title: "Healthy", colorPreset: "mint", settings: { text: "Still here" } },
+          { id: "b", kind: "countdown", title: "Payday", colorPreset: "sky", settings: { targetAt: "2020-01-01T09:00:00.000Z", repeat: "fortnightly" } },
+          { id: "c", kind: "quote", title: "Words", colorPreset: "rose", settings: { quotes: "not a list", rotation: "daily" } }
+        ],
+        settings: { name: "" }
+      }
+    })
+  )
+  await page.reload()
+
+  await expect(page.getByLabel("Healthy note")).toHaveValue("Still here")
+  // The unknown repeat is dropped, so the countdown reads as a plain one-off in the past rather than throwing on its way to a date.
+  await expect(cardByTitle(page, "Payday").getByText("ago")).toBeVisible()
+  await expect(cardByTitle(page, "Words")).toContainText("Add a few quotes")
+})

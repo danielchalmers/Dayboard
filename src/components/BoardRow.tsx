@@ -88,10 +88,15 @@ const NoteField = ({
   const [text, setText] = useState(item.settings.text)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const timerRef = useRef<number | undefined>(undefined)
+  // Typing not yet handed to storage, or null once it has been.
+  const pendingRef = useRef<string | null>(null)
 
-  // Keep the latest callback without re-running the save timers.
+  // Keep the latest callback and widget without re-running the save timers.
+  // The save runs a beat after the keystroke that scheduled it, and building it from that keystroke's widget would write back whatever that widget looked like then, undoing an archive or rename that landed in between.
   const onChangeRef = useRef(onWidgetChange)
   onChangeRef.current = onWidgetChange
+  const itemRef = useRef(item)
+  itemRef.current = item
 
   // Adopt external updates (another tab, an edit dialog) unless the user is actively typing here, so a remote change never clobbers an in-progress note.
   useEffect(() => {
@@ -102,45 +107,66 @@ const NoteField = ({
     setText(item.settings.text)
   }, [item.settings.text])
 
-  useEffect(
-    () => () => {
-      if (timerRef.current) {
-        window.clearTimeout(timerRef.current)
-      }
-    },
-    []
-  )
-
-  const save = (value: string) => {
-    if (value !== item.settings.text) {
-      onChangeRef.current?.({ ...item, settings: { text: value } })
-    }
-  }
-
-  const handleChange = (value: string) => {
-    setText(value)
-
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current)
-    }
-
-    timerRef.current = window.setTimeout(() => save(value), NOTE_SAVE_DELAY)
-  }
-
-  const flush = () => {
+  const flushRef = useRef(() => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current)
       timerRef.current = undefined
     }
 
-    save(text)
+    const value = pendingRef.current
+    const latest = itemRef.current
+    pendingRef.current = null
+
+    if (value !== null && value !== latest.settings.text) {
+      onChangeRef.current?.({ ...latest, settings: { ...latest.settings, text: value } })
+    }
+  })
+
+  // Closing the tab straight after typing neither blurs the field nor unmounts the card, so the pending save would die with the page; hand it over the moment the page is hidden, which comes before it goes.
+  // Unmounting (the card archived out of view) flushes too, rather than dropping the last few keystrokes.
+  useEffect(() => {
+    const flush = flushRef.current
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") {
+        flush()
+      }
+    }
+
+    document.addEventListener("visibilitychange", flushWhenHidden)
+    window.addEventListener("pagehide", flush)
+
+    return () => {
+      document.removeEventListener("visibilitychange", flushWhenHidden)
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [])
+
+  // Leaving the field hands over what was typed, or, with nothing typed, catches up on any change that arrived while it was focused and so was held back above.
+  const handleBlur = () => {
+    if (pendingRef.current !== null) {
+      flushRef.current()
+    } else {
+      setText(itemRef.current.settings.text)
+    }
+  }
+
+  const handleChange = (value: string) => {
+    setText(value)
+    pendingRef.current = value
+
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+    }
+
+    timerRef.current = window.setTimeout(flushRef.current, NOTE_SAVE_DELAY)
   }
 
   return (
     <textarea
       aria-label={`${item.title} note`}
       className="note-field"
-      onBlur={flush}
+      onBlur={handleBlur}
       onChange={(event) => handleChange(event.currentTarget.value)}
       placeholder="Jot something down..."
       ref={fieldRef}
@@ -603,6 +629,17 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
     </article>
   )
 })
+
+// What a card shows when its body threw while rendering: its own frame and title, so it can still be found, dragged, and edited or deleted from its menu, and the rest of the board carries on around it.
+export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange">>(
+  function BoardRowFallback(props, ref) {
+    return (
+      <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
+        {null}
+      </CardShell>
+    )
+  }
+)
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
   {

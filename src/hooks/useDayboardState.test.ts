@@ -77,6 +77,106 @@ describe("useDayboardState save failure handling", () => {
   })
 })
 
+describe("useDayboardState change handling", () => {
+  const board: DayboardState = {
+    widgets: [
+      { id: "t1", kind: "timer", title: "Tea", colorPreset: "teal", settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false } },
+      { id: "t2", kind: "timer", title: "Eggs", colorPreset: "amber", settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false } }
+    ],
+    settings: { name: "" }
+  }
+
+  it("keeps both of two changes made in the same tick", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    // Two timers finishing on the same tick report from the same commit, before the board has re-rendered in between.
+    await act(async () => {
+      const [first, second] = result.current.state!.widgets as typeof board.widgets
+      void result.current.updateWidget({ ...first!, title: "Tea done" })
+      void result.current.updateWidget({ ...second!, title: "Eggs done" })
+    })
+
+    expect(result.current.state!.widgets.map((widget) => widget.title)).toEqual([
+      "Tea done",
+      "Eggs done"
+    ])
+    const written = vi.mocked(chrome.storage.sync.set).mock.calls.at(-1)?.[0] as
+      Record<string, DayboardState>
+    expect(Object.values(written)[0]!.widgets.map((widget) => widget.title)).toEqual([
+      "Tea done",
+      "Eggs done"
+    ])
+
+    unmount()
+  })
+
+  it("does not write when the changed widget is no longer on the board", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.updateWidget({ ...board.widgets[0]!, id: "gone" })
+    })
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
+  it("leaves the board untouched when storage echoes back what is already shown", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+    const shown = result.current.state
+
+    const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
+    act(() => {
+      listener(
+        { "dayboard-state": { newValue: JSON.parse(JSON.stringify(board)) } },
+        "sync"
+      )
+    })
+
+    expect(result.current.state).toBe(shown)
+
+    unmount()
+  })
+
+  it("puts a failed write back to what storage holds", async () => {
+    const stored = { ...board, settings: { name: "Sam" } }
+    stubChrome({
+      get: async (key) => ({ [key]: stored }),
+      set: () => Promise.reject(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE"))
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.setWidgets([])
+    })
+
+    expect(result.current.state).toEqual(stored)
+    expect(result.current.saveError).toMatch(/save/i)
+
+    unmount()
+  })
+})
+
 describe("useDayboardState load failure handling", () => {
   const cachedBoard: DayboardState = {
     widgets: [
