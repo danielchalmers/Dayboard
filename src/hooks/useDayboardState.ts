@@ -88,15 +88,24 @@ export const useDayboardState = (): UseDayboardStateResult => {
       try {
         await writeDayboardState(nextState)
       } catch {
-        // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit).
-        // Roll back so the UI matches storage and surface a calm notice instead of silently diverging.
-        if (previous) {
-          commit(previous)
+        // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit), so put the board back to what storage holds and surface a calm notice instead of silently diverging.
+        // Storage is asked rather than the board from before this change being restored, because a later change made while this write was in flight may have landed, and restoring the snapshot would take it off the screen while it sits in storage.
+        let restored = previous
+
+        try {
+          restored = await readDayboardState()
+        } catch {
+          // Storage can't be read either, so the snapshot is the best there is.
         }
+
+        if (restored) {
+          adopt(restored)
+        }
+
         setSaveError("Couldn’t save — this board may be too large to sync.")
       }
     },
-    [commit]
+    [adopt, commit]
   )
 
   const dismissSaveError = useCallback(() => setSaveError(null), [])

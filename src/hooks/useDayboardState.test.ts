@@ -137,6 +137,27 @@ describe("useDayboardState change handling", () => {
     unmount()
   })
 
+  it("puts a failed write back to what storage holds", async () => {
+    const stored = { ...board, settings: { name: "Sam" } }
+    stubChrome({
+      get: async (key) => ({ [key]: stored }),
+      set: () => Promise.reject(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE"))
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.setWidgets([])
+    })
+
+    expect(result.current.state).toEqual(stored)
+    expect(result.current.saveError).toMatch(/save/i)
+
+    unmount()
+  })
 })
 
 describe("useDayboardState load failure handling", () => {
