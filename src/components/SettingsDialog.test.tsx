@@ -38,6 +38,18 @@ describe("SettingsDialog", () => {
     expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, name: "Sam" })
   })
 
+  // The file input itself is hidden, so the Import button is the only way anyone reaches the picker.
+  it("opens the file picker from the Import button", () => {
+    render(settingsDialog())
+
+    const input = screen.getByLabelText<HTMLInputElement>("Import board file")
+    const pick = vi.spyOn(input, "click").mockImplementation(() => {})
+
+    fireEvent.click(screen.getByRole("button", { name: "Import" }))
+
+    expect(pick).toHaveBeenCalledTimes(1)
+  })
+
   it("exports from the Export button and imports a chosen file", () => {
     const onExport = vi.fn()
     const onImport = vi.fn()

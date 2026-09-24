@@ -62,6 +62,16 @@ describe("TimeZoneField", () => {
     expect(screen.queryByRole("listbox")).toBeNull()
   })
 
+  it("finds a zone by the spaces people type rather than its underscores", () => {
+    render(<Harness />)
+
+    typeIntoField(screen.getByLabelText("Time zone"), "New York")
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "America/New_York"
+    ])
+  })
+
   it("offers the system clock as a selectable option", () => {
     const onChange = vi.fn()
 

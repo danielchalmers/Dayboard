@@ -760,6 +760,29 @@ describe("BoardRow", () => {
     expect(vi.mocked(primeChime)).not.toHaveBeenCalled()
   })
 
+  it("warms up audio from the Start press for a timer that opted into the chime", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: {
+        durationMs: 60_000,
+        running: false,
+        remainingMs: 60_000,
+        endsAt: null,
+        chime: true
+      }
+    }
+
+    render(<BoardRow item={item} now={new Date(0)} onWidgetChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
+    // The finish arrives with no gesture of its own, so this press is the chime's only chance to be allowed to play.
+    expect(vi.mocked(primeChime)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(playChime)).not.toHaveBeenCalled()
+  })
+
   describe("with fake timers", () => {
     afterEach(() => {
       vi.useRealTimers()

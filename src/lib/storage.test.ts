@@ -253,6 +253,26 @@ describe("normalizing widgets read from storage or an import", () => {
     return parseDayboardState(JSON.stringify({ widgets })).widgets
   }
 
+  // The fallbacks below only earn their place if they never fire on a board this build wrote itself: a running timer read back as stopped, or an archived card back on the board, is data loss that looks like a sync glitch.
+  it("reads back a well-formed card of every kind exactly as it was written", async () => {
+    const written = [
+      widget("clock", { timeZone: "Asia/Tokyo" }, { archived: true }),
+      widget("countdown", {
+        targetAt: "2026-12-31T00:00:00.000Z",
+        startAt: "2026-01-01T00:00:00.000Z",
+        repeat: "yearly"
+      }),
+      widget("note", { text: "Buy milk" }),
+      widget("quote", { quotes: ["One", "Two"], rotation: "open" }),
+      widget("stopwatch", { running: true, elapsedMs: 5_000, startedAt: 1_000 }),
+      widget("timer", { durationMs: 60_000, running: true, remainingMs: 30_000, endsAt: 90_000, chime: true }),
+      widget("habit", { history: ["2026-07-08", "2026-07-09"] }),
+      widget("todo", { tasks: [{ id: "a", text: "Call the vet", done: true }] })
+    ]
+
+    expect(await parse(written)).toEqual(written)
+  })
+
   it("rebuilds each field a card reads when it arrives with the wrong type", async () => {
     const widgets = await parse([
       widget("clock", { timeZone: 5 }),
@@ -338,6 +358,23 @@ describe("shareUnchanged", () => {
     expect(next.widgets[0]).toBe(previous.widgets[0])
     expect(next.widgets[1]).toBe(reordered)
     expect(next.settings).toBe(previous.settings)
+  })
+
+  it("treats a reorder as a change even when every widget is the same", async () => {
+    const { shareUnchanged } = await import("./storage")
+    const [first] = sampleState.widgets
+    const second = { ...first!, id: "clock-2", title: "Paris" }
+    const previous: DayboardState = { ...sampleState, widgets: [first!, second] }
+    const next = shareUnchanged(previous, {
+      ...previous,
+      widgets: JSON.parse(JSON.stringify([second, first]))
+    })
+
+    // A drag in another tab arrives as the same widgets in a new order, and keeping the previous board would leave this tab showing the old one.
+    expect(next).not.toBe(previous)
+    expect(next.widgets).toEqual([second, first])
+    expect(next.widgets[0]).toBe(second)
+    expect(next.widgets[1]).toBe(first)
   })
 
   it("adopts the incoming board outright when there is nothing to compare with", async () => {

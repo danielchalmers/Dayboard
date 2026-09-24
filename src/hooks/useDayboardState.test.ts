@@ -189,7 +189,62 @@ describe("useDayboardState change handling", () => {
     })
 
     expect(result.current.state).toEqual(stored)
-    expect(result.current.saveError).toMatch(/save/i)
+    expect(result.current.saveError).toBe(SAVE_ERROR)
+
+    unmount()
+  })
+
+  it("falls back to the board from before the change when storage can't be read back either", async () => {
+    // The first read loads the board; by the time the write fails, sync has gone away altogether.
+    let reads = 0
+    stubChrome({
+      get: async (key) => {
+        reads += 1
+
+        if (reads > 1) {
+          throw new Error("Sync is unavailable")
+        }
+
+        return { [key]: board }
+      },
+      set: () => Promise.reject(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE"))
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+    const shown = result.current.state
+
+    await act(async () => {
+      await result.current.setWidgets([])
+    })
+
+    // The change never persisted and nothing better can be learned, so the board goes back to what it was rather than keeping an edit storage doesn't hold.
+    expect(reads).toBe(2)
+    expect(result.current.state).toEqual(shown)
+    expect(result.current.saveError).toBe(SAVE_ERROR)
+
+    unmount()
+  })
+
+  it("saves new settings alongside the board as it stands", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.setSettings({ name: "Sam" })
+    })
+
+    const expected = { widgets: board.widgets, settings: { name: "Sam" } }
+    expect(result.current.state).toEqual(expected)
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      "dayboard-state": expected
+    })
 
     unmount()
   })
