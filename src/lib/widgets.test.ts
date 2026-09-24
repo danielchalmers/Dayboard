@@ -51,8 +51,9 @@ describe("createWidget", () => {
 
     // A start is what makes the card a progress bar, and that is opt-in from the dialog's Starting from field rather than pre-filled.
     expect(countdown.settings.startAt).toBeUndefined()
-    expect(new Date(countdown.settings.targetAt).getTime()).toBeGreaterThan(
-      now.getTime()
+    // The target defaults to the top of the coming hour.
+    expect(countdown.settings.targetAt).toBe(
+      new Date(2026, 5, 19, 13, 0, 0).toISOString()
     )
   })
 })
@@ -77,14 +78,42 @@ describe("moveWidgetToIndex", () => {
 
     expect(moveWidgetToIndex(widgets, 1, 1)).toBe(widgets)
   })
+
+  it("keeps the same list reference for an index off either end", () => {
+    const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta")]
+
+    expect(moveWidgetToIndex(widgets, -1, 0)).toBe(widgets)
+    expect(moveWidgetToIndex(widgets, 0, -1)).toBe(widgets)
+    expect(moveWidgetToIndex(widgets, 2, 0)).toBe(widgets)
+    expect(moveWidgetToIndex(widgets, 0, 2)).toBe(widgets)
+  })
 })
 
 describe("reorderWidgets", () => {
-  it("returns the original list for invalid widget ids", () => {
-    const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta")]
+  const widgets = [
+    createWidget("alpha", "Alpha"),
+    createWidget("beta", "Beta"),
+    createWidget("gamma", "Gamma")
+  ]
 
+  // A drop takes the slot of the card it lands on, from either direction, the way dnd-kit's sortable preview has already shown it.
+  it("drops a card into the slot of the one it lands on", () => {
+    expect(reorderWidgets(widgets, "alpha", "gamma").map((w) => w.id)).toEqual([
+      "beta",
+      "gamma",
+      "alpha"
+    ])
+    expect(reorderWidgets(widgets, "gamma", "alpha").map((w) => w.id)).toEqual([
+      "gamma",
+      "alpha",
+      "beta"
+    ])
+  })
+
+  it("returns the original list for invalid widget ids or a drop onto itself", () => {
     expect(reorderWidgets(widgets, "missing", "beta")).toBe(widgets)
     expect(reorderWidgets(widgets, "alpha", "missing")).toBe(widgets)
+    expect(reorderWidgets(widgets, "beta", "beta")).toBe(widgets)
   })
 })
 
@@ -172,10 +201,10 @@ describe("archiveWidget / restoreWidget", () => {
   })
 
   it("leaves the list untouched for an unknown or already-archived widget", () => {
+    const archived = archiveWidget(widgets, "alpha")
+
     expect(archiveWidget(widgets, "missing")).toBe(widgets)
-    expect(archiveWidget(archiveWidget(widgets, "alpha"), "alpha")).toEqual(
-      archiveWidget(widgets, "alpha")
-    )
+    expect(archiveWidget(archived, "alpha")).toBe(archived)
   })
 
   it("restores a widget back after the last active one", () => {
@@ -190,8 +219,9 @@ describe("archiveWidget / restoreWidget", () => {
     expect(restored.every((widget) => !widget.archived)).toBe(true)
   })
 
-  it("leaves the list untouched when restoring a non-archived widget", () => {
+  it("leaves the list untouched when restoring an unknown or non-archived widget", () => {
     expect(restoreWidget(widgets, "alpha")).toBe(widgets)
+    expect(restoreWidget(widgets, "missing")).toBe(widgets)
   })
 
   it("restores into the slot of the board card it was dropped on", () => {
