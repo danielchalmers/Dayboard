@@ -255,13 +255,21 @@ export const readDayboardState = async (): Promise<DayboardState> => {
 export const serializeDayboardState = (state: DayboardState): string =>
   JSON.stringify(state, null, 2)
 
+const NOT_A_BOARD = "That file is not a Dayboard board."
+
 // Parse an exported file back into state for the Import option.
 // Throws on invalid JSON or a payload that is not a board, so callers can reject the file rather than silently replacing the board with defaults.
 export const parseDayboardState = (text: string): DayboardState => {
-  const parsed: unknown = JSON.parse(text)
+  // The Options dialog shows this message as it is, so a file that isn't even JSON gets the same plain answer rather than the parser's position report.
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error(NOT_A_BOARD)
+  }
 
   if (!hasWidgets(parsed)) {
-    throw new Error("That file is not a Dayboard board.")
+    throw new Error(NOT_A_BOARD)
   }
 
   return normalizeState(parsed)
