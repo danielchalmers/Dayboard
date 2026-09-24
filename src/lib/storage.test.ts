@@ -388,8 +388,13 @@ describe("serializeDayboardState / parseDayboardState", () => {
   it("rejects invalid JSON and non-board payloads", async () => {
     const { parseDayboardState } = await import("./storage")
 
-    expect(() => parseDayboardState("{ not json")).toThrow()
-    expect(() => parseDayboardState(JSON.stringify({ nope: true }))).toThrow()
+    // The message is shown to the user as is, so malformed JSON must not surface the parser's own wording.
+    expect(() => parseDayboardState("{ not json")).toThrow(
+      new Error("That file is not a Dayboard board.")
+    )
+    expect(() => parseDayboardState(JSON.stringify({ nope: true }))).toThrow(
+      new Error("That file is not a Dayboard board.")
+    )
   })
 })
 

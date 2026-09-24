@@ -110,6 +110,25 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Name")).toBeRequired()
   })
 
+  it("will not save a timer with no length", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: timerItem, onSave }))
+
+    fireEvent.change(screen.getByLabelText("minutes"), { target: { value: "0" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    // A zero length would finish on save, then read back from storage as the default five minutes.
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("hours")).toBeInvalid()
+
+    fireEvent.change(screen.getByLabelText("seconds"), { target: { value: "30" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(saved(onSave).settings.durationMs).toBe(30_000)
+  })
+
   it("closes on Escape without saving, even when opened by a prop change", () => {
     const onClose = vi.fn()
     const onSave = vi.fn()

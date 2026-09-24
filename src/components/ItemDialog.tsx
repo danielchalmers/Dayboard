@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
@@ -41,6 +41,7 @@ export const ItemDialog = ({
   const [syncedItem, setSyncedItem] = useState(item)
   const dialogRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const lengthRef = useRef<HTMLInputElement>(null)
 
   // Adopt a newly opened item during render (not in an effect) so the dialog body, and the focusable section that useModalFocus wires into, exist on the very first open render.
   // Deferring the draft to an effect left the section null for one render, after which the focus hook's deps never changed again, so focus-move, the focus trap, and Escape-to-close were silently never attached.
@@ -52,6 +53,13 @@ export const ItemDialog = ({
   }
 
   useModalFocus(isOpen, dialogRef, onClose)
+
+  // A timer with no length would read "Time's up" the moment it was saved, and storage reads a zero length back as the default five minutes.
+  // Marking the length invalid lets native validation hold the save, the same as an empty required field.
+  const isLengthless = draft?.kind === "timer" && draft.settings.durationMs <= 0
+  useEffect(() => {
+    lengthRef.current?.setCustomValidity(isLengthless ? "Give it a length." : "")
+  }, [isLengthless])
 
   const title = useMemo(
     () => (draft ? `${mode === "add" ? "Add" : "Edit"} ${draft.kind}` : ""),
@@ -341,6 +349,7 @@ export const ItemDialog = ({
                           aria-label={part}
                           max={max}
                           min={0}
+                          ref={part === "hours" ? lengthRef : undefined}
                           onChange={(event) =>
                             updateDuration(
                               part,
