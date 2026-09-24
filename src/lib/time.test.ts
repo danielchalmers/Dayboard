@@ -336,6 +336,22 @@ describe("datetime-local countdown conversions", () => {
     )
   })
 
+  it("rejects a date or time that does not exist rather than rolling it over", () => {
+    expect(dateTimeInputValueToIsoInstant("2026-02-30T10:00")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-13-01T10:00")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-00-10T10:00")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-04-00T10:00")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-04-10T24:00")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-04-10T10:60")).toBeNull()
+  })
+
+  it("accepts the edges of a real calendar", () => {
+    expect(dateTimeInputValueToIsoInstant("2028-02-29T23:59")).toBe(
+      new Date(2028, 1, 29, 23, 59, 0, 0).toISOString()
+    )
+    expect(dateTimeInputValueToIsoInstant("2026-02-29T00:00")).toBeNull()
+  })
+
   it("converts an ISO instant into a datetime-local value", () => {
     expect(
       isoInstantToDateTimeInputValue(new Date(2026, 0, 2, 3, 4, 0, 0).toISOString())
