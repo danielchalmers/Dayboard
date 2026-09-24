@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { CACHE_KEY } from "~/lib/storage"
 import type { DayboardState } from "~/lib/types"
 
+const SAVE_ERROR = "Couldn’t save — this board may be too large to sync."
+
 const stubChrome = ({
   get = async (key: string) => ({ [key]: undefined }),
   set = () => Promise.resolve()
@@ -49,7 +51,7 @@ describe("useDayboardState save failure handling", () => {
 
     // The write rejected, so the board is restored and a notice is shown.
     expect(result.current.state!.widgets).toEqual(widgetsBefore)
-    expect(result.current.saveError).toMatch(/save/i)
+    expect(result.current.saveError).toBe(SAVE_ERROR)
 
     act(() => result.current.dismissSaveError())
     expect(result.current.saveError).toBeNull()
@@ -59,12 +61,28 @@ describe("useDayboardState save failure handling", () => {
   })
 
   it("clears any prior save error on a successful write", async () => {
-    stubChrome()
+    // The first write hits the quota and the next one goes through.
+    let rejectNext = true
+    stubChrome({
+      set: () => {
+        if (rejectNext) {
+          rejectNext = false
+          return Promise.reject(new Error("QUOTA_BYTES quota exceeded"))
+        }
+
+        return Promise.resolve()
+      }
+    })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
 
     await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    await act(async () => {
+      await result.current.setWidgets([])
+    })
+    expect(result.current.saveError).toBe(SAVE_ERROR)
 
     await act(async () => {
       await result.current.setWidgets([])

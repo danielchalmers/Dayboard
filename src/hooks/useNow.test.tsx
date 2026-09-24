@@ -4,6 +4,7 @@ import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useNow } from "./useNow"
+import { subscribeToClock } from "~/lib/clock"
 
 describe("useNow", () => {
   beforeEach(() => {
@@ -23,12 +24,18 @@ describe("useNow", () => {
     })
     const first = result.current
     expect(first.getTime()).toBe(new Date(2026, 2, 4, 10, 17).getTime())
-    renders = 0
 
-    // A second-level neighbour ticking the store does not render a minute subscriber.
+    // A running stopwatch elsewhere on the page ticks the shared store every second.
+    // Without it the store would sleep until the minute, and nothing below could render the hook however it compared snapshots.
+    const secondTicks = vi.fn()
+    const unsubscribeSecond = subscribeToClock(secondTicks, "second")
+    renders = 0
+    secondTicks.mockClear()
+
     act(() => {
       vi.advanceTimersByTime(17_000)
     })
+    expect(secondTicks).toHaveBeenCalledTimes(17)
     expect(renders).toBe(0)
     expect(result.current).toBe(first)
 
@@ -37,6 +44,8 @@ describe("useNow", () => {
     })
     expect(renders).toBe(1)
     expect(result.current.getTime()).toBe(new Date(2026, 2, 4, 10, 18).getTime())
+
+    unsubscribeSecond()
   })
 
   it("follows a change of granularity without a stale minute", () => {

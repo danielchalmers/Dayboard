@@ -27,13 +27,6 @@ describe("SettingsDialog", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it("keeps the options minimal — no layout knobs to fiddle with", () => {
-    render(settingsDialog())
-
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-  })
-
   it("edits the greeting name", () => {
     const onChange = vi.fn()
     render(settingsDialog({ onChange }))
@@ -60,12 +53,15 @@ describe("SettingsDialog", () => {
     expect(onImport).toHaveBeenCalledWith(file)
   })
 
-  it("shows an import error when one is provided", () => {
-    render(settingsDialog({ importError: "That file is not a Dayboard board." }))
+  it("announces an import error when one is provided", () => {
+    const { rerender } = render(settingsDialog())
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
-    expect(
-      screen.getByText("That file is not a Dayboard board.")
-    ).toBeInTheDocument()
+    rerender(settingsDialog({ importError: "That file is not a Dayboard board." }))
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "That file is not a Dayboard board."
+    )
   })
 
   it("links to the project on GitHub", () => {

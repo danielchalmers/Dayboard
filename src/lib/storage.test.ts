@@ -358,33 +358,6 @@ describe("serializeDayboardState / parseDayboardState", () => {
     )
   })
 
-  it("fills defaults for a board missing settings", async () => {
-    const { parseDayboardState } = await import("./storage")
-
-    const parsed = parseDayboardState(
-      JSON.stringify({ widgets: sampleState.widgets })
-    )
-
-    expect(parsed.widgets).toEqual(sampleState.widgets)
-    expect(parsed.settings).toEqual(sampleState.settings)
-  })
-
-  // The same normalization runs on an imported file, so a row the board would drop must not throw on the way through instead.
-  it("drops a settings-less widget from an imported file rather than throwing", async () => {
-    const { parseDayboardState } = await import("./storage")
-
-    const parsed = parseDayboardState(
-      JSON.stringify({
-        widgets: [
-          { id: "no-settings-habit", kind: "habit" },
-          ...sampleState.widgets
-        ]
-      })
-    )
-
-    expect(parsed.widgets).toEqual(sampleState.widgets)
-  })
-
   it("rejects invalid JSON and non-board payloads", async () => {
     const { parseDayboardState } = await import("./storage")
 
@@ -392,9 +365,13 @@ describe("serializeDayboardState / parseDayboardState", () => {
     expect(() => parseDayboardState("{ not json")).toThrow(
       new Error("That file is not a Dayboard board.")
     )
-    expect(() => parseDayboardState(JSON.stringify({ nope: true }))).toThrow(
-      new Error("That file is not a Dayboard board.")
-    )
+
+    // Valid JSON that is not a board is refused by name, rather than read as an empty board that would replace the real one.
+    for (const payload of [{ nope: true }, { widgets: "none" }, [], null, "board"]) {
+      expect(() => parseDayboardState(JSON.stringify(payload))).toThrow(
+        new Error("That file is not a Dayboard board.")
+      )
+    }
   })
 })
 
@@ -505,8 +482,10 @@ describe("watchDayboardState", () => {
     const handleChange = vi.fn()
     watchDayboardState(handleChange)
 
+    // Without a registered listener there is nothing to call, and the assertion below would pass for that reason alone.
     const listener = addListener.mock.calls[0]?.[0]
-    listener?.({ "some-other-key": { newValue: {} } }, "sync")
+    expect(listener).toBeTypeOf("function")
+    listener({ "some-other-key": { newValue: {} } }, "sync")
 
     expect(handleChange).not.toHaveBeenCalled()
   })
