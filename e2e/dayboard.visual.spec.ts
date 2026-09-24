@@ -1,7 +1,7 @@
 import type { Page, TestInfo } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
-import { cardByTitle } from "./helpers"
+import { openWidgetMenu } from "./helpers"
 import type { DayboardState } from "../src/lib/types"
 
 const STORAGE_KEY = "dayboard-state"
@@ -115,10 +115,6 @@ const attachScreenshot = async (
     contentType: "image/png",
     path
   })
-}
-
-const openWidgetMenu = async (page: Page, title: string) => {
-  await cardByTitle(page, title).click({ button: "right" })
 }
 
 test("captures Dayboard product screenshots", async ({

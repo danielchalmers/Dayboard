@@ -22,6 +22,10 @@ describe("BoardRow", () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("renders a clock card with time, date metadata, and color-preset attribute", () => {
     const item: Widget = {
       id: "utc",
@@ -572,10 +576,19 @@ describe("BoardRow", () => {
     expect(screen.getByText("0:00")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled()
 
+    // A paused stopwatch reads the clock by the day, so the card's `now` can be hours stale; the run has to be stamped with the moment of the press.
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-01-01T12:34:56.789Z"))
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
     expect(onWidgetChange).toHaveBeenCalledTimes(1)
-    expect(onWidgetChange.mock.calls[0]![0].settings.running).toBe(true)
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: {
+        running: true,
+        elapsedMs: 0,
+        startedAt: Date.parse("2026-01-01T12:34:56.789Z")
+      }
+    })
   })
 
   it("shows live stopwatch time while running", () => {
@@ -617,9 +630,18 @@ describe("BoardRow", () => {
     )
 
     expect(screen.getByText("2:00")).toBeInTheDocument()
-    // Mid-way and paused → the primary control offers to resume.
+    // Mid-way and paused → the primary control offers to resume, counting down what was left from the moment of the press.
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-01-01T12:34:56.789Z"))
     fireEvent.click(screen.getByRole("button", { name: "Resume" }))
-    expect(onWidgetChange.mock.calls[0]![0].settings.running).toBe(true)
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: {
+        ...item.settings,
+        running: true,
+        remainingMs: 120_000,
+        endsAt: Date.parse("2026-01-01T12:34:56.789Z") + 120_000
+      }
+    })
   })
 
   it("announces completion to screen readers when a timer is done", () => {
@@ -738,10 +760,32 @@ describe("BoardRow", () => {
     expect(vi.mocked(primeChime)).not.toHaveBeenCalled()
   })
 
+  it("warms up audio from the Start press for a timer that opted into the chime", () => {
+    const item: Widget = {
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: {
+        durationMs: 60_000,
+        running: false,
+        remainingMs: 60_000,
+        endsAt: null,
+        chime: true
+      }
+    }
+
+    render(<BoardRow item={item} now={new Date(0)} onWidgetChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
+    // The finish arrives with no gesture of its own, so this press is the chime's only chance to be allowed to play.
+    expect(vi.mocked(primeChime)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(playChime)).not.toHaveBeenCalled()
+  })
+
   describe("with fake timers", () => {
     afterEach(() => {
       vi.useRealTimers()
-      vi.restoreAllMocks()
     })
 
     it("auto-saves a note a short beat after typing stops", () => {

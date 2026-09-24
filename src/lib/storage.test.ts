@@ -253,6 +253,26 @@ describe("normalizing widgets read from storage or an import", () => {
     return parseDayboardState(JSON.stringify({ widgets })).widgets
   }
 
+  // The fallbacks below only earn their place if they never fire on a board this build wrote itself: a running timer read back as stopped, or an archived card back on the board, is data loss that looks like a sync glitch.
+  it("reads back a well-formed card of every kind exactly as it was written", async () => {
+    const written = [
+      widget("clock", { timeZone: "Asia/Tokyo" }, { archived: true }),
+      widget("countdown", {
+        targetAt: "2026-12-31T00:00:00.000Z",
+        startAt: "2026-01-01T00:00:00.000Z",
+        repeat: "yearly"
+      }),
+      widget("note", { text: "Buy milk" }),
+      widget("quote", { quotes: ["One", "Two"], rotation: "open" }),
+      widget("stopwatch", { running: true, elapsedMs: 5_000, startedAt: 1_000 }),
+      widget("timer", { durationMs: 60_000, running: true, remainingMs: 30_000, endsAt: 90_000, chime: true }),
+      widget("habit", { history: ["2026-07-08", "2026-07-09"] }),
+      widget("todo", { tasks: [{ id: "a", text: "Call the vet", done: true }] })
+    ]
+
+    expect(await parse(written)).toEqual(written)
+  })
+
   it("rebuilds each field a card reads when it arrives with the wrong type", async () => {
     const widgets = await parse([
       widget("clock", { timeZone: 5 }),
@@ -340,6 +360,23 @@ describe("shareUnchanged", () => {
     expect(next.settings).toBe(previous.settings)
   })
 
+  it("treats a reorder as a change even when every widget is the same", async () => {
+    const { shareUnchanged } = await import("./storage")
+    const [first] = sampleState.widgets
+    const second = { ...first!, id: "clock-2", title: "Paris" }
+    const previous: DayboardState = { ...sampleState, widgets: [first!, second] }
+    const next = shareUnchanged(previous, {
+      ...previous,
+      widgets: JSON.parse(JSON.stringify([second, first]))
+    })
+
+    // A drag in another tab arrives as the same widgets in a new order, and keeping the previous board would leave this tab showing the old one.
+    expect(next).not.toBe(previous)
+    expect(next.widgets).toEqual([second, first])
+    expect(next.widgets[0]).toBe(second)
+    expect(next.widgets[1]).toBe(first)
+  })
+
   it("adopts the incoming board outright when there is nothing to compare with", async () => {
     const { shareUnchanged } = await import("./storage")
 
@@ -358,33 +395,6 @@ describe("serializeDayboardState / parseDayboardState", () => {
     )
   })
 
-  it("fills defaults for a board missing settings", async () => {
-    const { parseDayboardState } = await import("./storage")
-
-    const parsed = parseDayboardState(
-      JSON.stringify({ widgets: sampleState.widgets })
-    )
-
-    expect(parsed.widgets).toEqual(sampleState.widgets)
-    expect(parsed.settings).toEqual(sampleState.settings)
-  })
-
-  // The same normalization runs on an imported file, so a row the board would drop must not throw on the way through instead.
-  it("drops a settings-less widget from an imported file rather than throwing", async () => {
-    const { parseDayboardState } = await import("./storage")
-
-    const parsed = parseDayboardState(
-      JSON.stringify({
-        widgets: [
-          { id: "no-settings-habit", kind: "habit" },
-          ...sampleState.widgets
-        ]
-      })
-    )
-
-    expect(parsed.widgets).toEqual(sampleState.widgets)
-  })
-
   it("rejects invalid JSON and non-board payloads", async () => {
     const { parseDayboardState } = await import("./storage")
 
@@ -392,9 +402,13 @@ describe("serializeDayboardState / parseDayboardState", () => {
     expect(() => parseDayboardState("{ not json")).toThrow(
       new Error("That file is not a Dayboard board.")
     )
-    expect(() => parseDayboardState(JSON.stringify({ nope: true }))).toThrow(
-      new Error("That file is not a Dayboard board.")
-    )
+
+    // Valid JSON that is not a board is refused by name, rather than read as an empty board that would replace the real one.
+    for (const payload of [{ nope: true }, { widgets: "none" }, [], null, "board"]) {
+      expect(() => parseDayboardState(JSON.stringify(payload))).toThrow(
+        new Error("That file is not a Dayboard board.")
+      )
+    }
   })
 })
 
@@ -505,8 +519,10 @@ describe("watchDayboardState", () => {
     const handleChange = vi.fn()
     watchDayboardState(handleChange)
 
+    // Without a registered listener there is nothing to call, and the assertion below would pass for that reason alone.
     const listener = addListener.mock.calls[0]?.[0]
-    listener?.({ "some-other-key": { newValue: {} } }, "sync")
+    expect(listener).toBeTypeOf("function")
+    listener({ "some-other-key": { newValue: {} } }, "sync")
 
     expect(handleChange).not.toHaveBeenCalled()
   })

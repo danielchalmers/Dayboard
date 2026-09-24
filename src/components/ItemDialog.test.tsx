@@ -299,7 +299,7 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.targetAt).toBe(countdownItem.settings.targetAt)
   })
 
-  it("keeps an hourly repeat on a countdown", () => {
+  it("moves a countdown's target without disturbing its repeat or start", () => {
     const onSave = vi.fn()
 
     render(itemDialog({ item: countdownItem, onSave }))
@@ -313,8 +313,59 @@ describe("ItemDialog", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
 
-    expect(saved(onSave).settings.repeat).toBe("hourly")
-    expect(saved(onSave).settings.startAt).toBe(countdownItem.settings.startAt)
+    expect(saved(onSave).settings).toEqual({
+      targetAt: new Date(2026, 0, 3, 9, 0, 0).toISOString(),
+      startAt: countdownItem.settings.startAt,
+      repeat: "hourly"
+    })
+  })
+
+  // Changing how long a timer runs is starting it over, so one edited mid-run would otherwise keep counting down to the old end.
+  it("stops a running timer and starts it over from a new length", () => {
+    const onSave = vi.fn()
+    const running: Widget = {
+      ...timerItem,
+      settings: {
+        ...timerItem.settings,
+        running: true,
+        remainingMs: 20_000,
+        endsAt: 1_000_000,
+        chime: true
+      }
+    }
+
+    render(itemDialog({ item: running, onSave }))
+
+    expect(screen.getByLabelText("minutes")).toHaveValue(1)
+    fireEvent.change(screen.getByLabelText("hours"), { target: { value: "1" } })
+    fireEvent.change(screen.getByLabelText("seconds"), { target: { value: "30" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings).toEqual({
+      durationMs: 3_690_000,
+      running: false,
+      remainingMs: 3_690_000,
+      endsAt: null,
+      chime: true
+    })
+  })
+
+  it("reads a cleared or negative length field as zero", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: timerItem, onSave }))
+
+    // A number field that has been emptied hands over NaN, and the spinner's own bounds are only a suggestion to typing.
+    fireEvent.change(screen.getByLabelText("minutes"), { target: { value: "" } })
+    fireEvent.change(screen.getByLabelText("seconds"), { target: { value: "-5" } })
+
+    expect(screen.getByLabelText("minutes")).toHaveValue(0)
+    expect(screen.getByLabelText("seconds")).toHaveValue(0)
+
+    fireEvent.change(screen.getByLabelText("seconds"), { target: { value: "45" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.durationMs).toBe(45_000)
   })
 
   it("ignores clicks that land inside the dialog", () => {

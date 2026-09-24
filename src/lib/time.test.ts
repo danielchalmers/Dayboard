@@ -132,41 +132,56 @@ describe("resolveCountdown", () => {
   })
 
   it("rolls a daily target to the next future day, keeping the time", () => {
+    // Noon on the 19th is past the 19th's 9am, so the next one is the 20th.
     const target = new Date(2026, 5, 17, 9, 0, 0).toISOString()
-    const next = new Date(nextCountdownTarget(target, "daily", now))
 
-    expect(next.getTime()).toBeGreaterThan(now.getTime())
-    expect(next.getHours()).toBe(9)
-    expect(next.getTime() - now.getTime()).toBeLessThanOrEqual(DAY)
+    expect(nextCountdownTarget(target, "daily", now)).toBe(
+      new Date(2026, 5, 20, 9, 0, 0).toISOString()
+    )
   })
 
-  it("rolls a weekly target to within a week", () => {
+  it("keeps a daily target on its wall-clock time across a DST change", () => {
+    // America/Chicago springs forward on 2026-03-08, so that day is 23 hours long: stepping by a fixed 24 hours would land the next occurrence at 10am.
+    const target = new Date(2026, 2, 7, 9, 0, 0).toISOString()
+
+    expect(
+      nextCountdownTarget(target, "daily", new Date(2026, 2, 9, 12, 0, 0))
+    ).toBe(new Date(2026, 2, 10, 9, 0, 0).toISOString())
+  })
+
+  it("rolls a weekly target to the same weekday within a week", () => {
+    // A Monday, rolled on from a Friday to the Monday after.
     const target = new Date(2026, 4, 4, 8, 0, 0).toISOString()
-    const next = new Date(nextCountdownTarget(target, "weekly", now))
 
-    expect(next.getTime()).toBeGreaterThan(now.getTime())
-    expect(next.getDay()).toBe(new Date(target).getDay())
-    expect(next.getTime() - now.getTime()).toBeLessThanOrEqual(7 * DAY)
+    expect(nextCountdownTarget(target, "weekly", now)).toBe(
+      new Date(2026, 5, 22, 8, 0, 0).toISOString()
+    )
   })
 
-  it("rolls a yearly target to the same month and day next year", () => {
+  it("rolls a yearly target to the same month and day in the coming year", () => {
     const target = new Date(2025, 11, 25, 9, 0, 0).toISOString()
-    const next = new Date(nextCountdownTarget(target, "yearly", now))
 
-    expect(next.getTime()).toBeGreaterThan(now.getTime())
-    expect(next.getMonth()).toBe(11)
-    expect(next.getDate()).toBe(25)
-    expect(next.getFullYear()).toBe(2026)
+    expect(nextCountdownTarget(target, "yearly", now)).toBe(
+      new Date(2026, 11, 25, 9, 0, 0).toISOString()
+    )
   })
 
-  it("rolls an hourly target to the top of the coming hour", () => {
+  it("rolls an hourly target to its minute in the coming hour", () => {
     // Years of missed occurrences resolve in one step rather than iterating.
     const target = new Date(2024, 0, 1, 8, 30, 0).toISOString()
-    const next = new Date(nextCountdownTarget(target, "hourly", now))
 
-    expect(next.getTime()).toBeGreaterThan(now.getTime())
-    expect(next.getMinutes()).toBe(30)
-    expect(next.getTime() - now.getTime()).toBeLessThanOrEqual(60 * 60 * 1000)
+    expect(nextCountdownTarget(target, "hourly", now)).toBe(
+      new Date(2026, 5, 19, 12, 30, 0).toISOString()
+    )
+  })
+
+  it("moves a target that lands exactly on now on to the next occurrence", () => {
+    // The boundary belongs to the next cycle: at the instant of an occurrence, the card is already counting toward the one after it.
+    const target = new Date(2026, 5, 18, 12, 0, 0).toISOString()
+
+    expect(nextCountdownTarget(target, "daily", now)).toBe(
+      new Date(2026, 5, 20, 12, 0, 0).toISOString()
+    )
   })
 
   it("leaves an unreadable target alone rather than resolving it", () => {
@@ -350,6 +365,31 @@ describe("datetime-local countdown conversions", () => {
       new Date(2028, 1, 29, 23, 59, 0, 0).toISOString()
     )
     expect(dateTimeInputValueToIsoInstant("2026-02-29T00:00")).toBeNull()
+  })
+
+  it("rejects anything that is not a whole date and time to the minute", () => {
+    // The dialog only commits a target that parses, so anything short of a full minute has to come back null rather than as a guess.
+    expect(dateTimeInputValueToIsoInstant("")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02T03")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02T03:04:05")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-1-2T3:04")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02 03:04")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant(" 2026-01-02T03:04")).toBeNull()
+  })
+
+  it("keeps a year under 100 where it was typed", () => {
+    expect(dateTimeInputValueToIsoInstant("0050-01-02T03:04")).toMatch(/^0050-01-02T/)
+  })
+
+  it("reads a wall-clock time inside a DST change as the offset in force then", () => {
+    // 2026-03-08 in America/Chicago: 01:30 is still CST (UTC-6) and 03:30 is already CDT (UTC-5).
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T01:30")).toBe(
+      "2026-03-08T07:30:00.000Z"
+    )
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T03:30")).toBe(
+      "2026-03-08T08:30:00.000Z"
+    )
   })
 
   it("converts an ISO instant into a datetime-local value", () => {
