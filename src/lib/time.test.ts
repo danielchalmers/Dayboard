@@ -342,6 +342,13 @@ describe("datetime-local countdown conversions", () => {
     ).toBe("2026-01-02T03:04")
   })
 
+  it("round-trips a year under 1000 through the edit field", () => {
+    // A datetime-local field reads "50-01-02T03:04" as empty, which would leave the required When field blank and block saving.
+    const instant = dateTimeInputValueToIsoInstant("0050-01-02T03:04")!
+
+    expect(isoInstantToDateTimeInputValue(instant)).toBe("0050-01-02T03:04")
+  })
+
   it("leaves the input empty for a missing or unreadable instant", () => {
     // The edit dialog runs every countdown through this to seed its field, including
     // one with no start yet, so an empty control has to be the fallback for both.
