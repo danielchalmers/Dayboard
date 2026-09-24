@@ -367,6 +367,31 @@ describe("datetime-local countdown conversions", () => {
     expect(dateTimeInputValueToIsoInstant("2026-02-29T00:00")).toBeNull()
   })
 
+  it("rejects anything that is not a whole date and time to the minute", () => {
+    // The dialog only commits a target that parses, so anything short of a full minute has to come back null rather than as a guess.
+    expect(dateTimeInputValueToIsoInstant("")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02T03")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02T03:04:05")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-1-2T3:04")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant("2026-01-02 03:04")).toBeNull()
+    expect(dateTimeInputValueToIsoInstant(" 2026-01-02T03:04")).toBeNull()
+  })
+
+  it("keeps a year under 100 where it was typed", () => {
+    expect(dateTimeInputValueToIsoInstant("0050-01-02T03:04")).toMatch(/^0050-01-02T/)
+  })
+
+  it("reads a wall-clock time inside a DST change as the offset in force then", () => {
+    // 2026-03-08 in America/Chicago: 01:30 is still CST (UTC-6) and 03:30 is already CDT (UTC-5).
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T01:30")).toBe(
+      "2026-03-08T07:30:00.000Z"
+    )
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T03:30")).toBe(
+      "2026-03-08T08:30:00.000Z"
+    )
+  })
+
   it("converts an ISO instant into a datetime-local value", () => {
     expect(
       isoInstantToDateTimeInputValue(new Date(2026, 0, 2, 3, 4, 0, 0).toISOString())
