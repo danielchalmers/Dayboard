@@ -1,19 +1,5 @@
-import type { Page } from "@playwright/test"
-
 import { expect, test } from "./fixtures"
-import { cardByTitle } from "./helpers"
-
-const openNewTab = async (page: Page, extensionId: string) => {
-  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(() => chrome.storage.sync.clear())
-  await page.reload()
-}
-
-const openWidgetMenu = async (page: Page, title: string) => {
-  const card = cardByTitle(page, title)
-
-  await card.click({ button: "right" })
-}
+import { cardByTitle, openNewTab, openWidgetMenu } from "./helpers"
 
 test("canceling the delete dialog keeps the widget", async ({
   page,

@@ -1,21 +1,5 @@
-import type { Page } from "@playwright/test"
-
 import { expect, test } from "./fixtures"
-import { cardByTitle, readWidgetSettings } from "./helpers"
-
-const openNewTab = async (page: Page, extensionId: string) => {
-  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(() => chrome.storage.sync.clear())
-  await page.reload()
-}
-
-// The whole add flow for the common case: open the menu, pick the kind, name it, save.
-const addWidget = async (page: Page, kind: string, title: string) => {
-  await page.getByRole("button", { name: "Add widget" }).click()
-  await page.getByRole("button", { name: `Add ${kind}` }).click()
-  await page.getByLabel("Name").fill(title)
-  await page.getByRole("button", { name: `Save ${kind}` }).click()
-}
+import { addWidget, cardByTitle, openNewTab, readWidgetSettings } from "./helpers"
 
 // A rejected write is the one thing the shared browser's guard fails a test over, so the test that goes looking for one says so up front.
 test.describe("a board too large to sync", () => {

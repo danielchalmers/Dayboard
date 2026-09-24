@@ -4,17 +4,14 @@ import type { Page } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
 import {
+  addWidget,
   boxOf,
   cardByTitle,
   DEFAULT_BOARD_TITLES,
+  openNewTab,
+  openWidgetMenu,
   readWidgetSettings
 } from "./helpers"
-
-const openNewTab = async (page: Page, extensionId: string) => {
-  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(() => chrome.storage.sync.clear())
-  await page.reload()
-}
 
 const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) => {
   const sourceBox = await boxOf(cardByTitle(page, sourceTitle), "the dragged card")
@@ -34,30 +31,6 @@ const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) 
   await page.mouse.move(grabX + deltaX, grabY + deltaY, { steps: 20 })
   await page.mouse.up()
 }
-
-// The whole add flow for the common case: open the menu, pick the kind, name it, save.
-// Anything that needs to assert mid-flow or fill an extra field still writes the steps out.
-const addWidget = async (page: Page, kind: string, title: string) => {
-  await page.getByRole("button", { name: "Add widget" }).click()
-  await page.getByRole("button", { name: `Add ${kind}` }).click()
-  await page.getByLabel("Name").fill(title)
-  await page.getByRole("button", { name: `Save ${kind}` }).click()
-}
-
-const openWidgetMenu = async (page: Page, title: string) => {
-  const card = cardByTitle(page, title)
-
-  await card.click({ button: "right" })
-}
-
-const DEFAULT_TITLES = [
-  "🕒 Local time",
-  "🌅 Tomorrow morning",
-  "👋 Welcome",
-  "💬 Today's reminder",
-  "🚶 Daily walk",
-  "📅 This year"
-]
 
 // The whole delete flow for a card, opened from the keyboard rather than with `openWidgetMenu`.
 // A right-click lands in the middle of the card, and for a note that is its textarea and for a habit its dot row — controls that keep their own menu — so clearing a mixed board needs the one route every kind answers.
@@ -1339,7 +1312,7 @@ test("deleting the last widget hands the board over to the empty state", async (
   await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
-  for (const title of DEFAULT_TITLES) {
+  for (const title of DEFAULT_BOARD_TITLES) {
     await deleteWidget(page, title)
   }
 
@@ -1553,7 +1526,7 @@ test("dragging an archived widget onto an empty board restores it", async ({
 
   // Delete every card but one, then archive that one.
   // The board empties the other way it can: the last active card leaves for the archive, and the archived list renders below where it used to be.
-  const [last, ...others] = DEFAULT_TITLES
+  const [last, ...others] = DEFAULT_BOARD_TITLES
 
   for (const title of others) {
     await deleteWidget(page, title)
