@@ -1172,22 +1172,25 @@ test("a recurring countdown rolls forward to its next occurrence", async ({
   page,
   extensionId
 }) => {
+  // A Wednesday morning, held still so the time left is an exact string rather than a pattern.
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add countdown" }).click()
   await page.getByLabel("Name").fill("Standup")
-  // A target well in the past; weekly repeat should surface a future occurrence.
+  // A Monday years in the past; weekly repeat should surface the coming Monday.
   await page.getByLabel("When").fill("2020-01-06T09:00")
   await page.getByLabel("Repeats").selectOption("weekly")
   await page.getByRole("button", { name: "Save countdown" }).click()
 
   const card = cardByTitle(page, "Standup")
 
-  // It reads as upcoming (not "ago") and notes the cadence.
-  await expect(card.getByText("from now")).toBeVisible()
-  await expect(card.locator(".board-row__detail")).toContainText(
-    "repeats weekly"
+  // It reads as upcoming, lands on the right Monday at the right time, and notes the cadence.
+  await expect(card.locator(".board-row__value")).toHaveText("4 days, 23 hours")
+  await expect(card.locator(".board-row__meta")).toHaveText("from now")
+  await expect(card.locator(".board-row__detail")).toHaveText(
+    /^Mon, Mar 9, 9:00\sAM · repeats weekly$/
   )
 })
 
@@ -1195,6 +1198,7 @@ test("an hourly countdown rolls forward within the hour", async ({
   page,
   extensionId
 }) => {
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -1207,10 +1211,10 @@ test("an hourly countdown rolls forward within the hour", async ({
 
   const card = cardByTitle(page, "Stand up and stretch")
 
-  // The next occurrence is always under an hour out, so it never reads as past.
-  await expect(card.getByText("ago")).toHaveCount(0)
-  await expect(card.locator(".board-row__detail")).toContainText(
-    "repeats hourly"
+  await expect(card.locator(".board-row__value")).toHaveText("15 minutes")
+  await expect(card.locator(".board-row__meta")).toHaveText("from now")
+  await expect(card.locator(".board-row__detail")).toHaveText(
+    /^Wed, Mar 4, 10:15\sAM · repeats hourly$/
   )
 })
 
@@ -1460,6 +1464,57 @@ test("a card dragged toward the archive follows the cursor instead of snapping b
   await expect(
     page.locator(".board-list").first().getByText("🕒 Local time")
   ).toHaveCount(0)
+})
+
+test("dropping a board card among the archived ones archives it", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps the board and the revealed archive on one screen, so the drag never has to scroll.
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "🌅 Tomorrow morning")
+  await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+  await page.getByRole("button", { name: "Show archived" }).click()
+
+  const source = await boxOf(cardByTitle(page, "🕒 Local time"), "the dragged card")
+  const target = await boxOf(
+    cardByTitle(page, "🌅 Tomorrow morning"),
+    "the archived card it is dropped onto"
+  )
+
+  // Grab the frame, then carry the card's center onto the archived card's center.
+  const grabX = source.x + source.width / 2
+  const grabY = source.y + 12
+  await page.mouse.move(grabX, grabY)
+  await page.mouse.down()
+  await page.mouse.move(
+    target.x + target.width / 2,
+    grabY + target.y + target.height / 2 - (source.y + source.height / 2),
+    { steps: 20 }
+  )
+
+  // The floating archive zone would archive the card too, so make sure it is the archived card being aimed at.
+  await expect(page.locator(".archive-dropzone")).toBeVisible()
+  await expect(page.locator(".archive-dropzone--over")).toHaveCount(0)
+  await page.mouse.up()
+
+  // The archive keeps no order worth aiming for, so landing on an archived card archives the one dropped rather than reordering anything.
+
+  const [board, archive] = [
+    page.locator(".board-list").first(),
+    page.locator(".archive-section .board-list")
+  ]
+  await expect(board.locator("h2")).toHaveText(
+    DEFAULT_BOARD_TITLES.filter(
+      (title) => title !== "🕒 Local time" && title !== "🌅 Tomorrow morning"
+    )
+  )
+  await expect(archive.locator("h2")).toHaveText([
+    "🌅 Tomorrow morning",
+    "🕒 Local time"
+  ])
 })
 
 test("dragging an archived widget onto a board card restores it into that slot", async ({
