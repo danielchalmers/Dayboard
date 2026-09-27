@@ -49,19 +49,27 @@ describe("TimeZoneField", () => {
     const field = screen.getByLabelText("Time zone")
     typeIntoField(field, "berlin")
 
-    // Typing is kept as the value (free text is allowed) and filters the open list down to matches.
+    // Typing is kept as the value (free text is allowed) and filters the open list down to matches, which leaves out the system option too.
     expect(field).toHaveValue("berlin")
-    const options = screen.getAllByRole("option")
-    expect(options.length).toBeLessThan(getTimeZoneOptions().length + 1)
-    options.forEach((option) =>
-      expect(option.textContent!.toLowerCase()).toContain("berlin")
-    )
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Europe/Berlin"
+    ])
 
     fireEvent.pointerDown(screen.getByRole("option", { name: "Europe/Berlin" }))
 
     expect(field).toHaveValue("Europe/Berlin")
     // Choosing puts the list away.
     expect(screen.queryByRole("listbox")).toBeNull()
+  })
+
+  it("finds a zone by the spaces people type rather than its underscores", () => {
+    render(<Harness />)
+
+    typeIntoField(screen.getByLabelText("Time zone"), "New York")
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "America/New_York"
+    ])
   })
 
   it("offers the system clock as a selectable option", () => {

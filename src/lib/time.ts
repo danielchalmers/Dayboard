@@ -27,6 +27,18 @@ export const dateTimeInputValueToIsoInstant = (
   const hour = Number(match[4]!)
   const minute = Number(match[5]!)
 
+  // The pattern only checks the shape, and `Date` would roll an impossible part forward (February 30 becoming March 2), so check the parts are a real date and time first.
+  const calendarDate = new Date(Date.UTC(2000, 0, 1))
+  calendarDate.setUTCFullYear(year, month - 1, day)
+  if (
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day ||
+    hour > 23 ||
+    minute > 59
+  ) {
+    return null
+  }
+
   const local = new Date(year, month - 1, day, hour, minute, 0, 0)
 
   // `new Date(year, ...)` reads a year under 100 as 1900-something, so a target typed as the year 50 would be stored as 1950; setting the year back puts it where it was typed.

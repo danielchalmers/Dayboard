@@ -27,16 +27,29 @@ describe("dailyQuoteIndex", () => {
   })
 
   it("advances by one each day and wraps around the list", () => {
-    const day1 = new Date(2026, 0, 1, 12, 0, 0)
-    const day2 = new Date(2026, 0, 2, 12, 0, 0)
     const length = 3
+    const indices = Array.from({ length: length + 1 }, (_, offset) =>
+      dailyQuoteIndex(new Date(2026, 0, 1 + offset, 12, 0, 0), length)
+    )
 
-    const i1 = dailyQuoteIndex(day1, length)
-    const i2 = dailyQuoteIndex(day2, length)
+    // Every quote gets its day before any comes back, and the day after the last one starts the list over.
+    expect(new Set(indices.slice(0, length)).size).toBe(length)
+    indices.slice(1).forEach((index, day) => {
+      expect(index).toBe((indices[day]! + 1) % length)
+    })
+    expect(indices[length]).toBe(indices[0])
+  })
 
-    expect(i2).toBe((i1 + 1) % length)
-    expect(i1).toBeGreaterThanOrEqual(0)
-    expect(i1).toBeLessThan(length)
+  it("turns over at local midnight, including the short day of a DST change", () => {
+    // America/Chicago springs forward on 2026-03-08, so that day is 23 hours long.
+    const lateSaturday = new Date(2026, 2, 7, 23, 59, 0)
+    const earlySunday = new Date(2026, 2, 8, 0, 1, 0)
+    const lateSunday = new Date(2026, 2, 8, 23, 59, 0)
+    const earlyMonday = new Date(2026, 2, 9, 0, 1, 0)
+
+    expect(dailyQuoteIndex(earlySunday, 5)).toBe((dailyQuoteIndex(lateSaturday, 5) + 1) % 5)
+    expect(dailyQuoteIndex(lateSunday, 5)).toBe(dailyQuoteIndex(earlySunday, 5))
+    expect(dailyQuoteIndex(earlyMonday, 5)).toBe((dailyQuoteIndex(lateSunday, 5) + 1) % 5)
   })
 
   it("returns 0 for an empty list", () => {

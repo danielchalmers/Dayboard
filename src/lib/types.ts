@@ -246,7 +246,8 @@ export const createDefaultState = (now = new Date()): DayboardState => ({
 })
 
 export const toDateTimeInputValue = (date: Date): string => {
-  const year = date.getFullYear()
+  // A datetime-local value needs a four-digit year, so the year 50 has to read "0050" or the field treats it as empty.
+  const year = String(date.getFullYear()).padStart(4, "0")
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
   const hour = String(date.getHours()).padStart(2, "0")

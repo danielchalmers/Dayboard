@@ -24,11 +24,16 @@ describe("getDaypart", () => {
 
 describe("getHeaderDate", () => {
   it("spells out the weekday, month, and day", () => {
-    const formatted = getHeaderDate(new Date(2026, 6, 7))
+    const date = new Date(2026, 6, 7)
+    const formatted = getHeaderDate(date)
+    const part = (options: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat(undefined, options).format(date)
 
-    // Locale-dependent order, but all three parts must be present.
-    expect(formatted).toMatch(/7/)
-    expect(formatted.length).toBeGreaterThan(8)
+    // The order is the locale's, but the long names of all three parts must be there, and no year.
+    expect(formatted).toContain(part({ weekday: "long" }))
+    expect(formatted).toContain(part({ month: "long" }))
+    expect(formatted).toMatch(/\b7\b/)
+    expect(formatted).not.toContain("2026")
   })
 })
 

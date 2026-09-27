@@ -1,23 +1,10 @@
-import type { Locator, Page, Request } from "@playwright/test"
+import type { Locator, Request } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
-import { boxOf, cardByTitle } from "./helpers"
+import { addWidget, boxOf, cardByTitle, openNewTab } from "./helpers"
 
 // The standing rules of the product, the ones a well-meaning change breaks quietly: a minimal manifest, no network, a board that scrolls from the top, centered dialogs, buttons that stay put, and menus that close.
 // Each of these is one line of config or CSS away from regressing with every feature test still green.
-
-const openNewTab = async (page: Page, extensionId: string) => {
-  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(() => chrome.storage.sync.clear())
-  await page.reload()
-}
-
-const addWidget = async (page: Page, kind: string, title: string) => {
-  await page.getByRole("button", { name: "Add widget" }).click()
-  await page.getByRole("button", { name: `Add ${kind}` }).click()
-  await page.getByLabel("Name").fill(title)
-  await page.getByRole("button", { name: `Save ${kind}` }).click()
-}
 
 test("ships a minimal, new-tab-only manifest", async ({ page, extensionId }) => {
   await page.goto(`chrome-extension://${extensionId}/newtab.html`)
