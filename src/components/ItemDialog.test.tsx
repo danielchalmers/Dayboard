@@ -289,6 +289,14 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.rotation).toBe("daily")
   })
 
+  it("lets the name and quotes take the direction of what is typed into them", () => {
+    render(itemDialog({ item: quoteItem }))
+
+    // Without it, a right-to-left name or quote is laid out left to right, with its closing punctuation at the wrong end.
+    expect(screen.getByLabelText("Name")).toHaveAttribute("dir", "auto")
+    expect(screen.getByLabelText("Quotes (one per line)")).toHaveAttribute("dir", "auto")
+  })
+
   // The page keeps the dialog open when storage refuses its save, so what was typed has to survive the error arriving and the dialog has to say why.
   it("keeps the draft and says why when its save was refused", () => {
     const onSave = vi.fn()

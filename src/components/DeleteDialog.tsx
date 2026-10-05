@@ -44,10 +44,10 @@ export const DeleteDialog = ({
             <h2 className="modal-dialog__title" id="delete-dialog-title">
               Delete {item.kind}?
             </h2>
+            {/* The title is set apart from the sentence around it, so one written right to left keeps its own punctuation at its own end. */}
             <p className="modal-dialog__subtitle">
-              {item.archived
-                ? `This removes ${item.title} for good.`
-                : `This removes ${item.title} for good. If you might want it back, archive it instead.`}
+              This removes <bdi>{item.title}</bdi> for good.
+              {!item.archived && " If you might want it back, archive it instead."}
             </p>
           </div>
         </div>

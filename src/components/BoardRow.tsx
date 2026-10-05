@@ -98,6 +98,7 @@ const NoteField = ({
     <textarea
       aria-label={`${item.title} note`}
       className="note-field"
+      dir="auto"
       onBlur={field.onBlur}
       onChange={(event) => field.onChange(event.currentTarget.value)}
       placeholder="Jot something down..."
@@ -128,7 +129,9 @@ const QuoteField = ({ item, now }: { item: QuoteWidget; now: Date }) => {
       : Math.floor(openSeed * quotes.length) % quotes.length
 
   return (
-    <blockquote className="quote-text">{quotes[index] ?? quotes[0]}</blockquote>
+    <blockquote className="quote-text" dir="auto">
+      {quotes[index] ?? quotes[0]}
+    </blockquote>
   )
 }
 
@@ -527,7 +530,8 @@ const TodoBody = ({
               <span
                 className={`todo-task__text${
                   task.done ? " todo-task__text--done" : ""
-                }`}>
+                }`}
+                dir="auto">
                 {task.text}
               </span>
             </label>
@@ -565,6 +569,7 @@ const TodoBody = ({
           <input
             aria-label={`Add a task to ${item.title}`}
             className="todo-add__field"
+            dir="auto"
             maxLength={MAX_TASK_LENGTH}
             onChange={(event) => setDraft(event.currentTarget.value)}
             placeholder="Add a task..."
@@ -629,7 +634,10 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
       {frame}
       <div className="board-row__header">
         <div className="board-row__identity">
-          <h2 className="board-row__title">{item.title}</h2>
+          {/* Titles, like everything typed onto a card, take their direction from their own first letters, so a right-to-left one reads and aligns as it was written. */}
+          <h2 className="board-row__title" dir="auto">
+            {item.title}
+          </h2>
           {detail !== undefined ? (
             <p className="board-row__detail">{detail}</p>
           ) : null}

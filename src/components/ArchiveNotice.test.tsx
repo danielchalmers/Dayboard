@@ -18,10 +18,16 @@ describe("ArchiveNotice", () => {
     const onUndo = vi.fn()
     render(<ArchiveNotice onExpire={() => {}} onUndo={onUndo} title="Launch" />)
 
-    expect(screen.getByText("Archived Launch")).toBeInTheDocument()
+    expect(screen.getByText(/^Archived/)).toHaveTextContent(/^Archived Launch$/)
     fireEvent.click(screen.getByRole("button", { name: "Undo" }))
 
     expect(onUndo).toHaveBeenCalledOnce()
+  })
+
+  it("sets the title apart from the line, so a right-to-left one keeps its punctuation", () => {
+    render(<ArchiveNotice onExpire={() => {}} onUndo={() => {}} title="مذكرات!" />)
+
+    expect(screen.getByText("مذكرات!").tagName).toBe("BDI")
   })
 
   it("lets itself go after a few seconds", () => {

@@ -37,8 +37,9 @@ export const ArchiveNotice = ({ title, onUndo, onExpire }: ArchiveNoticeProps) =
       onFocus={() => setHasFocus(true)}
       onPointerEnter={() => setHasPointer(true)}
       onPointerLeave={() => setHasPointer(false)}>
+      {/* Set apart from the line around it, so a title written right to left keeps its own punctuation at its own end. */}
       <span className="board-notice__text board-notice__text--one-line">
-        Archived {title}
+        Archived <bdi>{title}</bdi>
       </span>
       <button
         className="board-notice__action"

@@ -780,6 +780,41 @@ describe("BoardRow", () => {
     expect(screen.getByText("Only one here")).toBeInTheDocument()
   })
 
+  it("lets everything typed onto a card take its own direction", () => {
+    const now = new Date("2026-03-04T09:00:00.000Z")
+    const note: Widget = {
+      id: "n",
+      kind: "note",
+      title: "مذكرات",
+      colorPreset: "indigo",
+      settings: { text: "اشترِ الحليب!" }
+    }
+    const quote: Widget = {
+      id: "q",
+      kind: "quote",
+      title: "حكمة",
+      colorPreset: "emerald",
+      settings: { quotes: ["اطلبوا العلم."], rotation: "daily" }
+    }
+
+    // Right-to-left text only lays out right to left, with its punctuation at the proper end, when the element is told to look at what it holds.
+    render(
+      <>
+        <BoardRow item={note} now={now} />
+        <BoardRow item={quote} now={now} />
+        <BoardRow item={todo([{ id: "a", text: "شراء الخبز!", done: false }])} now={now} />
+      </>
+    )
+
+    for (const title of ["مذكرات", "حكمة", "Today"]) {
+      expect(screen.getByRole("heading", { name: title })).toHaveAttribute("dir", "auto")
+    }
+    expect(screen.getByLabelText("مذكرات note")).toHaveAttribute("dir", "auto")
+    expect(screen.getByText("اطلبوا العلم.")).toHaveAttribute("dir", "auto")
+    expect(screen.getByText("شراء الخبز!")).toHaveAttribute("dir", "auto")
+    expect(screen.getByLabelText("Add a task to Today")).toHaveAttribute("dir", "auto")
+  })
+
   it("renders a stopwatch and starts it from the button", () => {
     const item: Widget = {
       id: "sw",

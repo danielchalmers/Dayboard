@@ -49,19 +49,24 @@ describe("DeleteDialog", () => {
   it("points at archiving as the gentler option for a widget still on the board", () => {
     render(deleteDialog())
 
-    expect(
-      screen.getByText(
-        "This removes Groceries for good. If you might want it back, archive it instead."
-      )
-    ).toBeInTheDocument()
+    expect(screen.getByText(/^This removes/)).toHaveTextContent(
+      /^This removes Groceries for good\. If you might want it back, archive it instead\.$/
+    )
   })
 
   it("drops the archive suggestion for a widget that is already archived", () => {
     render(deleteDialog({ item: { ...noteItem, archived: true } }))
 
-    expect(
-      screen.getByText("This removes Groceries for good.")
-    ).toBeInTheDocument()
+    expect(screen.getByText(/^This removes/)).toHaveTextContent(
+      /^This removes Groceries for good\.$/
+    )
+  })
+
+  it("sets the title apart from the sentence, so a right-to-left one keeps its punctuation", () => {
+    render(deleteDialog({ item: { ...noteItem, title: "مذكرات!" } }))
+
+    // Left in the sentence, the "!" of an Arabic title lands at its left-to-right end, on the wrong side of the word.
+    expect(screen.getByText("مذكرات!").tagName).toBe("BDI")
   })
 
   it("confirms with the widget it was handed", () => {
