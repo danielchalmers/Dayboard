@@ -290,7 +290,7 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Quotes (one per line)")).toHaveValue(pasted)
   })
 
-  // A save from the backdrop can be refused and leave the dialog open, and Escape only reaches it while focus is still inside.
+  // A save from the backdrop can be refused, by the form over an empty field or by storage, and leave the dialog open; Escape only reaches it while focus is still inside.
   it("keeps focus where it was when the backdrop is pressed", () => {
     render(itemDialog())
 

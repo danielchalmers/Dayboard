@@ -106,6 +106,28 @@ test("clicking away from an add only keeps it once something was changed", async
   await expect(cards).toHaveCount(before + 1)
 })
 
+test("an outside click the form refuses keeps focus on the field and Escape working", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add note" }).click()
+  const dialog = page.getByRole("dialog", { name: "Add note" })
+  await page.getByLabel("Name").fill("")
+
+  // The form refuses the save and focuses the empty Name to say why; the press on the backdrop must not then carry focus out to the page.
+  // A save that storage refuses is held the same way (see board-state.spec.ts).
+  await page.mouse.click(8, 8)
+  await expect(dialog).toBeVisible()
+  await expect(page.getByLabel("Name")).toBeFocused()
+
+  // Escape listens inside the dialog, so it only still works because focus stayed there.
+  await page.keyboard.press("Escape")
+  await expect(dialog).toHaveCount(0)
+})
+
 test("picking a color repaints the card and it survives a reload", async ({
   page,
   extensionId

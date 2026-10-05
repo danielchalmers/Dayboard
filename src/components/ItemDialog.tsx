@@ -196,7 +196,8 @@ export const ItemDialog = ({
         }
       }}
       onMouseDown={(event) => {
-        // The press would otherwise take focus out to the page, beyond the focus trap and the Escape key, and a refused save leaves the dialog open there.
+        // The save the press asks for can be refused, by the form over an empty field or by storage, and either way the dialog stays open.
+        // The press would otherwise take focus out to the page, beyond the focus trap and the Escape key, and an empty field's validation message would go with it.
         if (event.target === event.currentTarget) {
           event.preventDefault()
         }
