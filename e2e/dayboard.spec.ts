@@ -272,7 +272,12 @@ test("an import keeps its Undo through the late echo of an earlier write", async
 
   await page.getByRole("button", { name: "Options" }).click()
   await page.getByLabel("Your name").fill("Sam")
-  await page.locator('input[type="file"]').setInputFiles({
+  // Going for Import takes focus off the name, which is what saves it.
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: "Import" }).click()
+  ])
+  await chooser.setFiles({
     name: "dayboard.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ widgets: [], settings: { name: "" } }))

@@ -32,6 +32,7 @@ import type {
 } from "~/lib/types"
 import { getPresetCssVars } from "~/lib/colors"
 import { WidgetIcon } from "~/components/WidgetIcon"
+import { useAutoSave } from "~/hooks/useAutoSave"
 import { playChime, primeChime } from "~/lib/chime"
 import {
   formatDayLabel,
@@ -78,9 +79,6 @@ interface BoardRowProps {
   onWidgetChange?: WidgetChangeHandler
 }
 
-// Auto-save notes a short beat after typing stops to stay well under chrome.storage.sync's write-rate limits while still feeling instant.
-const NOTE_SAVE_DELAY = 600
-
 const NoteField = ({
   item,
   onWidgetChange
@@ -88,114 +86,21 @@ const NoteField = ({
   item: NoteWidget
   onWidgetChange?: WidgetChangeHandler
 }) => {
-  const [text, setText] = useState(item.settings.text)
-  const fieldRef = useRef<HTMLTextAreaElement>(null)
-  const timerRef = useRef<number | undefined>(undefined)
-  // Typing storage doesn't hold yet, or null once it does.
-  // It stays set while its save is on the way and after storage refuses it, so the field never trades the user's words for the stored text until those words have landed.
-  const pendingRef = useRef<string | null>(null)
-  // The text a save is carrying right now, so a blur or a hidden page in the meantime doesn't send the same words twice.
-  const savingRef = useRef<string | null>(null)
-
-  // Keep the latest callback and widget without re-running the save timers.
-  // The save runs a beat after the keystroke that scheduled it, and building it from that keystroke's widget would write back whatever that widget looked like then, undoing an archive or rename that landed in between.
-  const onChangeRef = useRef(onWidgetChange)
-  onChangeRef.current = onWidgetChange
-  const itemRef = useRef(item)
-  itemRef.current = item
-
-  // Adopt external updates (another tab, an edit dialog) unless the user is actively typing here or has words here storage doesn't hold yet, so a remote change, or the rollback of a refused save, never clobbers them.
-  const adoptRef = useRef(() => {
-    if (document.activeElement !== fieldRef.current && pendingRef.current === null) {
-      setText(itemRef.current.settings.text)
-    }
-  })
-
-  useEffect(() => {
-    adoptRef.current()
-  }, [item.settings.text])
-
-  const flushRef = useRef(() => {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current)
-      timerRef.current = undefined
-    }
-
-    const value = pendingRef.current
-    const latest = itemRef.current
-
-    if (value === null || value === savingRef.current) {
-      return
-    }
-
-    // Text typed back to exactly what is stored goes up too: nothing is written for it, but that is how the board hears this note no longer holds refused words.
-    savingRef.current = value
-    void Promise.resolve(
-      onChangeRef.current?.({ ...latest, settings: { ...latest.settings, text: value } })
-    ).then((refused) => {
-      if (savingRef.current === value) {
-        savingRef.current = null
-      }
-
-      // A refused save keeps its words pending, so the next blur, pause, or hidden page tries them again and the notice tells the user what to change; typed on since, the newer words have a save of their own coming.
-      if (!refused && pendingRef.current === value) {
-        pendingRef.current = null
-        // Anything that arrived from elsewhere while these words were on their way was held back above, so catch up with it now.
-        adoptRef.current()
-      }
-    })
-  })
-
-  // Closing the tab straight after typing neither blurs the field nor unmounts the card, so the pending save would die with the page; hand it over the moment the page is hidden, which comes before it goes.
-  // Unmounting (the card archived out of view) flushes too, rather than dropping the last few keystrokes.
-  useEffect(() => {
-    const flush = flushRef.current
-    const flushWhenHidden = () => {
-      if (document.visibilityState === "hidden") {
-        flush()
-      }
-    }
-
-    document.addEventListener("visibilitychange", flushWhenHidden)
-    window.addEventListener("pagehide", flush)
-
-    return () => {
-      document.removeEventListener("visibilitychange", flushWhenHidden)
-      window.removeEventListener("pagehide", flush)
-      flush()
-    }
-  }, [])
-
-  // Leaving the field hands over what was typed, or, with nothing typed, catches up on any change that arrived while it was focused and so was held back above.
-  const handleBlur = () => {
-    if (pendingRef.current !== null) {
-      flushRef.current()
-    } else {
-      setText(itemRef.current.settings.text)
-    }
-  }
-
-  const handleChange = (value: string) => {
-    setText(value)
-    pendingRef.current = value
-
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current)
-    }
-
-    timerRef.current = window.setTimeout(flushRef.current, NOTE_SAVE_DELAY)
-  }
+  // Built on the widget as it is when the save runs (see useAutoSave), so a late save cannot undo an archive or rename that landed in between.
+  const field = useAutoSave<HTMLTextAreaElement>(item.settings.text, (text) =>
+    onWidgetChange?.({ ...item, settings: { ...item.settings, text } })
+  )
 
   return (
     <textarea
       aria-label={`${item.title} note`}
       className="note-field"
-      onBlur={handleBlur}
-      onChange={(event) => handleChange(event.currentTarget.value)}
+      onBlur={field.onBlur}
+      onChange={(event) => field.onChange(event.currentTarget.value)}
       placeholder="Jot something down..."
-      ref={fieldRef}
+      ref={field.fieldRef}
       spellCheck={false}
-      value={text}
+      value={field.value}
     />
   )
 }

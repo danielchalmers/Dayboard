@@ -537,7 +537,7 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
   })
 })
 
-// A note keeps words storage refused on screen (see NoteField), where every other card shows what the board rolled back to.
+// A note keeps words storage refused on screen (see useAutoSave), where every other card shows what the board rolled back to.
 describe("useDayboardState with a note holding refused words", () => {
   const note: NoteWidget = {
     id: "jot",
@@ -699,6 +699,95 @@ describe("useDayboardState with a note holding refused words", () => {
     expect(noteIn(stored())).toEqual({ ...note, archived: true, settings: { text: long } })
     expect(noteIn(result.current.state!)?.archived).toBe(true)
     expect(result.current.saveError).toBeNull()
+
+    unmount()
+  })
+})
+
+// The greeting name keeps refused words in its field the way a note does, but Options covers the board and its notice, so it says why there instead (see SettingsDialog).
+describe("useDayboardState saving the greeting name", () => {
+  const habit: HabitWidget = {
+    id: "walk",
+    kind: "habit",
+    title: "Walk",
+    colorPreset: "amber",
+    settings: { history: [] }
+  }
+
+  // Refuses every write that would change the name while `refusing` says so, the way a burst of writes plays out.
+  const render = async () => {
+    const control = { refusing: true }
+    let stored: DayboardState = { widgets: [habit], settings: { name: "Sam" } }
+
+    stubChrome({
+      get: async (key) => ({ [key]: structuredClone(stored) }),
+      set: async (items) => {
+        const next = Object.values(items)[0]!
+
+        if (control.refusing && next.settings.name !== stored.settings.name) {
+          throw TOO_OFTEN
+        }
+
+        stored = structuredClone(next)
+      }
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const hook = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(hook.result.current.state).not.toBeNull())
+
+    return { ...hook, control }
+  }
+
+  it("leaves the board's notice out of a name refused while Options shows it", async () => {
+    const { result, unmount } = await render()
+
+    let refused: string | null = null
+    await act(async () => {
+      refused = await result.current.setSettings({ name: "Samantha" }, () => true)
+    })
+
+    // Options hears why, to say so beside the name it keeps; the board goes back to what storage holds.
+    expect(refused).toBe(TOO_OFTEN_NOTICE)
+    expect(result.current.saveError).toBeNull()
+    expect(result.current.state!.settings).toEqual({ name: "Sam" })
+
+    unmount()
+  })
+
+  it("says on the board why a name refused as Options closed went with it, until the next save lands", async () => {
+    const { result, unmount, control } = await render()
+
+    // Sent while Options was open, and answered once it had closed.
+    let shown = true
+    await act(async () => {
+      const saving = result.current.setSettings({ name: "Samantha" }, () => shown)
+      shown = false
+      await saving
+    })
+    expect(result.current.saveError).toBe(TOO_OFTEN_NOTICE)
+
+    // Nothing on screen holds the name any more, so the notice goes the way any other refusal's does.
+    control.refusing = false
+    await act(async () => {
+      await result.current.updateWidget({ ...habit, settings: { history: ["2026-10-05"] } })
+    })
+    expect(result.current.saveError).toBeNull()
+
+    unmount()
+  })
+
+  it("writes nothing for a name typed back to what is stored", async () => {
+    const { result, unmount } = await render()
+
+    let refused: string | null = "unset"
+    await act(async () => {
+      refused = await result.current.setSettings({ name: "Sam" }, () => true)
+    })
+
+    expect(refused).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
 
     unmount()
   })

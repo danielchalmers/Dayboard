@@ -1,16 +1,66 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 
+import { useAutoSave } from "~/hooks/useAutoSave"
 import { useModalFocus } from "~/hooks/useModalFocus"
 import type { DayboardSettings } from "~/lib/types"
 
 interface SettingsDialogProps {
   isOpen: boolean
   settings: DayboardSettings
-  onChange: (settings: DayboardSettings) => void
+  /** Resolves to why storage refused the change, or null once it is saved. `isShown` says whether the name is still on screen to say why beside it. */
+  onChange: (
+    settings: DayboardSettings,
+    isShown?: () => boolean
+  ) => Promise<string | null> | void
   onClose: () => void
   onExport?: () => void
   onImport?: (file: File) => void
   importError?: string | null
+}
+
+// The name saves the way a note does (see useAutoSave): a beat after typing stops, on leaving the field, and as Options closes or the page is hidden.
+// A write per keystroke could run into the sync write-rate limit within one name, and a refused one put the stored name back over what was being typed.
+// Options covers the board and its notice, so a refusal is told here, beside the words it kept, for as long as it keeps them.
+// Options also puts focus on the name as it opens, so unlike a note, a focused name with nothing typed in it still takes a change made in another tab.
+const NameSection = ({
+  settings,
+  onChange
+}: Pick<SettingsDialogProps, "settings" | "onChange">) => {
+  const [refusal, setRefusal] = useState<string | null>(null)
+  const field = useAutoSave<HTMLInputElement>(
+    settings.name,
+    async (name, isShown) => {
+      const refused = (await onChange({ ...settings, name }, isShown)) ?? null
+
+      setRefusal(refused)
+      return refused
+    },
+    { adoptWhileFocused: true }
+  )
+
+  return (
+    <section className="settings-section">
+      <label className="form-label-group">
+        <span>Your name</span>
+        <input
+          onBlur={field.onBlur}
+          onChange={(event) => field.onChange(event.currentTarget.value)}
+          placeholder="Optional"
+          ref={field.fieldRef}
+          type="text"
+          value={field.value}
+        />
+      </label>
+      <p className="form-note">
+        Used to greet you at the top of every new tab.
+      </p>
+      {refusal ? (
+        <p className="form-note form-note--error" role="alert">
+          {refusal}
+        </p>
+      ) : null}
+    </section>
+  )
 }
 
 // Dayboard keeps options to a minimum on purpose: the layout, dragging, and placement all just work.
@@ -55,22 +105,7 @@ export const SettingsDialog = ({
         </div>
 
         <div className="settings-sections">
-          <section className="settings-section">
-            <label className="form-label-group">
-              <span>Your name</span>
-              <input
-                onChange={(event) =>
-                  onChange({ ...settings, name: event.currentTarget.value })
-                }
-                placeholder="Optional"
-                type="text"
-                value={settings.name}
-              />
-            </label>
-            <p className="form-note">
-              Used to greet you at the top of every new tab.
-            </p>
-          </section>
+          <NameSection onChange={onChange} settings={settings} />
 
           <section className="settings-section">
             <div className="form-label-group">

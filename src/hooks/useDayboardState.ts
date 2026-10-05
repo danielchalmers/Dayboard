@@ -18,7 +18,7 @@ interface UseDayboardStateResult {
   isLoading: boolean
   error: string | null
   setWidgets: Save<Widget[]>
-  setSettings: Save<DayboardSettings>
+  setSettings: (settings: DayboardSettings, isShown?: () => boolean) => Promise<string | null>
   updateWidget: Save<Widget>
   replaceState: Save<DayboardState>
   saveError: string | null
@@ -144,8 +144,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
     return () => document.removeEventListener("resume", catchUp)
   }, [catchUpWith, reload])
 
+  // `toldBeside` is asked once a refusal comes back, and says whether whatever made the change is still on screen saying why beside it, which leaves the board's notice out of it.
   const saveState = useCallback(
-    async (nextState: DayboardState) => {
+    async (nextState: DayboardState, toldBeside?: () => boolean) => {
       const previous = stateRef.current
       commit(nextState)
 
@@ -167,7 +168,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
         }
 
         const reason = describeSaveError(cause)
-        setSaveError(reason)
+        if (!toldBeside?.()) {
+          setSaveError(reason)
+        }
         return reason
       }
 
@@ -203,14 +206,18 @@ export const useDayboardState = (): UseDayboardStateResult => {
     [saveState]
   )
 
+  // Only the greeting name is typed into settings.
+  // While Options shows it, a refused name stays in its field with the reason under it (see SettingsDialog), so the board's notice stays out of it; refused as Options closes, the words go with the dialog, and the board's notice is what is left to say so.
   const setSettings = useCallback(
-    async (settings: DayboardSettings) => {
+    async (settings: DayboardSettings, isShown?: () => boolean) => {
       const current = stateRef.current
-      if (!current) {
+
+      // A name typed back to what is stored has nothing to write.
+      if (!current || isSameData(current.settings, settings)) {
         return null
       }
 
-      return saveState({ ...current, settings })
+      return saveState({ ...current, settings }, isShown)
     },
     [saveState]
   )
