@@ -6,7 +6,7 @@ import type { DayboardState } from "../src/lib/types"
 // Spelled out here rather than imported so a change to the product's default board fails these tests loudly instead of moving along with it.
 export const DEFAULT_BOARD_TITLES = [
   "🕒 Local time",
-  "🌅 Tomorrow morning",
+  "🌅 Morning",
   "👋 Welcome",
   "💬 Today's reminder",
   "🚶 Daily walk",

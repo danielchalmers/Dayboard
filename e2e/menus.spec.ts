@@ -84,8 +84,8 @@ test("the widget menu traps Tab inside itself", async ({
 }) => {
   await openNewTab(page, extensionId)
 
-  // "🌅 Tomorrow morning" sits among other widgets, so every item is enabled and the cycle covers the whole menu.
-  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  // "🌅 Morning" sits among other widgets, so every item is enabled and the cycle covers the whole menu.
+  const card = cardByTitle(page, "🌅 Morning")
 
   await card.focus()
   await card.press("ContextMenu")
@@ -93,24 +93,24 @@ test("the widget menu traps Tab inside itself", async ({
   const menu = page.locator(".card-menu")
   await expect(menu).toBeVisible()
   await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Tomorrow morning back" })
+    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
   ).toBeFocused()
 
   // The menu renders in the top layer, so the board behind it is still in the page's tab order; trapping Tab is what keeps a stray keypress from stranding focus out there with the menu still up.
   await page.keyboard.press("Tab")
   await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Tomorrow morning next" })
+    page.getByRole("menuitem", { name: "Move 🌅 Morning next" })
   ).toBeFocused()
 
   await page.keyboard.press("Shift+Tab")
   await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Tomorrow morning back" })
+    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
   ).toBeFocused()
 
   // Shift+Tab from the first item wraps to the last rather than leaving.
   await page.keyboard.press("Shift+Tab")
   await expect(
-    page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" })
+    page.getByRole("menuitem", { name: "Delete 🌅 Morning" })
   ).toBeFocused()
 
   // Moving the focus around is all that happened; the menu is still open.
@@ -170,7 +170,7 @@ test("starting a keyboard drag puts away an open widget menu", async ({
   const menu = page.locator(".card-menu")
 
   // The card whose menu is open ignores drag keys, so the drag has to start from a neighbour, which is also the only way a user could reach one: light dismiss covers pointer drags, and this is the keyboard path it never sees.
-  const neighbour = cardByTitle(page, "🌅 Tomorrow morning")
+  const neighbour = cardByTitle(page, "🌅 Morning")
   await neighbour.focus()
   // Guard against a stray scroll or the focus change itself having dismissed the menu before the drag even starts.
   await expect(menu).toHaveCount(1)

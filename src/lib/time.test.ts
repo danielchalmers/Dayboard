@@ -280,6 +280,26 @@ describe("resolveCountdown", () => {
     expect(progress).toBeLessThan(0.5)
   })
 
+  it("counts the first-run morning card to the next 9 AM, saved or not", () => {
+    const morning = (createdAt: Date) =>
+      createDefaultWidgets(createdAt).find(
+        (widget): widget is CountdownWidget => widget.id === "tomorrow-countdown"
+      )!
+    const early = new Date(2026, 9, 8, 6, 45, 0)
+    const thisMorning = new Date(2026, 9, 8, 9, 0, 0).toISOString()
+
+    // An unsaved board is built afresh on every load, and a saved one keeps the day it was made; before 9 o'clock both count to this morning.
+    expect(resolveCountdown(morning(early), early).settings.targetAt).toBe(thisMorning)
+    expect(
+      resolveCountdown(morning(new Date(2026, 9, 7, 21, 30, 0)), early).settings.targetAt
+    ).toBe(thisMorning)
+
+    const late = new Date(2026, 9, 8, 9, 30, 0)
+    expect(resolveCountdown(morning(late), late).settings.targetAt).toBe(
+      new Date(2026, 9, 9, 9, 0, 0).toISOString()
+    )
+  })
+
   it("drops a start that cannot fill a span", () => {
     const backwards = countdownWidget("2026-01-11T00:00:00.000Z", {
       startAt: "2026-02-01T00:00:00.000Z"

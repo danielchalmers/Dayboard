@@ -173,10 +173,10 @@ export interface DayboardState {
 // Each title opens with an emoji, both because it warms up the first board and because it shows that a title is free text you can put anything in.
 // Everything here is editable; these are just inviting starting points.
 export const createDefaultWidgets = (now = new Date()): Widget[] => {
-  // Tomorrow at 9am local, repeating daily so this anchor stays evergreen instead of slipping into the past after the first day.
-  const tomorrowMorning = new Date(now)
-  tomorrowMorning.setDate(now.getDate() + 1)
-  tomorrowMorning.setHours(9, 0, 0, 0)
+  // Today at 9am local, repeating daily, so the card counts to the next 9am: this morning's until 9 o'clock comes round, then tomorrow's.
+  // That holds whether or not the board has been saved yet, which is why the title names the morning rather than the day.
+  const morning = new Date(now)
+  morning.setHours(9, 0, 0, 0)
 
   // The current calendar year as a span, so the progress bar reads as a meaningful fraction on first paint.
   // It repeats yearly: the board is saved as it stands at the first edit, and a fixed span would sit at Complete from New Year's Day on.
@@ -197,10 +197,10 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
     {
       id: "tomorrow-countdown",
       kind: "countdown",
-      title: "🌅 Tomorrow morning",
+      title: "🌅 Morning",
       colorPreset: "indigo",
       settings: {
-        targetAt: tomorrowMorning.toISOString(),
+        targetAt: morning.toISOString(),
         repeat: "daily"
       }
     },
