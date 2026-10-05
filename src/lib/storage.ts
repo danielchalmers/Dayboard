@@ -205,7 +205,7 @@ const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
 }
 
 // Structural equality over plain JSON data, blind to key order, which differs between a widget built in the page and the same widget read back out of storage.
-const isSameData = (a: unknown, b: unknown): boolean => {
+export const isSameData = (a: unknown, b: unknown): boolean => {
   if (a === b) {
     return true
   }

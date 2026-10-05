@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BoardRow, BoardRowFallback } from "./BoardRow"
@@ -9,7 +9,7 @@ import { playChime, primeChime } from "~/lib/chime"
 import { formatDayLabel, toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
 import { MAX_TASKS, type TodoTask } from "~/lib/todo"
-import type { HabitWidget, TodoWidget, Widget } from "~/lib/types"
+import type { HabitWidget, NoteWidget, TodoWidget, Widget } from "~/lib/types"
 
 // Sound is the one thing a test cannot observe by rendering, so the chime module is stubbed for the whole file and asserted on by call.
 vi.mock("~/lib/chime", () => ({
@@ -538,6 +538,129 @@ describe("BoardRow", () => {
       ...item,
       settings: { text: "Buy milk" }
     })
+  })
+
+  it("keeps a note's words in the field when storage refuses them, and offers them again", async () => {
+    const item: NoteWidget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "Keep me" }
+    }
+    const now = new Date("2026-01-01T12:30:00.000Z")
+    const onWidgetChange = vi.fn(async () => "Couldn’t save")
+
+    const { rerender } = render(
+      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
+    )
+    const field = screen.getByLabelText("Scratchpad note")
+    const typed = "Keep me, and the long paste after it"
+
+    fireEvent.change(field, { target: { value: typed } })
+    fireEvent.blur(field)
+    // The board shows the change at once, then rolls back to what storage holds once the write is refused.
+    rerender(
+      <BoardRow
+        item={{ ...item, settings: { text: typed } }}
+        now={now}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+    await act(async () => {})
+    rerender(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
+
+    expect(field).toHaveValue(typed)
+
+    // Leaving the field again tries the same words again rather than putting the stored text back over them.
+    fireEvent.focus(field)
+    fireEvent.blur(field)
+    await act(async () => {})
+
+    expect(field).toHaveValue(typed)
+    expect(onWidgetChange).toHaveBeenCalledTimes(2)
+    expect(onWidgetChange).toHaveBeenLastCalledWith({ ...item, settings: { text: typed } })
+  })
+
+  // Nothing needs writing for text typed back to what storage holds, but the board still has to hear that the refused words are gone, or its notice would stay up for them.
+  it("hands a note typed back to what is stored up to the board too", async () => {
+    const item: NoteWidget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "Keep me" }
+    }
+    const now = new Date("2026-01-01T12:30:00.000Z")
+    const onWidgetChange = vi
+      .fn<(widget: Widget) => Promise<string | null>>()
+      .mockResolvedValueOnce("Couldn’t save")
+      .mockResolvedValue(null)
+
+    const { rerender } = render(
+      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
+    )
+    const field = screen.getByLabelText("Scratchpad note")
+
+    fireEvent.change(field, { target: { value: "Keep me, and more" } })
+    fireEvent.blur(field)
+    await act(async () => {})
+    fireEvent.change(field, { target: { value: "Keep me" } })
+    fireEvent.blur(field)
+    await act(async () => {})
+
+    expect(onWidgetChange).toHaveBeenLastCalledWith(item)
+
+    // With nothing held any more, the field follows the board again.
+    rerender(
+      <BoardRow
+        item={{ ...item, settings: { text: "From the other tab" } }}
+        now={now}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+    expect(field).toHaveValue("From the other tab")
+  })
+
+  it("sends a note's words once while their save is on the way, and catches up once it lands", async () => {
+    const item: NoteWidget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "" }
+    }
+    const now = new Date("2026-01-01T12:30:00.000Z")
+    let land = (_refused: string | null) => {}
+    const onWidgetChange = vi.fn(
+      () => new Promise<string | null>((resolve) => (land = resolve))
+    )
+
+    const { rerender } = render(
+      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
+    )
+    const field = screen.getByLabelText("Scratchpad note")
+
+    fireEvent.change(field, { target: { value: "Idea" } })
+    fireEvent.blur(field)
+    fireEvent.focus(field)
+    fireEvent.blur(field)
+
+    expect(onWidgetChange).toHaveBeenCalledTimes(1)
+
+    // Another tab's edit arrives while this one is still on its way, and is held back until it lands.
+    rerender(
+      <BoardRow
+        item={{ ...item, settings: { text: "From the other tab" } }}
+        now={now}
+        onWidgetChange={onWidgetChange}
+      />
+    )
+    expect(field).toHaveValue("Idea")
+
+    await act(async () => land(null))
+
+    expect(field).toHaveValue("From the other tab")
   })
 
   it("renders the deterministic daily quote for a quote widget", () => {

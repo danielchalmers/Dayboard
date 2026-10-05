@@ -65,6 +65,9 @@ import {
   timerRemainingMs
 } from "~/lib/timers"
 
+// A card hands its change up and may hear back why storage refused it (null once it is saved), which only a card holding typed text has a use for.
+export type WidgetChangeHandler = (widget: Widget) => Promise<string | null> | void
+
 interface BoardRowProps {
   item: Widget
   now: Date
@@ -72,7 +75,7 @@ interface BoardRowProps {
   dragHandleProps?: ComponentPropsWithoutRef<"div">
   className?: string
   style?: CSSProperties
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: WidgetChangeHandler
 }
 
 // Auto-save notes a short beat after typing stops to stay well under chrome.storage.sync's write-rate limits while still feeling instant.
@@ -83,13 +86,16 @@ const NoteField = ({
   onWidgetChange
 }: {
   item: NoteWidget
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: WidgetChangeHandler
 }) => {
   const [text, setText] = useState(item.settings.text)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const timerRef = useRef<number | undefined>(undefined)
-  // Typing not yet handed to storage, or null once it has been.
+  // Typing storage doesn't hold yet, or null once it does.
+  // It stays set while its save is on the way and after storage refuses it, so the field never trades the user's words for the stored text until those words have landed.
   const pendingRef = useRef<string | null>(null)
+  // The text a save is carrying right now, so a blur or a hidden page in the meantime doesn't send the same words twice.
+  const savingRef = useRef<string | null>(null)
 
   // Keep the latest callback and widget without re-running the save timers.
   // The save runs a beat after the keystroke that scheduled it, and building it from that keystroke's widget would write back whatever that widget looked like then, undoing an archive or rename that landed in between.
@@ -98,13 +104,15 @@ const NoteField = ({
   const itemRef = useRef(item)
   itemRef.current = item
 
-  // Adopt external updates (another tab, an edit dialog) unless the user is actively typing here, so a remote change never clobbers an in-progress note.
-  useEffect(() => {
-    if (document.activeElement === fieldRef.current) {
-      return
+  // Adopt external updates (another tab, an edit dialog) unless the user is actively typing here or has words here storage doesn't hold yet, so a remote change, or the rollback of a refused save, never clobbers them.
+  const adoptRef = useRef(() => {
+    if (document.activeElement !== fieldRef.current && pendingRef.current === null) {
+      setText(itemRef.current.settings.text)
     }
+  })
 
-    setText(item.settings.text)
+  useEffect(() => {
+    adoptRef.current()
   }, [item.settings.text])
 
   const flushRef = useRef(() => {
@@ -115,11 +123,27 @@ const NoteField = ({
 
     const value = pendingRef.current
     const latest = itemRef.current
-    pendingRef.current = null
 
-    if (value !== null && value !== latest.settings.text) {
-      onChangeRef.current?.({ ...latest, settings: { ...latest.settings, text: value } })
+    if (value === null || value === savingRef.current) {
+      return
     }
+
+    // Text typed back to exactly what is stored goes up too: nothing is written for it, but that is how the board hears this note no longer holds refused words.
+    savingRef.current = value
+    void Promise.resolve(
+      onChangeRef.current?.({ ...latest, settings: { ...latest.settings, text: value } })
+    ).then((refused) => {
+      if (savingRef.current === value) {
+        savingRef.current = null
+      }
+
+      // A refused save keeps its words pending, so the next blur, pause, or hidden page tries them again and the notice tells the user what to change; typed on since, the newer words have a save of their own coming.
+      if (!refused && pendingRef.current === value) {
+        pendingRef.current = null
+        // Anything that arrived from elsewhere while these words were on their way was held back above, so catch up with it now.
+        adoptRef.current()
+      }
+    })
   })
 
   // Closing the tab straight after typing neither blurs the field nor unmounts the card, so the pending save would die with the page; hand it over the moment the page is hidden, which comes before it goes.

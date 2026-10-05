@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
+  isSameData,
   readCachedDayboardState,
   readDayboardState,
   shareUnchanged,
@@ -51,6 +52,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
   // The latest board, for the callbacks below to build on without depending on it.
   // It moves the moment a change is made rather than on the next render: two changes in one tick (two timers finishing together) would otherwise both start from the board before either, and the second would write the first one back out.
   const stateRef = useRef(state)
+
+  // Notes still showing words storage refused, by id.
+  // Every other card shows what the board rolled back to, but a note keeps refused words on screen (see NoteField), so the notice stays up until each of them has saved or let its words go rather than going at the first unrelated save that lands.
+  const heldRef = useRef(new Set<string>())
 
   const commit = useCallback((next: DayboardState) => {
     stateRef.current = next
@@ -127,13 +132,23 @@ export const useDayboardState = (): UseDayboardStateResult => {
       }
 
       // The notice stays up until something actually saves, rather than blinking off at the start of every attempt, a retry refused again included.
-      setSaveError(null)
+      if (heldRef.current.size === 0) {
+        setSaveError(null)
+      }
+
       return null
     },
     [adopt, commit]
   )
 
   const dismissSaveError = useCallback(() => setSaveError(null), [])
+
+  // A note's refused words have saved, or there is nothing left of them to save, so the notice goes once no other note holds any.
+  const release = useCallback((id: string) => {
+    if (heldRef.current.delete(id) && heldRef.current.size === 0) {
+      setSaveError(null)
+    }
+  }, [])
 
   // Read state through the ref so these stay referentially stable across renders, which lets the memoized board rows skip unrelated re-renders.
   const setWidgets = useCallback(
@@ -163,20 +178,34 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const updateWidget = useCallback(
     async (widget: Widget) => {
       const current = stateRef.current
+      const existing = current?.widgets.find((candidate) => candidate.id === widget.id)
 
-      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), and writing the board back unchanged would only spend sync quota.
-      if (!current?.widgets.some((existing) => existing.id === widget.id)) {
+      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), or one that leaves it as it is (a note typed back to what it held), and writing the board back unchanged would only spend sync quota.
+      if (!current || !existing || isSameData(existing.settings, widget.settings)) {
+        release(widget.id)
         return null
       }
 
-      return saveState({
+      // A card only ever changes its own settings, so those are laid over the card as it stands.
+      // A note offers refused words again from the copy it last rendered, even as it unmounts on being archived, and writing that whole copy back would undo the archive.
+      const refused = await saveState({
         ...current,
-        widgets: current.widgets.map((existing) =>
-          existing.id === widget.id ? widget : existing
+        widgets: current.widgets.map((candidate) =>
+          candidate === existing
+            ? ({ ...existing, settings: widget.settings } as Widget)
+            : candidate
         )
       })
+
+      if (!refused) {
+        release(widget.id)
+      } else if (widget.kind === "note") {
+        heldRef.current.add(widget.id)
+      }
+
+      return refused
     },
-    [saveState]
+    [release, saveState]
   )
 
   return {

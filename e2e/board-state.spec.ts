@@ -8,32 +8,46 @@ import { addWidget, cardByTitle, openNewTab, readWidgetSettings } from "./helper
 test.describe("a board too large to sync", () => {
   test.use({ expectsSaveError: true })
 
-  test("rolls the note back and says why", async ({ page, extensionId }) => {
+  test("keeps the note's words on screen, says why, and saves once they fit", async ({
+    page,
+    extensionId
+  }) => {
     await openNewTab(page, extensionId)
     await addWidget(page, "note", "Scratch")
 
-    // Save something worth keeping first, so the rollback below has a visible value to return to rather than an empty field.
+    // Save something first, so there is a stored value the refused paste could be traded back for.
     const field = page.getByLabel("Scratch note")
     await field.fill("Keep me")
     await field.blur()
-    await expect(field).toHaveValue("Keep me")
+    await expect.poll(() => readWidgetSettings(page, "Scratch")).toEqual({ text: "Keep me" })
 
     // chrome.storage.sync caps a single item at 8KB and a note has no length cap, so a long paste is a write the browser refuses.
-    await field.fill("x".repeat(20_000))
+    const pasted = `Keep me ${"x".repeat(20_000)}`
+    await field.fill(pasted)
     await field.blur()
 
     // The notice writes "Couldn't" with a typographic apostrophe, so match the plain half of the sentence instead.
     const notice = page.getByRole("alert")
     await expect(notice).toContainText("more than browser sync can hold")
 
-    // The optimistic update is undone, so the card shows what actually persisted instead of quietly diverging from it.
-    await expect(field).toHaveValue("Keep me")
+    // Storage still holds what it had, but the words stay in the field, so trimming them is all it takes rather than typing them again.
+    await expect(field).toHaveValue(pasted)
+    expect(await readWidgetSettings(page, "Scratch")).toEqual({ text: "Keep me" })
 
-    await page.getByRole("button", { name: "Dismiss" }).click()
+    // Another card saving fine says nothing about the note, so the notice stays for as long as the note holds words storage doesn't.
+    await page.getByRole("button", { name: "Mark today" }).click()
+    await expect
+      .poll(() => readWidgetSettings(page, "🚶 Daily walk"))
+      .toEqual({ history: [expect.any(String)] })
+    await expect(notice).toContainText("more than browser sync can hold")
+
+    await field.fill(pasted.slice(0, 2_000))
+    await field.blur()
+
     await expect(notice).toHaveCount(0)
-
-    await page.reload()
-    await expect(page.getByLabel("Scratch note")).toHaveValue("Keep me")
+    await expect.poll(() => readWidgetSettings(page, "Scratch")).toEqual({
+      text: pasted.slice(0, 2_000)
+    })
   })
 
   // A quote list has no length cap either, and it is typed into a dialog that used to close before its write was refused.
@@ -91,6 +105,57 @@ test.describe("a board too large to sync", () => {
     await expect(dialog).toHaveCount(0)
     await expect(cardByTitle(page, "Stoics")).toHaveCount(0)
     await expect(page.getByRole("alert")).toHaveCount(0)
+  })
+})
+
+test.describe("a board saved too often", () => {
+  test.use({ expectsSaveError: true })
+
+  test("archives a note still holding refused words, and saves them with it", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await addWidget(page, "note", "Scratch")
+
+    // Refuse the next write the way Chrome's write-rate quota does, then let writes through again.
+    await page.evaluate(() => {
+      const sync = chrome.storage.sync
+      const set = sync.set.bind(sync)
+      let refusals = 1
+
+      sync.set = ((items: Record<string, unknown>) =>
+        refusals-- > 0
+          ? Promise.reject(
+              new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota.")
+            )
+          : set(items)) as typeof sync.set
+    })
+
+    const field = page.getByLabel("Scratch note")
+    await field.fill("Typed while saving too often")
+    await field.blur()
+    await expect(page.getByRole("alert")).toContainText("too many changes in a row")
+
+    // The note's field takes a right-click for its copy/paste menu, so its card menu comes from the keyboard.
+    await cardByTitle(page, "Scratch").focus()
+    await page.keyboard.press("Shift+F10")
+    await page.getByRole("menuitem", { name: "Archive Scratch" }).click()
+
+    // Leaving the board unmounts the card, which offers its words once more from the copy it last rendered, from before the archive.
+    await expect(cardByTitle(page, "Scratch")).toHaveCount(0)
+    await expect(page.getByRole("alert")).toHaveCount(0)
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const stored = await chrome.storage.sync.get("dayboard-state")
+          const { widgets } = stored["dayboard-state"] as DayboardState
+
+          return widgets.find((widget) => widget.title === "Scratch")
+        })
+      )
+      .toMatchObject({ archived: true, settings: { text: "Typed while saving too often" } })
+    await expect(cardByTitle(page, "Scratch")).toHaveCount(0)
   })
 })
 
