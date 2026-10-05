@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, renderHook, waitFor } from "@testing-library/react"
+import { act, render as renderComponent, renderHook, waitFor } from "@testing-library/react"
+import { createElement, useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { CACHE_KEY } from "~/lib/storage"
@@ -305,33 +306,35 @@ describe("useDayboardState change handling", () => {
   })
 })
 
+// A running timer and a note, for the tabs below that come to a board older than storage's.
+const tea = (endsAt: number): TimerWidget => ({
+  id: "tea",
+  kind: "timer",
+  title: "Tea",
+  colorPreset: "rose",
+  settings: { durationMs: 6000, running: true, remainingMs: 6000, endsAt, chime: false }
+})
+const groceries = (text: string): NoteWidget => ({
+  id: "groceries",
+  kind: "note",
+  title: "Groceries",
+  colorPreset: "sky",
+  settings: { text }
+})
+
+// What the timer card hands up as its run ends.
+const finished = (timer: TimerWidget): TimerWidget => ({
+  ...timer,
+  settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
+})
+
 // Chrome delivers the storage changes a frozen tab missed only after its own wake-up work, and the clock catching up as it comes back into view is part of that.
 describe("useDayboardState in a tab waking from being frozen", () => {
-  const tea = (endsAt: number): TimerWidget => ({
-    id: "tea",
-    kind: "timer",
-    title: "Tea",
-    colorPreset: "rose",
-    settings: { durationMs: 6000, running: true, remainingMs: 6000, endsAt, chime: false }
-  })
-  const groceries = (text: string): NoteWidget => ({
-    id: "groceries",
-    kind: "note",
-    title: "Groceries",
-    colorPreset: "sky",
-    settings: { text }
-  })
-
   // The board as the tab froze with it, the timer's run since over.
   const frozenWith: DayboardState = {
     widgets: [tea(1_000), groceries("Milk")],
     settings: { name: "" }
   }
-
-  const finished = (timer: TimerWidget): TimerWidget => ({
-    ...timer,
-    settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
-  })
 
   // Storage answers the first read with the board the tab froze with, and the read it starts on waking only when the test says, the way that answer queues behind the changes delivered on waking.
   const render = async () => {
@@ -430,6 +433,105 @@ describe("useDayboardState in a tab waking from being frozen", () => {
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
     expect(result.current.state).toEqual(expected)
+
+    unmount()
+  })
+})
+
+// The localStorage mirror only moves while a board tab is open, so a new tab paints whatever the last one left there, however long ago that was.
+describe("useDayboardState in a new tab painted from the mirror", () => {
+  // The board as the last tab here left it, its timer run since over.
+  const remembered: DayboardState = {
+    widgets: [tea(1_000), groceries("Milk")],
+    settings: { name: "" }
+  }
+
+  // A board whose timer card settles a run that has ended from its own effect as it mounts, the way the real card does, which is before the hook's effects have run and so before its first read has even started.
+  const render = async () => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(remembered))
+
+    let answerFirstRead: (state: DayboardState) => void = () => {}
+    stubChrome({
+      get: (key) =>
+        new Promise((resolve) => {
+          answerFirstRead = (state) => resolve({ [key]: structuredClone(state) })
+        })
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const board: { current: ReturnType<typeof useDayboardState> | null } = { current: null }
+    const settled: Promise<string | null>[] = []
+
+    const Settles = ({ timer, onChange }: { timer: TimerWidget; onChange: (widget: TimerWidget) => Promise<string | null> }) => {
+      useEffect(() => {
+        settled.push(onChange(finished(timer)))
+      }, [onChange, timer])
+
+      return null
+    }
+
+    const Board = () => {
+      board.current = useDayboardState()
+      const timer = board.current.state?.widgets.find(
+        (widget): widget is TimerWidget => widget.kind === "timer" && widget.settings.running
+      )
+
+      return timer ? createElement(Settles, { timer, onChange: board.current.updateWidget }) : null
+    }
+
+    const view = renderComponent(createElement(Board))
+
+    // The board painted from the mirror, and its timer settled as it did.
+    expect(board.current!.state).toEqual(remembered)
+    expect(settled).toHaveLength(1)
+
+    return { ...view, board, settled, answerFirstRead: (state: DayboardState) => answerFirstRead(state) }
+  }
+
+  it("drops a change worked out from a card storage has moved on from", async () => {
+    const { board, settled, answerFirstRead, unmount } = await render()
+
+    // Meanwhile, on another device, the timer was reset and the note added to.
+    const stored: DayboardState = {
+      widgets: [
+        { ...tea(1_000), settings: { ...tea(1_000).settings, running: false, endsAt: null } },
+        groceries("Milk, eggs, bread")
+      ],
+      settings: { name: "" }
+    }
+
+    await act(async () => {
+      answerFirstRead(stored)
+      await Promise.all(settled)
+    })
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(board.current!.state).toEqual(stored)
+
+    unmount()
+  })
+
+  it("settles a run that ended while no tab was open once the first read finds it untouched", async () => {
+    const { board, settled, answerFirstRead, unmount } = await render()
+
+    // Only the note changed elsewhere, so the run really is over.
+    const stored: DayboardState = {
+      widgets: [tea(1_000), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+
+    await act(async () => {
+      answerFirstRead(stored)
+      await Promise.all(settled)
+    })
+
+    const expected = {
+      widgets: [finished(tea(1_000)), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
+    expect(board.current!.state).toEqual(expected)
 
     unmount()
   })

@@ -482,6 +482,51 @@ test("a note typed just before its tab closes keeps every keystroke", async ({
   await expect(reopened.getByLabel("Scratch note")).toHaveValue("Last thought")
 })
 
+// A new tab paints from the board the last one here left in localStorage, which falls behind whenever storage moves on with no board tab open (another device, say).
+test("a new tab leaves a newer board alone when the one it remembered had a timer run out", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const tea = (settings: Record<string, unknown>) => ({
+    id: "tea",
+    kind: "timer",
+    title: "Tea",
+    colorPreset: "rose",
+    settings: { durationMs: 60_000, remainingMs: 60_000, chime: false, ...settings }
+  })
+  const groceries = (text: string) => ({
+    id: "groceries",
+    kind: "note",
+    title: "Groceries",
+    colorPreset: "sky",
+    settings: { text }
+  })
+  const stored = {
+    widgets: [tea({ running: false, endsAt: null }), groceries("Milk, eggs, bread")],
+    settings: { name: "" }
+  }
+
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), stored)
+  await expect(page.getByLabel("Groceries note")).toHaveValue("Milk, eggs, bread")
+
+  // What this browser remembers is from before the timer was reset elsewhere, its run long since over.
+  await page.evaluate(
+    (board) => localStorage.setItem("dayboard-state-cache", JSON.stringify(board)),
+    {
+      widgets: [tea({ running: true, endsAt: Date.now() - 60_000 }), groceries("Milk")],
+      settings: { name: "" }
+    }
+  )
+  await page.reload()
+
+  await expect(page.getByLabel("Groceries note")).toHaveValue("Milk, eggs, bread")
+  await expect(cardByTitle(page, "Tea").getByText(/Time.s up/)).toHaveCount(0)
+  expect(await readWidgetSettings(page, "Groceries")).toEqual(stored.widgets[1]!.settings)
+  expect(await readWidgetSettings(page, "Tea")).toEqual(stored.widgets[0]!.settings)
+})
+
 test("a card carrying data this version can't read leaves the rest of the board standing", async ({
   page,
   extensionId
