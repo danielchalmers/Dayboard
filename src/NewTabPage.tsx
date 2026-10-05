@@ -10,7 +10,11 @@ import { WidgetIcon } from "~/components/WidgetIcon"
 import { useDayboardState } from "~/hooks/useDayboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting, getHeaderDate } from "~/lib/greeting"
-import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
+import {
+  isSameData,
+  parseDayboardState,
+  serializeDayboardState
+} from "~/lib/storage"
 import {
   applyDialogEdit,
   archiveWidget,
@@ -19,13 +23,20 @@ import {
   reorderWidgets,
   restoreWidget
 } from "~/lib/widgets"
-import type { Widget, WidgetKind } from "~/lib/types"
+import type { DayboardState, Widget, WidgetKind } from "~/lib/types"
 
 interface EditorState {
   mode: "add" | "edit"
   item: Widget
   /** Why the last save from this dialog was refused. */
   error?: string
+}
+
+interface ImportUndo {
+  /** The board the import replaced. */
+  previous: DayboardState
+  /** The board as it was imported. */
+  imported: DayboardState
 }
 
 // Leading icons for the card context menu.
@@ -117,6 +128,7 @@ export function NewTabPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
   const [showArchived, setShowArchived] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -220,11 +232,17 @@ export function NewTabPage() {
     URL.revokeObjectURL(url)
   }
 
+  // An import replaces the whole board, the name included, so the board it replaced is kept for an Undo in the notice that follows rather than a confirmation asked up front.
   const importBoard = async (file: File) => {
     setImportError(null)
     try {
       const imported = parseDayboardState(await file.text())
-      await replaceState(imported)
+      const previous = state
+
+      if ((await replaceState(imported)) === null) {
+        setImportUndo({ previous, imported })
+      }
+
       setIsSettingsOpen(false)
     } catch (cause) {
       setImportError(
@@ -236,6 +254,17 @@ export function NewTabPage() {
   const closeSettings = () => {
     setIsSettingsOpen(false)
     setImportError(null)
+  }
+
+  // The undo is only offered while the board is still exactly what was imported: once anything has changed since, putting the old board back would quietly throw that change away too.
+  // The board is compared by what it holds, since a late echo of an earlier write can swap the board object out and back with nothing changed.
+  const canUndoImport =
+    importUndo !== null && isSameData(state, importUndo.imported)
+
+  const undoImport = async () => {
+    if (importUndo && (await replaceState(importUndo.previous)) === null) {
+      setImportUndo(null)
+    }
   }
 
   return (
@@ -518,6 +547,26 @@ export function NewTabPage() {
             type="button">
             Dismiss
           </button>
+        </div>
+      ) : null}
+      {/* A refused save outranks the import's undo for the one place a notice sits. */}
+      {!saveError && canUndoImport ? (
+        <div className="board-notice board-notice--quiet" role="status">
+          <span className="board-notice__text">Board imported.</span>
+          <span className="board-notice__actions">
+            <button
+              className="board-notice__action"
+              onClick={() => void undoImport()}
+              type="button">
+              Undo
+            </button>
+            <button
+              className="board-notice__dismiss"
+              onClick={() => setImportUndo(null)}
+              type="button">
+              Dismiss
+            </button>
+          </span>
         </div>
       ) : null}
     </>

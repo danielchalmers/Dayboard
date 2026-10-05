@@ -193,6 +193,102 @@ test("exports the board to a file and imports one back", async ({
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
 })
 
+test("an import can be taken back until the board moves on", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // A file with an empty board replaces everything, the exact case an undo is for.
+  const importFile = async (widgets: unknown[]) => {
+    await page.getByRole("button", { name: "Options" }).click()
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "dayboard.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({ widgets, settings: { name: "" } }))
+    })
+  }
+
+  // The file's settings replace the greeting name along with the board, so the undo has to bring that back too.
+  const greeting = page.locator(".page-header__greeting")
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByLabel("Your name").fill("Sam")
+  await page.getByRole("button", { name: "Done" }).click()
+  await expect(greeting).toHaveText(/, Sam$/)
+
+  await importFile([])
+  await expect(page.getByText("A fresh start")).toBeVisible()
+  await expect(greeting).not.toHaveText(/Sam/)
+
+  const notice = page.getByRole("status").filter({ hasText: "Board imported." })
+  await notice.getByRole("button", { name: "Undo" }).click()
+
+  for (const title of DEFAULT_BOARD_TITLES) {
+    await expect(page.getByRole("heading", { name: title })).toBeVisible()
+  }
+  await expect(greeting).toHaveText(/, Sam$/)
+  await expect(notice).toHaveCount(0)
+
+  // Once the imported board has changed, putting the old one back would throw that change away too, so the offer goes.
+  await importFile([
+    {
+      id: "walk",
+      kind: "habit",
+      title: "Walk",
+      colorPreset: "amber",
+      settings: { history: [] }
+    }
+  ])
+  await expect(notice).toBeVisible()
+  await page.getByRole("button", { name: "Mark today" }).click()
+  await expect(notice).toHaveCount(0)
+})
+
+test("an import keeps its Undo through the late echo of an earlier write", async ({
+  page,
+  extensionId
+}) => {
+  // Hold every storage change back, the way a busy sync can, long enough that the echo of the name typed just before the import lands after it.
+  await page.addInitScript(() => {
+    const changes = chrome.storage.onChanged
+    const listen = changes.addListener.bind(changes)
+    const echoes = window as typeof window & { pendingEchoes: number }
+    echoes.pendingEchoes = 0
+
+    changes.addListener = ((listener: Parameters<typeof listen>[0]) =>
+      listen((...args) => {
+        echoes.pendingEchoes += 1
+        setTimeout(() => {
+          echoes.pendingEchoes -= 1
+          listener(...args)
+        }, 1_500)
+      })) as typeof changes.addListener
+  })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByLabel("Your name").fill("Sam")
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "dayboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ widgets: [], settings: { name: "" } }))
+  })
+  await expect(page.getByText("A fresh start")).toBeVisible()
+
+  // The name's echo still carries the board from before the import, and the import's own echo follows it.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as typeof window & { pendingEchoes: number }).pendingEchoes
+      )
+    )
+    .toBe(0)
+
+  // The board is back to exactly what was imported, so the way back is still on offer.
+  const notice = page.locator(".board-notice").filter({ hasText: "Board imported." })
+  await expect(notice.getByRole("button", { name: "Undo" })).toBeVisible()
+})
+
 test("a bad import shows an error and leaves the board intact", async ({
   page,
   extensionId
