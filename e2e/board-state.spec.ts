@@ -35,6 +35,41 @@ test.describe("a board too large to sync", () => {
   })
 })
 
+test("an edit dialog left open keeps what changed on the card meanwhile", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await addWidget(page, "note", "Ideas")
+
+  // A plain goto rather than openNewTab, which clears storage and would take the note with it.
+  const other = await context.newPage()
+  await other.goto(`chrome-extension://${extensionId}/newtab.html`)
+
+  // The note's own field takes a right-click for its copy/paste menu, so its card menu comes from the keyboard.
+  await cardByTitle(page, "Ideas").focus()
+  await page.keyboard.press("Shift+F10")
+  await page.getByRole("menuitem", { name: "Edit Ideas" }).click()
+
+  await other.getByLabel("Ideas note").fill("Eggs, milk, bread")
+  await other.getByLabel("Ideas note").blur()
+  await expect
+    .poll(() => readWidgetSettings(page, "Ideas"))
+    .toEqual({ text: "Eggs, milk, bread" })
+
+  await page.getByRole("dialog").getByLabel("Name").fill("Groceries")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  // The rename lands on the note as it is now, rather than putting back the empty one the dialog opened on.
+  await expect
+    .poll(() => readWidgetSettings(page, "Groceries"))
+    .toEqual({ text: "Eggs, milk, bread" })
+  await expect(other.getByLabel("Groceries note")).toHaveValue("Eggs, milk, bread")
+
+  await other.close()
+})
+
 test("a board from a newer Dayboard keeps what this one can't show through a save", async ({
   page,
   extensionId

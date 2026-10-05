@@ -90,6 +90,7 @@ export const ItemDialog = ({
 
   // Merge a patch into the draft's settings, leaving the fields the form didn't touch alone.
   // Every field belongs to exactly one kind, so the runtime check both guards a stale draft and is what makes the cast sound: the spread is only reached once `current` really is that kind.
+  // An edit saves only the fields `dialogSettings` in src/lib/widgets.ts names, so a field added to this form is added there too.
   const patchSettings = <K extends WidgetKind>(
     kind: K,
     patch: Partial<Extract<Widget, { kind: K }>["settings"]>

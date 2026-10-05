@@ -12,6 +12,7 @@ import { useNow } from "~/hooks/useNow"
 import { getGreeting, getHeaderDate } from "~/lib/greeting"
 import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
+  applyDialogEdit,
   archiveWidget,
   createWidget,
   moveActiveWidget,
@@ -133,13 +134,21 @@ export function NewTabPage() {
     return <ErrorView message={error || "Unable to load Dayboard"} />
   }
 
+  // An edit lands on the card as it is now (see applyDialogEdit), and a card deleted elsewhere while its dialog sat open stays deleted.
   const saveItem = (item: Widget) => {
-    const nextWidgets =
-      editorState?.mode === "edit"
-        ? state.widgets.map((current) => (current.id === item.id ? item : current))
-        : [...state.widgets, item]
+    const latest = state.widgets.find((current) => current.id === item.id)
+    const nextWidgets = latest
+      ? state.widgets.map((current) =>
+          current === latest ? applyDialogEdit(latest, item) : current
+        )
+      : editorState?.mode === "add"
+        ? [...state.widgets, item]
+        : null
 
-    void setWidgets(nextWidgets)
+    if (nextWidgets) {
+      void setWidgets(nextWidgets)
+    }
+
     setEditorState(null)
   }
 
