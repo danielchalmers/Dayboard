@@ -342,8 +342,8 @@ details > summary::-webkit-details-marker {
   padding: 6px;
   position: absolute;
   z-index: 100;
+  /* Unprefixed only, here and on the archive drop zone and modal backdrop below: handed both spellings, the minifier keeps the -webkit- one, which Chromium ignores, and the blur ships switched off. */
   backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   animation: scale-up-menu 160ms var(--ease-out) both;
   transform-origin: top right;
 }
@@ -489,7 +489,6 @@ details > summary::-webkit-details-marker {
   align-items: center;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 2px dashed var(--line-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
@@ -1550,7 +1549,6 @@ body:has(.board-row--overlay) .board-notice {
   position: fixed;
   z-index: 1000;
   backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   animation: fade-in var(--t-fast);
 }
 
