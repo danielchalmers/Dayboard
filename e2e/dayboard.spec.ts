@@ -906,6 +906,72 @@ test("typing in a note does not start a drag or open the widget menu", async ({
   await expect(page.locator(".card-menu")).toHaveCount(0)
 })
 
+test("a note that holds more than it shows fades at the edge the rest is behind", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await addWidget(page, "note", "Groceries")
+
+  const field = page.getByLabel("Groceries note")
+  // Which edges are faded, read from whether the mask starts and ends clear rather than from how Chrome spells the gradient.
+  const fadedEdges = () =>
+    field.evaluate((node) => {
+      const mask = getComputedStyle(node).maskImage
+      const colors = mask.match(/transparent|rgba?\([^)]*\)/g) ?? []
+      const clear = (color: string | undefined) => {
+        if (color === undefined) {
+          return false
+        }
+        if (color === "transparent") {
+          return true
+        }
+        const parts = color.slice(color.indexOf("(") + 1, -1).split(/[\s,/]+/).filter(Boolean)
+        return parts.length === 4 && Number(parts[3]) === 0
+      }
+      const top = clear(colors[0])
+      const bottom = clear(colors.at(-1))
+
+      return top && bottom ? "both" : top ? "top" : bottom ? "bottom" : "none"
+    })
+  const scrollTo = (fraction: number) =>
+    field.evaluate((node, at) => {
+      node.scrollTop = (node.scrollHeight - node.clientHeight) * at
+    }, fraction)
+
+  // Text that fits is left exactly as it is.
+  await field.fill("Oat milk")
+  await field.blur()
+  expect(await fadedEdges()).toBe("none")
+
+  // Typing past the end leaves the note scrolled to its last line, so once it is left the rest is above it and only the top edge fades.
+  await field.fill(
+    ["Oat milk", "Eggs", "Spinach", "Lemons", "Coffee beans", "Bread", "Rice", "Basil"].join("\n")
+  )
+  // While it is being typed in, nothing is faded, including the line under the caret at the edge.
+  await expect.poll(fadedEdges).toBe("none")
+  await field.blur()
+  await expect.poll(fadedEdges).toBe("top")
+
+  await scrollTo(0.5)
+  await expect.poll(fadedEdges).toBe("both")
+
+  // Back at the top, the rest is below, and the bottom edge fades instead.
+  await scrollTo(0)
+  await expect.poll(fadedEdges).toBe("bottom")
+
+  // The fade follows the hand rather than the clock, so asking for less motion keeps it tracking the scroll instead of stuck at its end.
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await expect.poll(fadedEdges).toBe("bottom")
+  await scrollTo(1)
+  await expect.poll(fadedEdges).toBe("top")
+
+  // High contrast keeps every line at full strength.
+  await page.emulateMedia({ forcedColors: "active" })
+  await expect.poll(fadedEdges).toBe("none")
+})
+
 test("add quote flow shows a quote and keeps the daily pick across reloads", async ({
   page,
   extensionId

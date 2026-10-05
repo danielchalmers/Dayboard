@@ -711,6 +711,44 @@ details > summary::-webkit-details-marker {
   margin: 0;
   padding: 0;
   resize: none;
+  /* A slim thumb in the card's own accent, where Windows would otherwise set a white track with arrows inside a tinted card. */
+  scrollbar-color: color-mix(in srgb, var(--card-accent-resolved) 40%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+/* A note that holds more than it shows fades out at whichever edge the rest is behind: the bottom at first, both partway down, the top at the end.
+   The fade is driven by the note's own scroll position, and a note with nothing to scroll has no scroll timeline, so text that fits is never faded.
+   It sits behind @supports because without scroll timelines the animation would run once by the clock and leave every note faded at the top.
+   It steps aside while the note is being typed in, since the line under the caret is often the one at the edge, and comes back where the note was left.
+   High contrast asks for every line at full strength, and there the stock scrollbar is drawn anyway to say there is more, so it never fades. */
+@supports (animation-timeline: scroll()) {
+  .note-field {
+    animation: edge-fade linear both;
+    animation-timeline: scroll(self);
+  }
+
+  .note-field:focus {
+    animation: none;
+  }
+
+  @media (forced-colors: active) {
+    .note-field {
+      animation: none;
+    }
+  }
+}
+
+@keyframes edge-fade {
+  from {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+  }
+  10%,
+  90% {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.6em, #000 calc(100% - 1.6em), transparent);
+  }
+  to {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.6em);
+  }
 }
 
 .note-field:hover,
@@ -1920,5 +1958,11 @@ body:has(.board-row--overlay) .board-notice {
   }
   .board-row:hover {
     transform: none !important;
+  }
+  /* A note's edge fade follows the hand scrolling it rather than the clock, so it isn't motion to take away.
+     Left to the rule above, its timing would pin every long note to the end-of-scroll frame: faded at the top, with no sign of the rest below. */
+  .note-field {
+    animation-delay: 0s !important;
+    animation-duration: auto !important;
   }
 }
