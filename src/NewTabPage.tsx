@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
+import { ArchiveNotice } from "~/components/ArchiveNotice"
 import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
@@ -20,8 +21,10 @@ import {
   archiveWidget,
   createWidget,
   moveActiveWidget,
+  neighborsOf,
   reorderWidgets,
-  restoreWidget
+  restoreWidget,
+  undoArchiveWidget
 } from "~/lib/widgets"
 import type { DayboardState, Widget, WidgetKind } from "~/lib/types"
 
@@ -37,6 +40,13 @@ interface ImportUndo {
   previous: DayboardState
   /** The board as it was imported. */
   imported: DayboardState
+}
+
+// The last archive, kept just long enough to undo: the card, and the board cards either side of it when it left.
+interface UndoableArchive {
+  id: string
+  previousId?: string
+  nextId?: string
 }
 
 // Leading icons for the card context menu.
@@ -128,6 +138,22 @@ export function NewTabPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
+  const [undoableArchive, setUndoableArchive] = useState<UndoableArchive | null>(null)
+  const expireUndo = useCallback(() => setUndoableArchive(null), [])
+
+  // Undo only stands for an archive that is still in place.
+  // Once the card is back on the board (restored by hand, or from another tab) or a failed save has rolled the archive back, there is nothing left to undo, and the notice goes rather than waiting to come back later for an archive made somewhere else.
+  const undoableItem = undoableArchive
+    ? state?.widgets.find(
+        (widget) => widget.id === undoableArchive.id && widget.archived
+      )
+    : undefined
+
+  useEffect(() => {
+    if (undoableArchive && !undoableItem) {
+      setUndoableArchive(null)
+    }
+  }, [undoableArchive, undoableItem])
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -195,14 +221,26 @@ export function NewTabPage() {
     setItemPendingDelete(null)
   }
 
+  // Every archive, from the menu or a drop, goes through here, so each one can be undone back into the slot it left.
+  const archive = (id: string) => {
+    const { previous, next } = neighborsOf(state.widgets, id)
+    setUndoableArchive({ id, previousId: previous?.id, nextId: next?.id })
+    void setWidgets(archiveWidget(state.widgets, id))
+  }
+
   const archiveItem = (item: Widget) => {
     closeOpenMenus()
-    void setWidgets(archiveWidget(state.widgets, item.id))
+    archive(item.id)
   }
 
   const restoreItem = (item: Widget) => {
     closeOpenMenus()
     void setWidgets(restoreWidget(state.widgets, item.id))
+  }
+
+  const undoArchive = ({ id, ...neighbors }: UndoableArchive) => {
+    setUndoableArchive(null)
+    void setWidgets(undoArchiveWidget(state.widgets, id, neighbors))
   }
 
   const addItem = (kind: Widget["kind"]) => {
@@ -239,6 +277,8 @@ export function NewTabPage() {
       const previous = state
 
       if ((await replaceState(imported)) === null) {
+        // An archive still on offer was taken off the board the import replaced, so the import's own Undo takes the notice.
+        setUndoableArchive(null)
         setImportUndo({ previous, imported })
       }
 
@@ -356,7 +396,7 @@ export function NewTabPage() {
             The lists render from BoardDnd's view of the widgets, which mid-drag previews the restore with the dragged card already sitting in its board slot. */}
         <BoardDnd
           widgets={state.widgets}
-          onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
+          onArchive={archive}
           onReorder={reorderList}
           onRestore={(id, beforeId) =>
             void setWidgets(restoreWidget(state.widgets, id, beforeId))
@@ -535,7 +575,8 @@ export function NewTabPage() {
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
       />
-      {/* A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
+      {/* One place at the bottom of the page holds one notice at a time, and a refused save outranks an undo for it.
+          A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
       {saveError && !editorState?.error ? (
         <div className="board-notice" role="alert">
           <span className="board-notice__text">{saveError}</span>
@@ -548,26 +589,39 @@ export function NewTabPage() {
           </button>
         </div>
       ) : null}
-      {/* A refused save outranks the import's undo for the one place a notice sits. */}
-      {!saveError && canUndoImport ? (
-        <div className="board-notice board-notice--quiet" role="status">
-          <span className="board-notice__text">Board imported.</span>
-          <span className="board-notice__actions">
-            <button
-              className="board-notice__action"
-              onClick={() => void undoImport()}
-              type="button">
-              Undo
-            </button>
-            <button
-              className="board-notice__dismiss"
-              onClick={() => setImportUndo(null)}
-              type="button">
-              Dismiss
-            </button>
-          </span>
-        </div>
-      ) : null}
+      {/* The live region stays mounted so an undo is announced as it is offered; one inserted along with its text is easily missed.
+          Archiving and importing each change the board the other's Undo would act on, so only the latest of the two is ever on offer. */}
+      <div role="status">
+        {undoableArchive && undoableItem ? (
+          // A refused save takes the spot, but the archive's few seconds keep running underneath it, so the Undo is not offered long after the fact once that notice goes.
+          <div hidden={Boolean(saveError)}>
+            <ArchiveNotice
+              key={undoableArchive.id}
+              onExpire={expireUndo}
+              onUndo={() => undoArchive(undoableArchive)}
+              title={undoableItem.title}
+            />
+          </div>
+        ) : !saveError && canUndoImport ? (
+          <div className="board-notice board-notice--quiet">
+            <span className="board-notice__text">Board imported.</span>
+            <span className="board-notice__actions">
+              <button
+                className="board-notice__action"
+                onClick={() => void undoImport()}
+                type="button">
+                Undo
+              </button>
+              <button
+                className="board-notice__dismiss"
+                onClick={() => setImportUndo(null)}
+                type="button">
+                Dismiss
+              </button>
+            </span>
+          </div>
+        ) : null}
+      </div>
     </>
   )
 }

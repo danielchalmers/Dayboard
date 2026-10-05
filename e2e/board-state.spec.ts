@@ -2,7 +2,14 @@ import type { Page } from "@playwright/test"
 
 import type { DayboardState } from "../src/lib/types"
 import { expect, test } from "./fixtures"
-import { addWidget, cardByTitle, openNewTab, readWidgetSettings } from "./helpers"
+import {
+  DEFAULT_BOARD_TITLES,
+  addWidget,
+  cardByTitle,
+  openNewTab,
+  openWidgetMenu,
+  readWidgetSettings
+} from "./helpers"
 
 // A rejected write is the one thing the shared browser's guard fails a test over, so the test that goes looking for one says so up front.
 test.describe("a board too large to sync", () => {
@@ -106,20 +113,45 @@ test.describe("a board too large to sync", () => {
     await expect(cardByTitle(page, "Stoics")).toHaveCount(0)
     await expect(page.getByRole("alert")).toHaveCount(0)
   })
+
+  // Words storage refused matter more than an Undo for a card that is safe in the archive either way.
+  test("keeps the notice for refused words over an archive's Undo", async ({
+    page,
+    extensionId
+  }) => {
+    await page.clock.install()
+    await openNewTab(page, extensionId)
+    await addWidget(page, "note", "Scratch")
+
+    const field = page.getByLabel("Scratch note")
+    await field.fill("x".repeat(20_000))
+    await field.blur()
+    const notice = page.getByRole("alert")
+    await expect(notice).toContainText("more than browser sync can hold")
+
+    await openWidgetMenu(page, "🌅 Tomorrow morning")
+    await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+    await expect(cardByTitle(page, "🌅 Tomorrow morning")).toHaveCount(0)
+
+    await expect(notice).toContainText("more than browser sync can hold")
+    await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
+
+    // The archive's few seconds run out underneath, so the words saving later does not bring back an Undo for an archive long past.
+    await page.clock.runFor(7_000)
+    await field.fill("Short again")
+    await field.blur()
+
+    await expect(notice).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
+  })
 })
 
 test.describe("a board saved too often", () => {
   test.use({ expectsSaveError: true })
 
-  test("archives a note still holding refused words, and saves them with it", async ({
-    page,
-    extensionId
-  }) => {
-    await openNewTab(page, extensionId)
-    await addWidget(page, "note", "Scratch")
-
-    // Refuse the next write the way Chrome's write-rate quota does, then let writes through again.
-    await page.evaluate(() => {
+  // Refuses the next write the way Chrome's write-rate quota does, then lets writes through again.
+  const refuseNextWrite = (page: Page) =>
+    page.evaluate(() => {
       const sync = chrome.storage.sync
       const set = sync.set.bind(sync)
       let refusals = 1
@@ -131,6 +163,14 @@ test.describe("a board saved too often", () => {
             )
           : set(items)) as typeof sync.set
     })
+
+  test("archives a note still holding refused words, and saves them with it", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await addWidget(page, "note", "Scratch")
+    await refuseNextWrite(page)
 
     const field = page.getByLabel("Scratch note")
     await field.fill("Typed while saving too often")
@@ -156,6 +196,28 @@ test.describe("a board saved too often", () => {
       )
       .toMatchObject({ archived: true, settings: { text: "Typed while saving too often" } })
     await expect(cardByTitle(page, "Scratch")).toHaveCount(0)
+  })
+
+  // A refusal is only news until something saves, and an archive that saves is news of its own.
+  test("offers an archive's Undo once its save clears a refusal", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await refuseNextWrite(page)
+
+    await page.getByRole("button", { name: "Mark today" }).click()
+    const notice = page.getByRole("alert")
+    await expect(notice).toContainText("too many changes in a row")
+
+    await openWidgetMenu(page, "🌅 Tomorrow morning")
+    await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+
+    await expect(notice).toHaveCount(0)
+    await page.getByRole("status").getByRole("button", { name: "Undo" }).click()
+    await expect(page.locator(".board-list").first().locator("h2")).toHaveText([
+      ...DEFAULT_BOARD_TITLES
+    ])
   })
 })
 

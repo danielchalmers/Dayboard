@@ -105,14 +105,17 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 
+  // The card, not the line naming it in the archive notice.
+  const archived = cardByTitle(page, "🌅 Tomorrow morning")
+
   await toggle.click()
-  await expect(page.getByText("🌅 Tomorrow morning")).toBeVisible()
+  await expect(archived).toBeVisible()
   await expect(toggle).toHaveAccessibleName("Hide archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "true")
 
   // The toggle is a two-way disclosure: clicking again puts the archive back out of sight, which is what keeps the active board the focus.
   await toggle.click()
-  await expect(page.getByText("🌅 Tomorrow morning")).toHaveCount(0)
+  await expect(archived).toHaveCount(0)
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 })

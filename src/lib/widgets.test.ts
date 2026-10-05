@@ -6,8 +6,10 @@ import {
   createWidget as createActualWidget,
   moveActiveWidget,
   moveWidgetToIndex,
+  neighborsOf,
   reorderWidgets,
-  restoreWidget
+  restoreWidget,
+  undoArchiveWidget
 } from "./widgets"
 import { COLOR_PRESETS } from "./colors"
 import type { Widget } from "./types"
@@ -326,5 +328,100 @@ describe("applyDialogEdit", () => {
       endsAt: null,
       chime: false
     })
+  })
+})
+
+describe("neighborsOf", () => {
+  // Storage interleaves the two lists once a card is added after something was archived, so the neighbors must come from the list the card shows in.
+  const widgets = [
+    createWidget("alpha", "Alpha"),
+    createWidget("old", "Old", true),
+    createWidget("beta", "Beta"),
+    createWidget("older", "Older", true),
+    createWidget("gamma", "Gamma")
+  ]
+
+  it("finds the board cards either side, skipping archived ones between them", () => {
+    const { previous, next } = neighborsOf(widgets, "beta")
+
+    expect(previous?.id).toBe("alpha")
+    expect(next?.id).toBe("gamma")
+  })
+
+  it("finds archived neighbors among the archive", () => {
+    expect(neighborsOf(widgets, "old").next?.id).toBe("older")
+    expect(neighborsOf(widgets, "older").previous?.id).toBe("old")
+  })
+
+  it("has nothing past either end of a list, or for an unknown id", () => {
+    expect(neighborsOf(widgets, "alpha").previous).toBeUndefined()
+    expect(neighborsOf(widgets, "gamma").next).toBeUndefined()
+    expect(neighborsOf(widgets, "missing")).toEqual({})
+  })
+})
+
+describe("undoArchiveWidget", () => {
+  const widgets = [
+    createWidget("alpha", "Alpha"),
+    createWidget("beta", "Beta"),
+    createWidget("gamma", "Gamma"),
+    createWidget("delta", "Delta")
+  ]
+
+  // What the page records as a card is archived: the board cards either side of it.
+  const archiveWithNeighbors = (id: string) => {
+    const { previous, next } = neighborsOf(widgets, id)
+
+    return {
+      archived: archiveWidget(widgets, id),
+      neighbors: { previousId: previous?.id, nextId: next?.id }
+    }
+  }
+
+  const boardIds = (list: Widget[]) =>
+    list.filter((widget) => !widget.archived).map((widget) => widget.id)
+
+  it("puts every card back in exactly the slot it left", () => {
+    for (const { id } of widgets) {
+      const { archived, neighbors } = archiveWithNeighbors(id)
+
+      expect(undoArchiveWidget(archived, id, neighbors)).toEqual(widgets)
+    }
+  })
+
+  // A plain restore would send it to the end of the board, a long way from where it was taken off.
+  it("follows the card before it when the card after it has gone since", () => {
+    const { archived, neighbors } = archiveWithNeighbors("beta")
+    const withoutGamma = archived.filter((widget) => widget.id !== "gamma")
+
+    expect(boardIds(undoArchiveWidget(withoutGamma, "beta", neighbors))).toEqual([
+      "alpha",
+      "beta",
+      "delta"
+    ])
+  })
+
+  it("leads the board again when it led it and the card after it has gone", () => {
+    const { archived, neighbors } = archiveWithNeighbors("alpha")
+    const withoutBeta = archived.filter((widget) => widget.id !== "beta")
+
+    expect(boardIds(undoArchiveWidget(withoutBeta, "alpha", neighbors))).toEqual([
+      "alpha",
+      "gamma",
+      "delta"
+    ])
+  })
+
+  it("rejoins the end of the board once neither neighbor is left on it", () => {
+    const { archived, neighbors } = archiveWithNeighbors("beta")
+    const withoutEither = archiveWidget(
+      archived.filter((widget) => widget.id !== "gamma"),
+      "alpha"
+    )
+
+    expect(boardIds(undoArchiveWidget(withoutEither, "beta", neighbors))).toEqual([
+      "delta",
+      "beta"
+    ])
   })
 })

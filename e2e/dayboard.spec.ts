@@ -220,7 +220,11 @@ test("an import can be taken back until the board moves on", async ({
   await expect(page.getByText("A fresh start")).toBeVisible()
   await expect(greeting).not.toHaveText(/Sam/)
 
-  const notice = page.getByRole("status").filter({ hasText: "Board imported." })
+  // The live region the notice is announced through stays mounted around it, so the notice itself is what comes and goes.
+  const notice = page
+    .getByRole("status")
+    .locator(".board-notice")
+    .filter({ hasText: "Board imported." })
   await notice.getByRole("button", { name: "Undo" }).click()
 
   for (const title of DEFAULT_BOARD_TITLES) {
@@ -1440,16 +1444,19 @@ test("archiving from the menu hides a widget and it can be restored", async ({
     .getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" })
     .click()
 
-  // It leaves the board and the archived section stays collapsed by default.
+  // It leaves the board, says where it went, and the archived section stays collapsed by default.
   await expect(
     page.locator(".board-list").first().getByText("🌅 Tomorrow morning")
   ).toHaveCount(0)
+  await expect(
+    page.getByRole("status").getByText("Archived 🌅 Tomorrow morning")
+  ).toBeVisible()
   const toggle = page.getByRole("button", { name: "Show archived" })
   await expect(toggle).toBeVisible()
 
   // Reveal it, then restore it back to the board.
   await toggle.click()
-  await expect(page.getByText("🌅 Tomorrow morning")).toBeVisible()
+  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
   await openWidgetMenu(page, "🌅 Tomorrow morning")
   await page
     .getByRole("menuitem", { name: "Restore 🌅 Tomorrow morning" })
@@ -1461,6 +1468,104 @@ test("archiving from the menu hides a widget and it can be restored", async ({
   await expect(
     page.getByRole("button", { name: /Show archived/ })
   ).toHaveCount(0)
+  // With the card back on the board there is no archive left to undo.
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
+})
+
+test("an archive can be undone back into the slot it left", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "🌅 Tomorrow morning")
+  await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+
+  const titles = page.locator(".board-list").first().locator("h2")
+  await expect(titles).toHaveText(
+    DEFAULT_BOARD_TITLES.filter((title) => title !== "🌅 Tomorrow morning")
+  )
+
+  // Restoring from the archive puts a card at the end of the board; Undo puts it back where it was.
+  await page.getByRole("button", { name: "Undo" }).click()
+  await expect(titles).toHaveText([...DEFAULT_BOARD_TITLES])
+  await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
+  await expect(page.locator(".board-notice")).toHaveCount(0)
+})
+
+test.describe("with the clock paused", () => {
+  // A paused clock holds for the whole browser context, so this test takes a browser of its own rather than stopping time for the tests after it.
+  test.use({ ownBrowser: true })
+
+  test("the archive notice steps aside while a card is dragged", async ({
+    page,
+    extensionId
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 1000 })
+    await page.clock.install({ time: new Date("2026-03-04T10:00:00Z") })
+    await openNewTab(page, extensionId)
+    // The clock stands still from here, so the Undo's few seconds outlast the drag however slowly a busy machine runs it.
+    await page.clock.pauseAt(new Date("2026-03-04T10:01:00Z"))
+
+    await openWidgetMenu(page, "🌅 Tomorrow morning")
+    await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+
+    const notice = page.locator(".board-notice")
+    await expect(notice).toBeVisible()
+
+    // Lift another card while Undo is still on offer.
+    const box = await boxOf(cardByTitle(page, "🕒 Local time"), "the dragged card")
+    const grabX = box.x + box.width / 2
+    const grabY = box.y + 12
+    await page.mouse.move(grabX, grabY)
+    await page.mouse.down()
+    await page.mouse.move(grabX, grabY + 24, { steps: 6 })
+
+    // The archive zone comes up where the notice sits, so the notice makes way for it instead of showing around the tray's edges.
+    await expect(page.locator(".archive-dropzone")).toBeVisible()
+    await expect(notice).toBeHidden()
+
+    // Set the card back down where it was, and the notice returns with Undo still on offer.
+    await page.mouse.move(grabX, grabY, { steps: 6 })
+    await page.mouse.up()
+    await expect(notice).toBeVisible()
+    await expect(notice.getByRole("button", { name: "Undo" })).toBeVisible()
+  })
+})
+
+test("a long title keeps the archive notice to one line", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  const title = "A rather long title for a card, the kind that names a whole plan rather than a thing"
+  await addWidget(page, "note", title)
+
+  // A note's middle is its text field, which keeps a menu of its own, so the card's menu comes from the keyboard.
+  const card = cardByTitle(page, title)
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: `Archive ${title}` }).click()
+
+  // The title is clipped with an ellipsis rather than wrapped, so the notice keeps its one height instead of climbing over the bottom of the board.
+  const text = page.locator(".board-notice__text")
+  await expect(text).toBeVisible()
+  const layout = await text.evaluate((element) => ({
+    lines: Math.round(
+      element.getBoundingClientRect().height /
+        parseFloat(getComputedStyle(element).lineHeight)
+    ),
+    clipped: element.scrollWidth > element.clientWidth
+  }))
+  expect(layout).toEqual({ lines: 1, clipped: true })
+
+  // Scrolled to its end, the board leaves Show archived clear of the notice, just when someone who archived a card goes looking for it.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  const toggle = await boxOf(page.locator(".archive-toggle"), "the Show archived toggle")
+  const notice = await boxOf(page.locator(".board-notice"), "the archive notice")
+  expect(toggle.y + toggle.height).toBeLessThanOrEqual(notice.y)
 })
 
 test("a keyboard drag is released by reaching for the mouse", async ({
@@ -1533,6 +1638,10 @@ test("dragging a widget onto the archive zone archives it", async ({
     page.locator(".board-list").first().getByText("🕒 Local time")
   ).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Show archived" })).toBeVisible()
+
+  // A drop is as easy to undo as the menu's Archive.
+  await page.getByRole("button", { name: "Undo" }).click()
+  await expect(page.locator(".board-row h2").first()).toHaveText("🕒 Local time")
 })
 
 test("a card carried onto the bottom row by its top edge moves there instead of archiving", async ({
