@@ -1,3 +1,4 @@
+import type { DayboardState } from "../src/lib/types"
 import { expect, test } from "./fixtures"
 import { addWidget, cardByTitle, openNewTab, readWidgetSettings } from "./helpers"
 
@@ -32,6 +33,51 @@ test.describe("a board too large to sync", () => {
     await page.reload()
     await expect(page.getByLabel("Scratch note")).toHaveValue("Keep me")
   })
+})
+
+test("a board from a newer Dayboard keeps what this one can't show through a save", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const agenda = {
+    id: "agenda",
+    kind: "calendar",
+    title: "Agenda",
+    colorPreset: "sky",
+    settings: { calendarId: "work" }
+  }
+  const walk = {
+    id: "walk",
+    kind: "habit",
+    title: "Walk",
+    colorPreset: "amber",
+    settings: { history: [], goalPerWeek: 4 }
+  }
+  await page.evaluate(
+    (widgets) =>
+      chrome.storage.sync.set({
+        "dayboard-state": { widgets, settings: { name: "", theme: "dusk" } }
+      }),
+    [walk, agenda]
+  )
+  await page.reload()
+
+  // Only the card this version can draw is on the board.
+  await expect(page.locator(".board-row")).toHaveCount(1)
+
+  await page.getByRole("button", { name: "Mark today" }).click()
+
+  await expect
+    .poll(() => readWidgetSettings(page, "Walk"))
+    .toMatchObject({ history: [expect.any(String)], goalPerWeek: 4 })
+  const stored = await page.evaluate(
+    async () =>
+      (await chrome.storage.sync.get("dayboard-state"))["dayboard-state"] as DayboardState
+  )
+  expect(stored.widgets[1]).toEqual(agenda)
+  expect(stored.settings).toEqual({ name: "", theme: "dusk" })
 })
 
 test("a note keeps what is being typed in it while an idle one adopts the change", async ({

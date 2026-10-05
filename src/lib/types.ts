@@ -153,9 +153,19 @@ export const DEFAULT_SETTINGS: DayboardSettings = {
   name: ""
 }
 
+/**
+ * A card of a kind this build has no renderer for, as a newer Dayboard on another synced device wrote it, with the place it held among the stored cards.
+ */
+export interface UnknownWidget {
+  index: number
+  widget: { id: string; kind: string; settings: object }
+}
+
 export interface DayboardState {
   widgets: Widget[]
   settings: DayboardSettings
+  /** Cards this build can't show, kept off the board but written back with every save so the version that made them still has them. */
+  unknownWidgets?: UnknownWidget[]
 }
 
 // The first-run board.

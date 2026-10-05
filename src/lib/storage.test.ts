@@ -111,7 +111,7 @@ describe("readDayboardState", () => {
     store.set(STORAGE_KEY, {
       widgets: [
         sampleState.widgets[0],
-        { id: "x", kind: "totally-unknown", settings: {} },
+        { id: "x", kind: 7, settings: {} },
         { kind: "clock" },
         // A known kind with no settings is junk too: everything downstream reads through that object, so keeping the row would throw instead of rendering the rest of the board.
         { id: "no-settings-habit", kind: "habit" },
@@ -122,7 +122,7 @@ describe("readDayboardState", () => {
     const { readDayboardState } = await import("./storage")
     const state = await readDayboardState()
 
-    expect(state.widgets).toEqual(sampleState.widgets)
+    expect(state).toEqual(sampleState)
   })
 
   it("prunes a legacy unbounded habit history down to the visible week", async () => {
@@ -329,6 +329,128 @@ describe("normalizing widgets read from storage or an import", () => {
   })
 })
 
+// Every signed-in browser writes the whole board back on each save, so a machine that hasn't updated yet saves over what a newer release wrote.
+// Whatever this build can't read has to come back out of that save exactly as it went in.
+describe("a board written by a newer Dayboard", () => {
+  const newer = {
+    widgets: [
+      {
+        id: "today",
+        kind: "todo",
+        title: "Today",
+        colorPreset: "mint",
+        settings: {
+          tasks: [
+            { id: "t1", text: "Call Sam", done: false, due: "2026-10-08" },
+            { id: "t2", text: "Pay rent", done: true }
+          ],
+          sort: "manual"
+        }
+      },
+      {
+        id: "agenda",
+        kind: "calendar",
+        title: "Agenda",
+        colorPreset: "sky",
+        settings: { calendarId: "work" }
+      },
+      {
+        id: "stretch",
+        kind: "habit",
+        title: "Stretch",
+        colorPreset: "amber",
+        settings: { history: ["2026-10-05"], goalPerWeek: 4 },
+        pinned: true
+      },
+      {
+        id: "laps",
+        kind: "stopwatch",
+        title: "Laps",
+        colorPreset: "teal",
+        settings: { running: false, elapsedMs: 4_000, startedAt: null, laps: [1_000] }
+      },
+      {
+        id: "weather",
+        kind: "weather",
+        title: "Outside",
+        colorPreset: "indigo",
+        settings: { place: "Lisbon" },
+        archived: true
+      }
+    ],
+    settings: { name: "Ana", theme: "dusk" }
+  }
+
+  it("keeps the cards and fields it can't show through a read and a save", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, structuredClone(newer))
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+
+    // Only the kinds this build can draw reach the board.
+    expect(state.widgets.map((widget) => widget.id)).toEqual(["today", "stretch", "laps"])
+
+    await writeDayboardState(state)
+
+    expect(store.get(STORAGE_KEY)).toEqual(newer)
+  })
+
+  it("puts an unknown card back where it was among the cards around it", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, structuredClone(newer))
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    // A new card joins the end of the list, after the archived ones, just as the newer build would add it.
+    const added = { ...sampleState.widgets[0]!, id: "added" }
+    await writeDayboardState({ ...state, widgets: [...state.widgets, added] })
+
+    expect(
+      (store.get(STORAGE_KEY) as { widgets: { id: string }[] }).widgets.map((widget) => widget.id)
+    ).toEqual(["today", "agenda", "stretch", "laps", "weather", "added"])
+
+    // With the cards before it gone, an unknown card still makes it back rather than falling off the end.
+    await writeDayboardState({ ...state, widgets: [] })
+
+    expect(
+      (store.get(STORAGE_KEY) as { widgets: { id: string }[] }).widgets.map((widget) => widget.id)
+    ).toEqual(["agenda", "weather"])
+  })
+
+  it("keeps them in an export, and in the copy a new tab paints from first", async () => {
+    const { store } = stubChromeStorage()
+    store.set(STORAGE_KEY, structuredClone(newer))
+
+    const { readCachedDayboardState, readDayboardState, serializeDayboardState } =
+      await import("./storage")
+    const state = await readDayboardState()
+
+    // The file can be carried to a device on the newer build and imported there whole.
+    expect(JSON.parse(serializeDayboardState(state))).toEqual(newer)
+    // The mirror hydrates the first render, and a save made before the sync read lands must not drop them either.
+    expect(readCachedDayboardState()).toEqual(state)
+  })
+
+  // In a file the user picked, an unknown kind is far likelier a hand-edited typo than a newer card, and kept it would sit on the board where nobody could see or remove it.
+  it("drops them from an imported file instead", async () => {
+    const { parseDayboardState } = await import("./storage")
+    const typo = {
+      id: "tokyo",
+      kind: "clok",
+      title: "Tokyo",
+      colorPreset: "sky",
+      settings: { timeZone: "Asia/Tokyo" }
+    }
+    const imported = parseDayboardState(
+      JSON.stringify({ ...newer, widgets: [...newer.widgets, typo] })
+    )
+
+    expect(imported.widgets.map((widget) => widget.id)).toEqual(["today", "stretch", "laps"])
+    expect(imported.unknownWidgets).toBeUndefined()
+  })
+})
+
 describe("shareUnchanged", () => {
   it("keeps the previous board when a read or echo carries the same data", async () => {
     const { shareUnchanged } = await import("./storage")
@@ -375,6 +497,30 @@ describe("shareUnchanged", () => {
     expect(next.widgets).toEqual([second, first])
     expect(next.widgets[0]).toBe(second)
     expect(next.widgets[1]).toBe(first)
+  })
+
+  it("takes a change to a card only a newer build can show", async () => {
+    const { shareUnchanged } = await import("./storage")
+    const agenda = { id: "agenda", kind: "calendar", settings: { calendarId: "work" } }
+    const previous: DayboardState = {
+      ...sampleState,
+      unknownWidgets: [{ index: 1, widget: agenda }]
+    }
+
+    expect(
+      shareUnchanged(previous, JSON.parse(JSON.stringify(previous)) as DayboardState)
+    ).toBe(previous)
+
+    // Missing it would leave this tab holding the old card, and its next save would write that back over the newer build's edit.
+    const edited: DayboardState = {
+      ...sampleState,
+      unknownWidgets: [{ index: 1, widget: { ...agenda, settings: { calendarId: "home" } } }]
+    }
+    const next = shareUnchanged(previous, edited)
+
+    expect(next).not.toBe(previous)
+    expect(next.unknownWidgets).toEqual(edited.unknownWidgets)
+    expect(next.widgets[0]).toBe(previous.widgets[0])
   })
 
   it("adopts the incoming board outright when there is nothing to compare with", async () => {

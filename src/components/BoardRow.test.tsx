@@ -9,7 +9,7 @@ import { playChime, primeChime } from "~/lib/chime"
 import { formatDayLabel, toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
 import { MAX_TASKS, type TodoTask } from "~/lib/todo"
-import type { Widget } from "~/lib/types"
+import type { HabitWidget, TodoWidget, Widget } from "~/lib/types"
 
 // Sound is the one thing a test cannot observe by rendering, so the chime module is stubbed for the whole file and asserted on by call.
 vi.mock("~/lib/chime", () => ({
@@ -418,6 +418,39 @@ describe("BoardRow", () => {
         { id: "b", text: "Call the vet", done: true }
       ])
     )
+  })
+
+  // An older build pressing these on a synced board must not strip a field a newer one keeps beside them.
+  it("keeps what a newer build stores beside a habit's marks and a todo's tasks", () => {
+    const onWidgetChange = vi.fn()
+    const stretch = {
+      id: "habit",
+      kind: "habit",
+      title: "Read",
+      colorPreset: "emerald",
+      settings: { history: [], goalPerWeek: 4 }
+    } as HabitWidget
+    const list = {
+      id: "todo",
+      kind: "todo",
+      title: "Today",
+      colorPreset: "mint",
+      settings: { tasks: [{ id: "a", text: "Buy milk", done: false }], sort: "manual" }
+    } as TodoWidget
+
+    render(<BoardRow item={stretch} now={todoAt} onWidgetChange={onWidgetChange} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark today" }))
+    render(<BoardRow item={list} now={todoAt} onWidgetChange={onWidgetChange} />)
+    fireEvent.click(screen.getByRole("checkbox", { name: "Buy milk" }))
+
+    expect(onWidgetChange).toHaveBeenNthCalledWith(1, {
+      ...stretch,
+      settings: { history: [toDayKey(todoAt)], goalPerWeek: 4 }
+    })
+    expect(onWidgetChange).toHaveBeenNthCalledWith(2, {
+      ...list,
+      settings: { tasks: [{ id: "a", text: "Buy milk", done: true }], sort: "manual" }
+    })
   })
 
   it("adds a todo task from the card and clears the field", () => {

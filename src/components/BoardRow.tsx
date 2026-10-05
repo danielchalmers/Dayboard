@@ -235,7 +235,7 @@ const StopwatchBody = ({
         <button
           className="timer-button"
           disabled={!running && elapsed === 0}
-          onClick={() => apply(resetStopwatch())}
+          onClick={() => apply(resetStopwatch(item.settings))}
           type="button">
           Reset
         </button>
@@ -348,7 +348,7 @@ const HabitBody = ({
   const toggle = (day: Date) =>
     onWidgetChange?.({
       ...item,
-      settings: { history: toggleDay(history, day) }
+      settings: { ...item.settings, history: toggleDay(history, day) }
     })
 
   const moveFocus = (event: KeyboardEvent<HTMLButtonElement>, from: number) => {
@@ -464,7 +464,7 @@ const TodoBody = ({
   }, [tasks])
 
   const apply = (nextTasks: TodoTask[]) =>
-    onWidgetChange?.({ ...item, settings: { tasks: nextTasks } })
+    onWidgetChange?.({ ...item, settings: { ...item.settings, tasks: nextTasks } })
 
   // The field only clears when a task actually landed, so nothing typed is thrown away by a blank or full add.
   const add = () => {

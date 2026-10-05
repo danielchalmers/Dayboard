@@ -49,12 +49,13 @@ export const stopwatchElapsedMs = (
   return Math.max(0, elapsed)
 }
 
+// Each of these keeps whatever else the settings carry, like the timer's below, so a field a newer build added survives a press on an older one.
 export const startStopwatch = (
   settings: StopwatchSettings,
   nowMs: number
 ): StopwatchSettings => ({
+  ...settings,
   running: true,
-  elapsedMs: settings.elapsedMs,
   startedAt: nowMs
 })
 
@@ -62,12 +63,14 @@ export const pauseStopwatch = (
   settings: StopwatchSettings,
   nowMs: number
 ): StopwatchSettings => ({
+  ...settings,
   running: false,
   elapsedMs: stopwatchElapsedMs(settings, nowMs),
   startedAt: null
 })
 
-export const resetStopwatch = (): StopwatchSettings => ({
+export const resetStopwatch = (settings: StopwatchSettings): StopwatchSettings => ({
+  ...settings,
   running: false,
   elapsedMs: 0,
   startedAt: null

@@ -76,11 +76,22 @@ describe("stopwatch", () => {
     const paused = pauseStopwatch(started, 103_500)
     expect(paused).toEqual({ running: false, elapsedMs: 5_500, startedAt: null })
 
-    expect(resetStopwatch()).toEqual({
+    expect(resetStopwatch(paused)).toEqual({
       running: false,
       elapsedMs: 0,
       startedAt: null
     })
+  })
+
+  it("keeps settings it does not touch through every press", () => {
+    // A field a newer build stores beside the run state, which an older build pressing Start must not strip.
+    const settings = { ...stopwatch({ elapsedMs: 2_000 }), laps: [1_000] }
+    const started = startStopwatch(settings, 100_000)
+    const paused = pauseStopwatch(started, 101_000)
+
+    expect(started).toMatchObject({ laps: [1_000] })
+    expect(paused).toMatchObject({ laps: [1_000] })
+    expect(resetStopwatch(paused)).toMatchObject({ laps: [1_000] })
   })
 })
 
