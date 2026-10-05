@@ -256,6 +256,25 @@ describe("BoardRow", () => {
     expect(container.querySelector(".board-row__meta")).toHaveTextContent("ago")
   })
 
+  it("writes a countdown's date against the card's clock, with no time on a date", () => {
+    const item: Widget = {
+      id: "retirement",
+      kind: "countdown",
+      title: "Retirement",
+      colorPreset: "sky",
+      settings: { targetAt: new Date(2056, 9, 6).toISOString() }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2056, 0, 2, 9, 0, 0)} />
+    )
+
+    // The card's own now is in 2056, so the year is this one and stays off; read against the real clock it would show.
+    expect(container.querySelector(".board-row__detail")).toHaveTextContent(
+      /^Fri, Oct 6$/
+    )
+  })
+
   // The habit tests all want the same card and differ only in which days are already marked; unlike the other kinds, none of them assert on the title or the preset.
   const habit = (history: string[] = []): Widget => ({
     id: "habit",

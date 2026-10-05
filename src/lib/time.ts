@@ -238,6 +238,27 @@ const countdownRepeatSteps = (
   return steps
 }
 
+const startOfLocalDay = (date: Date): Date => {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+
+  return start
+}
+
+const isLocalMidnight = (date: Date): boolean =>
+  date.getTime() === startOfLocalDay(date).getTime()
+
+// A target at local midnight is a date rather than a moment: a birthday, a trip, New Year's Day.
+// An hourly or daily repeat is never a date: it comes round every day, so its midnight is a time of day like any other.
+const isDate = (target: Date, repeat: CountdownRepeat | undefined): boolean =>
+  !Number.isNaN(target.getTime()) &&
+  isLocalMidnight(target) &&
+  repeat !== "hourly" &&
+  repeat !== "daily"
+
+const isDateCountdown = (widget: CountdownWidget): boolean =>
+  isDate(new Date(widget.settings.targetAt), widget.settings.repeat)
+
 // Resolve what a countdown means right now: a repeating one shows its next occurrence, and a start that cannot fill a bar is dropped.
 // Both ends of a repeating span move together so the bar keeps its length each cycle instead of stretching from the original start forever.
 // The result is computed on the fly, so the stored widget stays the anchor and every tab agrees without writes.
@@ -373,19 +394,28 @@ export const getCountdownPercent = (fraction: number): number => {
   return Math.min(99, Math.max(1, Math.round(fraction * 100)))
 }
 
-export const formatCountdownTarget = (widget: CountdownWidget): string => {
+// The detail line reads the way a date is written by hand: a date has no "12:00 AM", and the year appears once it isn't this one.
+// A repeating countdown leaves the year off, since its next occurrence is always the coming one.
+export const formatCountdownTarget = (
+  widget: CountdownWidget,
+  now = new Date()
+): string => {
   const target = new Date(widget.settings.targetAt)
 
   if (Number.isNaN(target.getTime())) {
     return "Invalid target"
   }
 
+  const { repeat } = widget.settings
+  const showsYear =
+    (!repeat || repeat === "none") && target.getFullYear() !== now.getFullYear()
+
   return getFormatter({
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
+    ...(showsYear ? { year: "numeric" } : {}),
+    ...(isDateCountdown(widget) ? {} : { hour: "numeric", minute: "2-digit" })
   }).format(target)
 }
 

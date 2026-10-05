@@ -482,10 +482,53 @@ describe("getCountdownParts", () => {
 })
 
 describe("formatCountdownTarget", () => {
+  const now = new Date(2026, 9, 7, 10, 0, 0)
+
   it("says so plainly when the stored target cannot be read", () => {
     // The only signal a corrupt countdown gives, since the relative label above reads
     // as an ordinary imminent one.
     expect(formatCountdownTarget(countdownWidget("soon"))).toBe("Invalid target")
+  })
+
+  it("names the day and time of a moment this year", () => {
+    expect(
+      formatCountdownTarget(countdownWidget(new Date(2026, 9, 7, 14, 0).toISOString()), now)
+    ).toMatch(/^Wed, Oct 7, 2:00\sPM$/)
+  })
+
+  it("leaves the time off a date", () => {
+    expect(
+      formatCountdownTarget(countdownWidget(new Date(2026, 11, 25).toISOString()), now)
+    ).toBe("Fri, Dec 25")
+  })
+
+  it("keeps the time on an hourly or daily repeat at midnight, which comes round every day", () => {
+    const midnight = new Date(2026, 9, 8).toISOString()
+
+    expect(
+      formatCountdownTarget(countdownWidget(midnight, { repeat: "daily" }), now)
+    ).toMatch(/^Thu, Oct 8, 12:00\sAM$/)
+    expect(
+      formatCountdownTarget(countdownWidget(midnight, { repeat: "hourly" }), now)
+    ).toMatch(/^Thu, Oct 8, 12:00\sAM$/)
+  })
+
+  it("adds the year once the target is in another one", () => {
+    expect(
+      formatCountdownTarget(countdownWidget(new Date(2027, 0, 1).toISOString()), now)
+    ).toBe("Fri, Jan 1, 2027")
+    expect(
+      formatCountdownTarget(countdownWidget(new Date(1990, 2, 15, 8, 0).toISOString()), now)
+    ).toMatch(/^Thu, Mar 15, 1990, 8:00\sAM$/)
+  })
+
+  it("leaves the year off a repeat, whose next occurrence is always the coming one", () => {
+    expect(
+      formatCountdownTarget(
+        countdownWidget(new Date(2027, 0, 1).toISOString(), { repeat: "yearly" }),
+        now
+      )
+    ).toBe("Fri, Jan 1")
   })
 })
 

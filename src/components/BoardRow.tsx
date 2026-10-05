@@ -761,7 +761,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     item.settings.repeat && item.settings.repeat !== "none"
       ? ` · repeats ${item.settings.repeat}`
       : ""
-  const countdownDetail = `${formatCountdownTarget(countdownItem)}${repeatLabel}`
+  const countdownDetail = `${formatCountdownTarget(countdownItem, now)}${repeatLabel}`
 
   const countdown = getCountdownParts(countdownItem, now)
 
