@@ -947,8 +947,10 @@ test("stopwatch counts up, keeps running across a reload, and resets", async ({
   await expect(reloaded.locator(".board-row__value")).not.toHaveText("0:00")
 
   await reloaded.getByRole("button", { name: "Pause" }).click()
+  await expect(reloaded.getByRole("button", { name: "Resume" })).toBeVisible()
   await reloaded.getByRole("button", { name: "Reset" }).click()
   await expect(reloaded.locator(".board-row__value")).toHaveText("0:00")
+  await expect(reloaded.getByRole("button", { name: "Start" })).toBeVisible()
 })
 
 test("timer counts down to a finished state and resets", async ({

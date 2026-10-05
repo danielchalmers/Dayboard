@@ -831,6 +831,32 @@ describe("BoardRow", () => {
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 
+  it("offers to resume a paused stopwatch, and resets it from there", () => {
+    const item: Widget = {
+      id: "sw",
+      kind: "stopwatch",
+      title: "Focus",
+      colorPreset: "slate",
+      settings: { running: false, elapsedMs: 8_040_000, startedAt: null }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(
+      <BoardRow item={item} now={new Date(0)} onWidgetChange={onWidgetChange} />
+    )
+
+    expect(screen.getByText("2:14:00")).toBeInTheDocument()
+    // Pressing it carries on from the tally rather than starting over, so it says so, the way a paused timer does.
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }))
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: { running: false, elapsedMs: 0, startedAt: null }
+    })
+  })
+
   it("renders a timer's remaining time and resumes from the button", () => {
     const item: Widget = {
       id: "t",

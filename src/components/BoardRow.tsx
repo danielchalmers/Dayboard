@@ -162,7 +162,7 @@ const StopwatchBody = ({
             )
           }
           type="button">
-          {running ? "Pause" : "Start"}
+          {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
         </button>
         <button
           className="timer-button"
