@@ -1509,12 +1509,24 @@ test("dragging a widget onto the archive zone archives it", async ({
   await expect(dropzone).toBeVisible()
   const zoneBox = await boxOf(dropzone, "the archive drop zone")
 
-  await page.mouse.move(
-    zoneBox.x + zoneBox.width / 2,
-    zoneBox.y + zoneBox.height / 2,
-    { steps: 20 }
-  )
+  const zoneCenter = {
+    x: zoneBox.x + zoneBox.width / 2,
+    y: zoneBox.y + zoneBox.height / 2
+  }
+  await page.mouse.move(zoneCenter.x, zoneCenter.y, { steps: 20 })
   await expect(page.locator(".archive-dropzone--over")).toBeVisible()
+
+  // The zone is drawn over the lifted card, so "Release to archive" is there to read at the moment it applies instead of hidden under the card.
+  await expect(
+    page.locator(".archive-dropzone").getByText("Release to archive")
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      ({ x, y }) =>
+        Boolean(document.elementFromPoint(x, y)?.closest(".archive-dropzone")),
+      zoneCenter
+    )
+  ).toBe(true)
   await page.mouse.up()
 
   await expect(

@@ -480,7 +480,8 @@ details > summary::-webkit-details-marker {
 
 /* ── Archive ───────────────────────────────────────────────────────────── */
 
-/* A floating drop target that only appears mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is. */
+/* A floating drop target that only appears mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is.
+   It sits above the lifted card (dnd-kit draws its overlay at 999), so "Release to archive" stays readable at the moment it matters and the card slides under the tray rather than over it. */
 .archive-dropzone {
   align-items: center;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
@@ -501,7 +502,7 @@ details > summary::-webkit-details-marker {
   margin-inline: auto;
   min-block-size: 64px;
   position: fixed;
-  z-index: 300;
+  z-index: 1000;
   animation: fade-in var(--t-fast);
 }
 
