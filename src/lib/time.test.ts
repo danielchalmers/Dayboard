@@ -292,8 +292,44 @@ describe("resolveCountdown", () => {
     ).toBe(new Date(2026, 5, 20, 0, 0, 0).toISOString())
   })
 
+  it("holds a finished repeating span at complete until the next one starts", () => {
+    // A workday, nine to five, every day.
+    const workday = countdownWidget(new Date(2026, 5, 17, 17, 0, 0).toISOString(), {
+      startAt: new Date(2026, 5, 17, 9, 0, 0).toISOString(),
+      repeat: "daily"
+    })
+
+    // The evening after it ends still reads as that day's span, full.
+    const evening = resolveCountdown(workday, new Date(2026, 5, 19, 22, 0, 0))
+    expect(evening.settings.targetAt).toBe(new Date(2026, 5, 19, 17, 0, 0).toISOString())
+    expect(getCountdownProgress(evening, new Date(2026, 5, 19, 22, 0, 0))).toBe(1)
+
+    const beforeNine = new Date(2026, 5, 20, 8, 59, 0)
+    expect(resolveCountdown(workday, beforeNine).settings.targetAt).toBe(
+      new Date(2026, 5, 19, 17, 0, 0).toISOString()
+    )
+
+    // The next span takes over the moment it starts, empty.
+    const nine = new Date(2026, 5, 20, 9, 0, 0)
+    const morning = resolveCountdown(workday, nine)
+    expect(morning.settings.startAt).toBe(nine.toISOString())
+    expect(getCountdownProgress(morning, nine)).toBe(0)
+  })
+
+  it("never holds a span that overlaps the next one", () => {
+    // Thirty hours every day: the next span is already under way when this one ends, so there is no gap to sit at complete in.
+    const overlapping = countdownWidget(new Date(2026, 5, 17, 18, 0, 0).toISOString(), {
+      startAt: new Date(2026, 5, 16, 12, 0, 0).toISOString(),
+      repeat: "daily"
+    })
+
+    expect(
+      resolveCountdown(overlapping, new Date(2026, 5, 19, 19, 0, 0)).settings.targetAt
+    ).toBe(new Date(2026, 5, 20, 18, 0, 0).toISOString())
+  })
+
   it("rolls a span straight on when the next one starts as it ends", () => {
-    // The year ends on a date, but a bar has no Today to hold, so New Year's Day starts the new bar.
+    // The year ends on a date and runs straight into the next, so there is neither a day nor a gap to hold, and New Year's Day starts the new bar.
     const year = countdownWidget(new Date(2026, 0, 1).toISOString(), {
       startAt: new Date(2025, 0, 1).toISOString(),
       repeat: "yearly"

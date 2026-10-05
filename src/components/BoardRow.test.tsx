@@ -236,6 +236,29 @@ describe("BoardRow", () => {
     )
   })
 
+  it("keeps a repeating bar complete between one span and the next", () => {
+    const item: Widget = {
+      id: "workday",
+      kind: "countdown",
+      title: "Workday",
+      colorPreset: "sky",
+      settings: {
+        startAt: new Date(2026, 5, 17, 9, 0, 0).toISOString(),
+        targetAt: new Date(2026, 5, 17, 17, 0, 0).toISOString(),
+        repeat: "daily"
+      }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2026, 5, 19, 22, 0, 0)} />
+    )
+
+    expect(screen.getByText("100%")).toBeInTheDocument()
+    expect(container.querySelector(".board-row__meta")).toHaveTextContent(
+      "Complete"
+    )
+  })
+
   it("splits a passed countdown into the span and an ago line", () => {
     const item: Widget = {
       id: "shipped",

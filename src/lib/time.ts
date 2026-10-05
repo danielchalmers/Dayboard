@@ -311,16 +311,23 @@ export const resolveCountdown = (
     !Number.isNaN(start.getTime()) &&
     start.getTime() < target.getTime()
 
-  // The steps land on the first occurrence still ahead, but a date outlasts its target, so stay on the one just passed while its day lasts.
-  // That way a birthday reads Today until midnight rather than a year away the moment it begins.
-  // A bar has no Today to read, so a span that ends on a date rolls on at once.
-  if (steps > 0 && !hasSpan) {
-    const previous = advanceByRepeat(target, repeat, steps - 1)
-    const dayAfter = new Date(previous)
-    dayAfter.setDate(dayAfter.getDate() + 1)
+  // The steps land on the first occurrence still ahead, but two kinds of occurrence outlast their target, so stay on the one just passed while it lasts.
+  if (steps > 0) {
+    if (hasSpan && start) {
+      // A finished span stays full until the next one starts, so a workday bar reads Complete through the evening rather than an empty bar with nineteen hours to go.
+      // Spans that run straight into each other, like the year card, have no gap to hold and roll on at once.
+      if (now.getTime() < advanceByRepeat(start, repeat, steps).getTime()) {
+        steps -= 1
+      }
+    } else {
+      // A date lasts all day, so a birthday reads Today until midnight rather than a year away the moment it begins.
+      const previous = advanceByRepeat(target, repeat, steps - 1)
+      const dayAfter = new Date(previous)
+      dayAfter.setDate(dayAfter.getDate() + 1)
 
-    if (isDate(previous, repeat) && now.getTime() < dayAfter.getTime()) {
-      steps -= 1
+      if (isDate(previous, repeat) && now.getTime() < dayAfter.getTime()) {
+        steps -= 1
+      }
     }
   }
 
