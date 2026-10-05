@@ -22,7 +22,7 @@ test.describe("a board too large to sync", () => {
 
     // The notice writes "Couldn't" with a typographic apostrophe, so match the plain half of the sentence instead.
     const notice = page.getByRole("alert")
-    await expect(notice).toContainText("too large to sync")
+    await expect(notice).toContainText("more than browser sync can hold")
 
     // The optimistic update is undone, so the card shows what actually persisted instead of quietly diverging from it.
     await expect(field).toHaveValue("Keep me")

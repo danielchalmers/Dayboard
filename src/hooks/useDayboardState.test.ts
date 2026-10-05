@@ -6,7 +6,15 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { CACHE_KEY } from "~/lib/storage"
 import type { DayboardState } from "~/lib/types"
 
-const SAVE_ERROR = "Couldn’t save — this board may be too large to sync."
+// Chrome's own wording for the two quotas a write runs into, which is all there is to tell them apart by.
+const TOO_LARGE = new Error("Resource::kQuotaBytesPerItem quota exceeded")
+const TOO_OFTEN = new Error(
+  "This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota."
+)
+const TOO_LARGE_NOTICE =
+  "Couldn’t save — that’s more than browser sync can hold. Try shortening a long note or list."
+const TOO_OFTEN_NOTICE =
+  "Couldn’t save — too many changes in a row. Give it a moment, then try again."
 
 const stubChrome = ({
   get = async (key: string) => ({ [key]: undefined }),
@@ -35,9 +43,7 @@ afterEach(() => {
 
 describe("useDayboardState save failure handling", () => {
   it("rolls back the optimistic update and reports a save error", async () => {
-    stubChrome({
-      set: () => Promise.reject(new Error("QUOTA_BYTES quota exceeded"))
-    })
+    stubChrome({ set: () => Promise.reject(TOO_LARGE) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -45,13 +51,16 @@ describe("useDayboardState save failure handling", () => {
     await waitFor(() => expect(result.current.state).not.toBeNull())
     const widgetsBefore = result.current.state!.widgets
 
+    let refused: string | null = null
     await act(async () => {
-      await result.current.setWidgets([])
+      refused = await result.current.setWidgets([])
     })
 
     // The write rejected, so the board is restored and a notice is shown.
     expect(result.current.state!.widgets).toEqual(widgetsBefore)
-    expect(result.current.saveError).toBe(SAVE_ERROR)
+    expect(result.current.saveError).toBe(TOO_LARGE_NOTICE)
+    // The caller hears the same reason, so a dialog can keep its draft and say why.
+    expect(refused).toBe(TOO_LARGE_NOTICE)
 
     act(() => result.current.dismissSaveError())
     expect(result.current.saveError).toBeNull()
@@ -60,14 +69,14 @@ describe("useDayboardState save failure handling", () => {
     unmount()
   })
 
-  it("clears any prior save error on a successful write", async () => {
-    // The first write hits the quota and the next one goes through.
-    let rejectNext = true
+  it("keeps the notice up through further refusals and clears it once a write lands", async () => {
+    // The first two writes hit the quota and the next one goes through, the way trimming a long note back under the limit plays out.
+    let rejections = 2
     stubChrome({
       set: () => {
-        if (rejectNext) {
-          rejectNext = false
-          return Promise.reject(new Error("QUOTA_BYTES quota exceeded"))
+        if (rejections > 0) {
+          rejections -= 1
+          return Promise.reject(TOO_LARGE)
         }
 
         return Promise.resolve()
@@ -82,16 +91,57 @@ describe("useDayboardState save failure handling", () => {
     await act(async () => {
       await result.current.setWidgets([])
     })
-    expect(result.current.saveError).toBe(SAVE_ERROR)
+    expect(result.current.saveError).toBe(TOO_LARGE_NOTICE)
 
+    // Refused again: the notice never blinks off while the retry is on its way.
+    let shownWhileSaving: string | null = null
     await act(async () => {
-      await result.current.setWidgets([])
+      const saving = result.current.setWidgets([])
+      shownWhileSaving = result.current.saveError
+      await saving
+    })
+    expect(shownWhileSaving).toBe(TOO_LARGE_NOTICE)
+    expect(result.current.saveError).toBe(TOO_LARGE_NOTICE)
+
+    let refused: string | null = "unset"
+    await act(async () => {
+      refused = await result.current.setWidgets([])
     })
 
+    expect(refused).toBeNull()
     expect(result.current.saveError).toBeNull()
     expect(result.current.state!.widgets).toEqual([])
 
     unmount()
+  })
+})
+
+describe("describeSaveError", () => {
+  it("tells a board too large to sync from one saved too often", async () => {
+    const { describeSaveError } = await import("./useDayboardState")
+
+    expect(describeSaveError(TOO_LARGE)).toBe(TOO_LARGE_NOTICE)
+    // The whole-area quota is the same problem as the one-item quota as far as the user can tell.
+    expect(describeSaveError(new Error("QUOTA_BYTES quota exceeded"))).toBe(
+      TOO_LARGE_NOTICE
+    )
+    expect(describeSaveError(TOO_OFTEN)).toBe(TOO_OFTEN_NOTICE)
+    expect(
+      describeSaveError(
+        new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_HOUR quota.")
+      )
+    ).toBe(TOO_OFTEN_NOTICE)
+    // Chrome has spelled the size quota both ways, so the rate quotas are read in either spelling too.
+    expect(
+      describeSaveError(new Error("Resource::kMaxWriteOperationsPerMinute quota exceeded"))
+    ).toBe(TOO_OFTEN_NOTICE)
+    // Anything else gets no guess at a cause, since a wrong one sends the user off shortening notes for nothing.
+    expect(describeSaveError(new Error("Extension context invalidated."))).toBe(
+      "Couldn’t save that change. Try again in a moment."
+    )
+    expect(describeSaveError("sync blew up")).toBe(
+      "Couldn’t save that change. Try again in a moment."
+    )
   })
 })
 
@@ -176,7 +226,7 @@ describe("useDayboardState change handling", () => {
     const stored = { ...board, settings: { name: "Sam" } }
     stubChrome({
       get: async (key) => ({ [key]: stored }),
-      set: () => Promise.reject(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE"))
+      set: () => Promise.reject(TOO_OFTEN)
     })
 
     const { useDayboardState } = await import("./useDayboardState")
@@ -189,7 +239,7 @@ describe("useDayboardState change handling", () => {
     })
 
     expect(result.current.state).toEqual(stored)
-    expect(result.current.saveError).toBe(SAVE_ERROR)
+    expect(result.current.saveError).toBe(TOO_OFTEN_NOTICE)
 
     unmount()
   })
@@ -207,7 +257,7 @@ describe("useDayboardState change handling", () => {
 
         return { [key]: board }
       },
-      set: () => Promise.reject(new Error("MAX_WRITE_OPERATIONS_PER_MINUTE"))
+      set: () => Promise.reject(TOO_OFTEN)
     })
 
     const { useDayboardState } = await import("./useDayboardState")
@@ -223,7 +273,7 @@ describe("useDayboardState change handling", () => {
     // The change never persisted and nothing better can be learned, so the board goes back to what it was rather than keeping an edit storage doesn't hold.
     expect(reads).toBe(2)
     expect(result.current.state).toEqual(shown)
-    expect(result.current.saveError).toBe(SAVE_ERROR)
+    expect(result.current.saveError).toBe(TOO_OFTEN_NOTICE)
 
     unmount()
   })

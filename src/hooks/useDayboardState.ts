@@ -9,16 +9,36 @@ import {
 } from "~/lib/storage"
 import type { DayboardSettings, DayboardState, Widget } from "~/lib/types"
 
+// Each change resolves to why storage refused it, or null once it is saved (or there was nothing to save), so whatever the user typed for it can be held on to until it lands.
+type Save<T> = (value: T) => Promise<string | null>
+
 interface UseDayboardStateResult {
   state: DayboardState | null
   isLoading: boolean
   error: string | null
-  setWidgets: (widgets: Widget[]) => Promise<void>
-  setSettings: (settings: DayboardSettings) => Promise<void>
-  updateWidget: (widget: Widget) => Promise<void>
-  replaceState: (state: DayboardState) => Promise<void>
+  setWidgets: Save<Widget[]>
+  setSettings: Save<DayboardSettings>
+  updateWidget: Save<Widget>
+  replaceState: Save<DayboardState>
   saveError: string | null
   dismissSaveError: () => void
+}
+
+// chrome.storage.sync refuses a write for two reasons worth telling apart, because they ask opposite things of the user: a board grown past what one sync item holds needs something shortened, while a burst of writes only needs a moment.
+// The message is the only place Chrome says which quota it hit, as in "Resource::kQuotaBytesPerItem quota exceeded" or "This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota".
+// A wording it doesn't recognise gets no guess at a cause, since a wrong one sends the user off shortening notes for nothing.
+export const describeSaveError = (cause: unknown): string => {
+  const message = cause instanceof Error ? cause.message : String(cause)
+
+  if (/quota_?bytes/i.test(message)) {
+    return "Couldn’t save — that’s more than browser sync can hold. Try shortening a long note or list."
+  }
+
+  if (/write_?operations/i.test(message)) {
+    return "Couldn’t save — too many changes in a row. Give it a moment, then try again."
+  }
+
+  return "Couldn’t save that change. Try again in a moment."
 }
 
 export const useDayboardState = (): UseDayboardStateResult => {
@@ -83,11 +103,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
     async (nextState: DayboardState) => {
       const previous = stateRef.current
       commit(nextState)
-      setSaveError(null)
 
       try {
         await writeDayboardState(nextState)
-      } catch {
+      } catch (cause) {
         // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit), so put the board back to what storage holds and surface a calm notice instead of silently diverging.
         // Storage is asked rather than the board from before this change being restored, because a later change made while this write was in flight may have landed, and restoring the snapshot would take it off the screen while it sits in storage.
         let restored = previous
@@ -102,8 +121,14 @@ export const useDayboardState = (): UseDayboardStateResult => {
           adopt(restored)
         }
 
-        setSaveError("Couldn’t save — this board may be too large to sync.")
+        const reason = describeSaveError(cause)
+        setSaveError(reason)
+        return reason
       }
+
+      // The notice stays up until something actually saves, rather than blinking off at the start of every attempt, a retry refused again included.
+      setSaveError(null)
+      return null
     },
     [adopt, commit]
   )
@@ -115,10 +140,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
     async (widgets: Widget[]) => {
       const current = stateRef.current
       if (!current) {
-        return
+        return null
       }
 
-      await saveState({ ...current, widgets })
+      return saveState({ ...current, widgets })
     },
     [saveState]
   )
@@ -127,10 +152,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
     async (settings: DayboardSettings) => {
       const current = stateRef.current
       if (!current) {
-        return
+        return null
       }
 
-      await saveState({ ...current, settings })
+      return saveState({ ...current, settings })
     },
     [saveState]
   )
@@ -141,10 +166,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
       // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), and writing the board back unchanged would only spend sync quota.
       if (!current?.widgets.some((existing) => existing.id === widget.id)) {
-        return
+        return null
       }
 
-      await saveState({
+      return saveState({
         ...current,
         widgets: current.widgets.map((existing) =>
           existing.id === widget.id ? widget : existing
