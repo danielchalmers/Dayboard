@@ -57,6 +57,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
   // Every other card shows what the board rolled back to, but a note keeps refused words on screen (see NoteField), so the notice stays up until each of them has saved or let its words go rather than going at the first unrelated save that lands.
   const heldRef = useRef(new Set<string>())
 
+  // The read a tab starts as it wakes from being frozen, until it lands (see the effect that starts it).
+  const wakingRef = useRef<Promise<void> | null>(null)
+
   const commit = useCallback((next: DayboardState) => {
     stateRef.current = next
     setState(next)
@@ -103,6 +106,26 @@ export const useDayboardState = (): UseDayboardStateResult => {
       stopWatching()
     }
   }, [adopt])
+
+  // Chrome freezes a tab left in the background (energy saver, Edge's sleeping tabs), and it wakes holding the board it froze with.
+  // The changes other tabs made meanwhile are queued for it, but they are delivered only after its own wake-up work has run, and coming back into view is part of that: the clock catches up first, and a timer that ran out while the tab slept would settle from the old board and write it back over everything since.
+  // A read started on waking is answered after those queued changes, so until it lands a card's change waits for it (see updateWidget).
+  useEffect(() => {
+    const catchUp = () => {
+      const reading = reload()
+
+      wakingRef.current = reading
+      void reading.finally(() => {
+        if (wakingRef.current === reading) {
+          wakingRef.current = null
+        }
+      })
+    }
+
+    document.addEventListener("resume", catchUp)
+
+    return () => document.removeEventListener("resume", catchUp)
+  }, [reload])
 
   const saveState = useCallback(
     async (nextState: DayboardState) => {
@@ -177,6 +200,21 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   const updateWidget = useCallback(
     async (widget: Widget) => {
+      // A change made before a waking tab has caught up was worked out from the card as the tab froze with it.
+      // Once caught up it goes ahead only if that card hasn't changed since; otherwise the card renders as it is now and does over from there whatever still needs doing, rather than settling a timer run another tab has already finished and started again.
+      if (wakingRef.current) {
+        const cardIn = (board: DayboardState | null) =>
+          board?.widgets.find((candidate) => candidate.id === widget.id)
+        const seen = cardIn(stateRef.current)
+
+        await wakingRef.current
+
+        if (!isSameData(cardIn(stateRef.current), seen)) {
+          release(widget.id)
+          return null
+        }
+      }
+
       const current = stateRef.current
       const existing = current?.widgets.find((candidate) => candidate.id === widget.id)
 
