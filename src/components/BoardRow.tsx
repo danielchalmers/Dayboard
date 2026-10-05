@@ -303,15 +303,16 @@ const TimerBody = ({
 
   return (
     <>
-      <p
-        className={`board-row__value board-row__value--timer${
-          done && !running ? " board-row__value--timer-done" : ""
-        }`}>
-        {formatDuration(remaining)}
-      </p>
+      {/* Finished, the words take the place of the digits rather than a line of their own: "0:00" tells a finished timer nothing, and the extra line pushed the buttons off a card with a two-line title. */}
       {done && !running ? (
-        <p className="board-row__meta board-row__meta--alert">Time&rsquo;s up</p>
-      ) : null}
+        <p className="board-row__value board-row__value--countdown board-row__value--timer-done">
+          Time&rsquo;s up
+        </p>
+      ) : (
+        <p className="board-row__value board-row__value--timer">
+          {formatDuration(remaining)}
+        </p>
+      )}
       {/* A polite live region announces the finish once (the visible text above is decorative for screen readers).
           It stays mounted and empty until the timer is done so the change is what gets read out. */}
       <span className="sr-only" role="status">

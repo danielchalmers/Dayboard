@@ -878,9 +878,12 @@ describe("BoardRow", () => {
       settings: { durationMs: 60_000, running: false, remainingMs: 0, endsAt: null }
     }
 
-    render(<BoardRow item={item} now={new Date(50_000)} />)
+    const { container } = render(<BoardRow item={item} now={new Date(50_000)} />)
 
     expect(screen.getByRole("status")).toHaveTextContent("Tea timer finished")
+    // The words stand in for the digits rather than adding a line under "0:00", so a finished card is no taller than a running one.
+    expect(container.querySelector(".board-row__value")).toHaveTextContent("Time’s up")
+    expect(screen.queryByText("0:00")).not.toBeInTheDocument()
   })
 
   it("keeps the live region empty while a timer is still running", () => {

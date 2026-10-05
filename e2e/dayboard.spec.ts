@@ -969,11 +969,44 @@ test("timer counts down to a finished state and resets", async ({
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
 
   await card.getByRole("button", { name: "Start" }).click()
-  await expect(card.getByText("Time’s up")).toBeVisible()
-  await expect(card.locator(".board-row__value")).toHaveText("0:00")
+  // The words take the digits' place rather than a line under "0:00".
+  await expect(card.locator(".board-row__value")).toHaveText("Time’s up")
 
   await card.getByRole("button", { name: "Reset" }).click()
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
+})
+
+test("a finished timer with a two-line title keeps its buttons on the card", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("Name").fill("Laundry in the basement machine, then the dryer")
+  await page.getByLabel("minutes").fill("0")
+  await page.getByLabel("seconds").fill("1")
+  await page.getByRole("button", { name: "Save timer" }).click()
+
+  const card = cardByTitle(page, "Laundry in the basement")
+  await card.getByRole("button", { name: "Start" }).click()
+  await expect(card.locator(".board-row__value")).toHaveText("Time’s up")
+
+  const title = await boxOf(card.locator(".board-row__title"), "the timer's title")
+  const lineHeight = await card
+    .locator(".board-row__title")
+    .evaluate((node) => parseFloat(getComputedStyle(node).lineHeight))
+  expect(Math.round(title.height / lineHeight)).toBe(2)
+
+  // The card is a fixed size, so anything that adds a line pushes the buttons through its bottom padding.
+  const cardBox = await boxOf(card, "the timer card")
+  const padding = await card.evaluate((node) =>
+    parseFloat(getComputedStyle(node).paddingBottom)
+  )
+  const reset = await boxOf(card.getByRole("button", { name: "Reset" }), "the Reset button")
+  expect(reset.y + reset.height).toBeLessThanOrEqual(cardBox.y + cardBox.height - padding + 0.5)
 })
 
 // A headless page never really goes into the background, so its visibility is taken over, and each oscillator the chime starts is counted.
@@ -1036,7 +1069,7 @@ test("a timer finishes on time while its tab is in the background", async ({
   // Coming back gives the tab its title back, shows the finish, and does not chime a second time.
   await setHidden(false)
   await expect(page).toHaveTitle("New Tab")
-  await expect(cardByTitle(page, "Steep").getByText("Time’s up")).toBeVisible()
+  await expect(cardByTitle(page, "Steep").locator(".board-row__value")).toHaveText("Time’s up")
   expect(await tones()).toBe(2)
 })
 
