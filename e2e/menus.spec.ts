@@ -40,6 +40,41 @@ test("the widget menu closes on scroll and returns focus to its card", async ({
   await expect(card).toBeFocused()
 })
 
+test("a menu opened as focus brings its card into view stays open", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1000, height: 400 })
+  await openNewTab(page, extensionId)
+
+  // Focus and open in one task, the way Shift+F10 straight after Tab or a screen reader can: the page has scrolled to the card, but the browser only reports that scroll on its next frame, after the menu is up.
+  const scrolled = await page.evaluate(() => {
+    const cards = document.querySelectorAll<HTMLElement>("article.board-row")
+    const card = cards[cards.length - 1]!
+    card.focus()
+    const { left, top } = card.getBoundingClientRect()
+    card.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        button: 2,
+        cancelable: true,
+        clientX: left + 20,
+        clientY: top + 20
+      })
+    )
+    return window.scrollY
+  })
+  // Without the scroll, the late report this guards against never comes.
+  expect(scrolled).toBeGreaterThan(0)
+
+  // Let the browser deliver that scroll before looking.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  )
+  await expect(page.locator(".card-menu")).toBeVisible()
+})
+
 test("the menu can't move a card past the ends of the board", async ({
   page,
   extensionId

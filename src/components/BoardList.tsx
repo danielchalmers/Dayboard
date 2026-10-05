@@ -248,12 +248,28 @@ const WidgetContextMenu = ({
       }
     }
 
+    // Focusing a card below the fold scrolls the page to it, and the browser reports that scroll a frame later.
+    // A menu opened in between (Shift+F10 straight after focus, or a screen reader doing both at once) would take that late report for a drift and close on the spot, so a page scroll only counts once the page has moved since the menu opened.
+    const openedAt = { x: window.scrollX, y: window.scrollY }
+
+    const closeOnScroll = (event: Event) => {
+      if (
+        event.target === document &&
+        window.scrollX === openedAt.x &&
+        window.scrollY === openedAt.y
+      ) {
+        return
+      }
+
+      close()
+    }
+
     window.addEventListener("resize", close)
-    window.addEventListener("scroll", close, true)
+    window.addEventListener("scroll", closeOnScroll, true)
 
     return () => {
       window.removeEventListener("resize", close)
-      window.removeEventListener("scroll", close, true)
+      window.removeEventListener("scroll", closeOnScroll, true)
     }
   }, [])
 

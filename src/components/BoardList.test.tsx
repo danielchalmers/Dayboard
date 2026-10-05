@@ -399,6 +399,35 @@ describe("BoardList", () => {
     expect(focus).toHaveBeenCalledWith({ preventScroll: true })
   })
 
+  // Focusing a card below the fold scrolls the page, and the browser reports that scroll a frame later, after a menu opened straight away is already up.
+  it("stays open through the report of a scroll made before it opened, and closes once the page moves", () => {
+    const { container } = renderBoard()
+
+    openMenu(container, { clientX: 10, clientY: 10 })
+    const hidePopover = vi.spyOn(
+      document.querySelector<HTMLElement>(".card-menu")!,
+      "hidePopover"
+    )
+
+    fireEvent.scroll(document)
+    expect(hidePopover).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
+
+    const scrollY = Object.getOwnPropertyDescriptor(window, "scrollY")
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 120 })
+
+    try {
+      fireEvent.scroll(document)
+      expect(hidePopover).toHaveBeenCalled()
+    } finally {
+      if (scrollY) {
+        Object.defineProperty(window, "scrollY", scrollY)
+      } else {
+        delete (window as { scrollY?: number }).scrollY
+      }
+    }
+  })
+
   it("closes the menu when an item is chosen", () => {
     const { container } = renderBoard()
 
