@@ -55,7 +55,7 @@ test("new tab page renders the default widgets and editing controls", async ({
     /icon32\.png$/
   )
   await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
   ).toBeVisible()
   await expect(page.getByText("🕒 Local time")).toBeVisible()
   await expect(page.getByText("🌅 Morning")).toBeVisible()
@@ -139,7 +139,7 @@ test("shows a time-aware greeting that can be personalized", async ({
   await openNewTab(page, extensionId)
 
   const greeting = page.locator(".page-header__greeting")
-  await expect(greeting).toHaveText(/Good (morning|afternoon|evening|night)/)
+  await expect(greeting).toHaveText(/Good (morning|afternoon|evening)/)
 
   // Setting a name in Options personalizes and persists the greeting.
   await page.getByRole("button", { name: "Options" }).click()
@@ -194,6 +194,27 @@ test("the greeting shrinks with a window narrower than a phone", async ({
   // Narrower still, at 2.1rem an everyday name such as Bartholomew had no room beside the buttons and broke mid-word, so the greeting keeps shrinking in step with the window.
   await page.setViewportSize({ width: 320, height: 844 })
   await expect.poll(fontSize).toBeCloseTo((33.6 * 320) / 390, 1)
+})
+
+test("says good evening through the small hours until the morning", async ({
+  page,
+  extensionId
+}) => {
+  // A tab opened late at night is usually opened to start something, so the greeting never reads as being sent to bed.
+  await page.clock.install({ time: new Date("2026-03-04T23:40:00Z") })
+  await openNewTab(page, extensionId)
+
+  const greeting = page.locator(".page-header__greeting")
+  await expect(greeting).toHaveText("Good evening")
+
+  // Left open past midnight, the tab is still in the evening a minute before 5.
+  await page.clock.fastForward("05:19:00")
+  await expect(page.locator(".page-header__date")).toContainText("March 5")
+  await expect(greeting).toHaveText("Good evening")
+
+  // It turns to the morning at 5 on its own.
+  await page.clock.fastForward("01:00")
+  await expect(greeting).toHaveText("Good morning")
 })
 
 test("exports the board to a file and imports one back", async ({
@@ -735,7 +756,7 @@ test("dropdowns close when clicking outside them", async ({
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
   await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
 
@@ -744,7 +765,7 @@ test("dropdowns close when clicking outside them", async ({
     page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
   ).toBeVisible()
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
   await expect(
     page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
@@ -883,7 +904,7 @@ test("add note flow saves typed text and persists across reloads", async ({
   await field.fill("Buy milk")
   // Blurring flushes the debounced auto-save.
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
 
   await page.reload()

@@ -10,15 +10,19 @@ import {
 const at = (hour: number) => new Date(2026, 0, 1, hour, 0, 0)
 
 describe("getDaypart", () => {
-  it("splits the day at 5, 12, 17, and 22", () => {
+  it("splits the day at 5, 12, and 17", () => {
     expect(getDaypart(at(5))).toBe("morning")
     expect(getDaypart(at(11))).toBe("morning")
     expect(getDaypart(at(12))).toBe("afternoon")
     expect(getDaypart(at(16))).toBe("afternoon")
     expect(getDaypart(at(17))).toBe("evening")
     expect(getDaypart(at(21))).toBe("evening")
-    expect(getDaypart(at(22))).toBe("night")
-    expect(getDaypart(at(4))).toBe("night")
+  })
+
+  it("keeps the evening through the small hours until 5", () => {
+    expect(getDaypart(at(22))).toBe("evening")
+    expect(getDaypart(at(0))).toBe("evening")
+    expect(getDaypart(new Date(2026, 0, 1, 4, 59))).toBe("evening")
   })
 })
 
@@ -42,8 +46,15 @@ describe("getTimeOfDayGreeting", () => {
     expect(getTimeOfDayGreeting(at(8))).toBe("Good morning")
     expect(getTimeOfDayGreeting(at(14))).toBe("Good afternoon")
     expect(getTimeOfDayGreeting(at(19))).toBe("Good evening")
-    expect(getTimeOfDayGreeting(at(23))).toBe("Good night")
-    expect(getTimeOfDayGreeting(at(3))).toBe("Good night")
+  })
+
+  it("never says good night, which reads as a goodbye", () => {
+    for (let hour = 0; hour < 24; hour += 1) {
+      expect(getTimeOfDayGreeting(at(hour))).not.toBe("Good night")
+    }
+
+    expect(getTimeOfDayGreeting(at(23))).toBe("Good evening")
+    expect(getTimeOfDayGreeting(at(3))).toBe("Good evening")
   })
 })
 
