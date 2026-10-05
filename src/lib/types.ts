@@ -178,8 +178,8 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
   tomorrowMorning.setDate(now.getDate() + 1)
   tomorrowMorning.setHours(9, 0, 0, 0)
 
-  // The current calendar year as a fixed span.
-  // `now` always sits inside it, so the progress bar reads as a meaningful fraction on first paint and never needs to roll forward.
+  // The current calendar year as a span, so the progress bar reads as a meaningful fraction on first paint.
+  // It repeats yearly: the board is saved as it stands at the first edit, and a fixed span would sit at Complete from New Year's Day on.
   const yearStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0)
   const yearEnd = new Date(now.getFullYear() + 1, 0, 1, 0, 0, 0, 0)
 
@@ -244,7 +244,8 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       colorPreset: "rose",
       settings: {
         targetAt: yearEnd.toISOString(),
-        startAt: yearStart.toISOString()
+        startAt: yearStart.toISOString(),
+        repeat: "yearly"
       }
     }
   ]

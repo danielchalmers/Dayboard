@@ -15,7 +15,12 @@ import {
   isoInstantToDateTimeInputValue,
   resolveCountdown
 } from "./time"
-import type { ClockWidget, CountdownRepeat, CountdownWidget } from "./types"
+import {
+  createDefaultWidgets,
+  type ClockWidget,
+  type CountdownRepeat,
+  type CountdownWidget
+} from "./types"
 
 const countdownWidget = (
   targetAt: string,
@@ -262,6 +267,17 @@ describe("resolveCountdown", () => {
     ).settings.targetAt)
 
     expect(second.getTime() - first.getTime()).toBe(60 * 60 * 1000)
+  })
+
+  it("refills the first-run year card each January instead of sitting at complete", () => {
+    const year = createDefaultWidgets(new Date(2026, 9, 4)).find(
+      (widget): widget is CountdownWidget => widget.id === "year-progress"
+    )!
+    const midsummer = new Date(2027, 5, 15, 12, 0, 0)
+
+    const progress = getCountdownProgress(resolveCountdown(year, midsummer), midsummer)
+    expect(progress).toBeGreaterThan(0.4)
+    expect(progress).toBeLessThan(0.5)
   })
 
   it("drops a start that cannot fill a span", () => {
