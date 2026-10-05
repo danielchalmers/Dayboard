@@ -784,9 +784,11 @@ details > summary::-webkit-details-marker {
 }
 
 /* The decorative mark sets the card apart from a note at a glance.
-   It is set in a serif, whose curly mark matches the badge's; the interface font draws it as two slanted wedges. */
+   It is set in a serif, whose curly mark matches the badge's; the interface font draws it as two slanted wedges.
+   Layout containment keeps the glyph's reach below its own short line out of the quote's scroll size, which would otherwise make a one-line quote read as clipped. */
 .quote-text::before {
   color: var(--card-accent-resolved);
+  contain: layout;
   content: "\201C";
   font-family: Georgia, "Times New Roman", serif;
   font-size: 3.2rem;
@@ -1225,7 +1227,8 @@ details > summary::-webkit-details-marker {
 .board-row__detail,
 .board-row__value,
 .board-row__meta,
-.quote-text {
+.quote-text,
+.todo-task__text {
   pointer-events: auto;
 }
 

@@ -972,6 +972,70 @@ test("a note that holds more than it shows fades at the edge the rest is behind"
   await expect.poll(fadedEdges).toBe("none")
 })
 
+test("a quote or task cut off by its card offers the whole of it on hover", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const passage =
+    "It is not the critic who counts; not the man who points out how the strong man " +
+    "stumbles, or where the doer of deeds could have done them better. The credit " +
+    "belongs to the man who is actually in the arena."
+
+  // The add flow written out, since a quote card needs its Quotes field filled too.
+  const addQuote = async (title: string, quote: string) => {
+    await page.getByRole("button", { name: "Add widget" }).click()
+    await page.getByRole("button", { name: "Add quote" }).click()
+    await page.getByLabel("Name").fill(title)
+    await page.getByLabel("Quotes").fill(quote)
+    await page.getByRole("button", { name: "Save quote" }).click()
+    await page.getByRole("dialog").waitFor({ state: "hidden" })
+  }
+
+  await addQuote("Arena", passage)
+  const long = cardByTitle(page, "Arena").locator(".quote-text")
+  await long.hover()
+  await expect(long).toHaveAttribute("title", passage)
+
+  // A quote that fits shows no copy of itself, including a one-line one, whose big opening mark can reach below its line in some fonts.
+  await addQuote("Quiet", "Quiet days still count.")
+  const short = cardByTitle(page, "Quiet").locator(".quote-text")
+  await short.hover()
+  await expect(short).not.toHaveAttribute("title")
+
+  await addWidget(page, "todo", "Errands")
+  const card = cardByTitle(page, "Errands")
+  const task = "Email Priya the revised launch schedule and the budget sheet"
+
+  for (const text of [task, "Water plants"]) {
+    await card.getByLabel("Add a task to Errands").fill(text)
+    await card.getByLabel("Add a task to Errands").press("Enter")
+  }
+
+  const cut = card.locator(".todo-task__text", { hasText: "Email Priya" })
+  await cut.hover()
+  await expect(cut).toHaveAttribute("title", task)
+
+  const whole = card.locator(".todo-task__text", { hasText: "Water plants" })
+  await whole.hover()
+  await expect(whole).not.toHaveAttribute("title")
+
+  // Cut off by a fraction of a pixel, a task still loses its last letters to the ellipsis, which widths rounded to whole pixels can miss.
+  await whole.evaluate((node) => {
+    const text = document.createRange()
+    text.selectNodeContents(node)
+    node.style.maxInlineSize = `${text.getBoundingClientRect().width - 0.25}px`
+  })
+  await cut.hover()
+  await whole.hover()
+  await expect(whole).toHaveAttribute("title", "Water plants")
+
+  // The text takes the pointer now, and a click on it still checks its task off.
+  await cut.click()
+  await expect(card.getByRole("checkbox", { name: task })).toBeChecked()
+})
+
 test("add quote flow shows a quote and keeps the daily pick across reloads", async ({
   page,
   extensionId

@@ -6,6 +6,7 @@ import {
   type ComponentPropsWithoutRef,
   type CSSProperties,
   type KeyboardEvent,
+  type PointerEvent,
   type ReactNode
 } from "react"
 
@@ -82,6 +83,25 @@ interface BoardRowProps {
   onTimerFinish?: TimerFinishHandler
 }
 
+// Text the card cuts off can still be read whole: pointing at it offers all of it as a tooltip.
+// Whether any of it is hidden is asked at that moment rather than kept up to date, so text that fits never shows a copy of itself and nothing is measured while the board just sits there.
+// A quote is clamped by whole lines, which its scroll height counts exactly. A task is cut along its line, where the scroll and client widths round to whole pixels but the ellipsis doesn't: a task a fraction of a pixel too wide loses its last letters while both widths read the same. So the text's own width is held against its box's instead.
+const offerHiddenText = (event: PointerEvent<HTMLElement>) => {
+  const element = event.currentTarget
+  const text = element.ownerDocument.createRange()
+  text.selectNodeContents(element)
+
+  const hidden =
+    element.scrollHeight > element.clientHeight ||
+    text.getBoundingClientRect().width > element.getBoundingClientRect().width
+
+  if (hidden) {
+    element.title = element.textContent ?? ""
+  } else {
+    element.removeAttribute("title")
+  }
+}
+
 const NoteField = ({
   item,
   onWidgetChange
@@ -129,7 +149,10 @@ const QuoteField = ({ item, now }: { item: QuoteWidget; now: Date }) => {
       : Math.floor(openSeed * quotes.length) % quotes.length
 
   return (
-    <blockquote className="quote-text" dir="auto">
+    <blockquote
+      className="quote-text"
+      dir="auto"
+      onPointerEnter={offerHiddenText}>
       {quotes[index] ?? quotes[0]}
     </blockquote>
   )
@@ -531,7 +554,8 @@ const TodoBody = ({
                 className={`todo-task__text${
                   task.done ? " todo-task__text--done" : ""
                 }`}
-                dir="auto">
+                dir="auto"
+                onPointerEnter={offerHiddenText}>
                 {task.text}
               </span>
             </label>
