@@ -31,15 +31,10 @@ export const ARCHIVE_DROP_ID = "dayboard-archive-dropzone"
 // Registered by the active board's empty state, so an archived card can still be dragged home when there are no board cards left to aim at.
 export const BOARD_DROP_ID = "dayboard-board-dropzone"
 
-const ARCHIVE_ICON = (
-  <path
-    d="M4 7.5h16M4 7.5 5.2 19a1.5 1.5 0 0 0 1.5 1.4h10.6a1.5 1.5 0 0 0 1.5-1.4L20 7.5M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2M10 11.5v5M14 11.5v5"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.7"
-  />
-)
+// The archive box, shared with the card menu's Archive item so the action has one glyph wherever it is offered.
+// The zone used to draw the lidded bin that the menu keeps for Delete, which read as dropping the card in the trash.
+export const ARCHIVE_ICON_PATH =
+  "M4.5 5h15a.5.5 0 0 1 .5.5V8H4V5.5a.5.5 0 0 1 .5-.5ZM5 8v10.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V8M10 11.5h4"
 
 const isArchiveZone = ({ id }: { id: UniqueIdentifier }) => id === ARCHIVE_DROP_ID
 
@@ -80,7 +75,13 @@ const ArchiveDropZone = () => {
       className={`archive-dropzone${isOver ? " archive-dropzone--over" : ""}`}
       aria-hidden="true">
       <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
-        {ARCHIVE_ICON}
+        <path
+          d={ARCHIVE_ICON_PATH}
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.7"
+        />
       </svg>
       <span>{isOver ? "Release to archive" : "Drag here to archive"}</span>
     </div>

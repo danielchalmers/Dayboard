@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { BoardDnd } from "~/components/BoardDnd"
+import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
@@ -45,8 +45,7 @@ const MENU_ICON_PATHS = {
   moveBack: "M19 12H5m6-6-6 6 6 6",
   moveNext: "M5 12h14m-6-6 6 6-6 6",
   edit: "M4.5 19.5h4L19 9a2.12 2.12 0 0 0-3-3L5.5 16.5l-1 3ZM13.5 5.5l3 3",
-  archive:
-    "M4.5 5h15a.5.5 0 0 1 .5.5V8H4V5.5a.5.5 0 0 1 .5-.5ZM5 8v10.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V8M10 11.5h4",
+  archive: ARCHIVE_ICON_PATH,
   restore: "M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5",
   del: "M4.5 7h15M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7m-8.2 0 .9 11.6a1.5 1.5 0 0 0 1.5 1.4h5.6a1.5 1.5 0 0 0 1.5-1.4L19 7M10 11v5M14 11v5"
 } as const
