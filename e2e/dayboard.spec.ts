@@ -1906,10 +1906,10 @@ test("dragging an archived widget onto an empty board restores it", async ({
   await lastCard.press("ContextMenu")
   await page.getByRole("menuitem", { name: `Archive ${last}` }).press("Enter")
 
-  // Focus lands on the way into the archive, the next stop after an empty board.
+  // The board was tidied away rather than never filled, so the empty state points at the archive, and focus lands on the way into it.
   await expect(page.locator(".board-row")).toHaveCount(0)
   await expect(
-    page.getByRole("heading", { name: "A fresh start" })
+    page.getByRole("heading", { name: "All tucked away" })
   ).toBeVisible()
   const toggle = page.getByRole("button", { name: "Show archived" })
   await expect(toggle).toBeFocused()

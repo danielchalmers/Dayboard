@@ -481,6 +481,7 @@ export function NewTabPage() {
             return (
               <>
                 <BoardList
+                  hasArchived={archivedWidgets.length > 0}
                   items={activeWidgets}
                   restoreTarget
                   onWidgetChange={updateWidget}

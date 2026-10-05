@@ -164,6 +164,19 @@ describe("BoardList", () => {
     expect(screen.getByText(/add a clock, a countdown, a note/i)).toBeInTheDocument()
   })
 
+  // Archiving everything is a tidy-up, and greeting it as a first run told whoever did it to start over with their cards a click away.
+  it("points to the archive when the board is empty because everything was archived", () => {
+    render(<BoardList hasArchived items={[]} restoreTarget />)
+
+    expect(
+      screen.getByRole("heading", { name: "All tucked away" })
+    ).toBeInTheDocument()
+    expect(screen.getByText(/archived cards are just below/i)).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "A fresh start" })
+    ).not.toBeInTheDocument()
+  })
+
   // Deleting the last card, or archiving it, empties the board while the component stays mounted.
   // Every hook has to run on that render too: one declared past the empty-state return is a hook fewer than the render before it, and React throws instead of showing the empty state.
   it("swaps to the empty state when the last card goes", () => {
