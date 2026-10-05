@@ -33,7 +33,7 @@ import type {
 import { getPresetCssVars } from "~/lib/colors"
 import { WidgetIcon } from "~/components/WidgetIcon"
 import { useAutoSave } from "~/hooks/useAutoSave"
-import { playChime, primeChime } from "~/lib/chime"
+import { playChimeOnce, primeChime } from "~/lib/chime"
 import {
   formatDayLabel,
   formatWeekRange,
@@ -54,7 +54,6 @@ import {
   type TodoTask
 } from "~/lib/todo"
 import {
-  finishTimer,
   formatDuration,
   pauseStopwatch,
   pauseTimer,
@@ -69,6 +68,9 @@ import {
 // A card hands its change up and may hear back why storage refused it (null once it is saved), which only a card holding typed text has a use for.
 export type WidgetChangeHandler = (widget: Widget) => Promise<string | null> | void
 
+// A timer reports the run that has ended by its finish time, and hears back, once the board has checked it, the timer as that finish left it, or null when that run was no longer the one going.
+export type TimerFinishHandler = (id: string, endsAt: number) => Promise<TimerWidget | null>
+
 interface BoardRowProps {
   item: Widget
   now: Date
@@ -77,6 +79,7 @@ interface BoardRowProps {
   className?: string
   style?: CSSProperties
   onWidgetChange?: WidgetChangeHandler
+  onTimerFinish?: TimerFinishHandler
 }
 
 const NoteField = ({
@@ -173,34 +176,71 @@ const StopwatchBody = ({
   )
 }
 
+// How late a timer's finish can be and still be news worth announcing.
+// A hidden tab's timeout lands within about a second; a minute leaves room for heavier throttling without announcing a finish that was missed.
+const FINISH_GRACE_MS = 60_000
+
+// setTimeout keeps its delay in a signed 32-bit count of milliseconds, so a longer wait (an imported timer weeks from its end) would fire at once; such a wait is taken in pieces instead.
+const MAX_TIMEOUT_MS = 2 ** 31 - 1
+
 const TimerBody = ({
   item,
   now,
-  onWidgetChange
+  onWidgetChange,
+  onTimerFinish
 }: {
   item: TimerWidget
   now: Date
   onWidgetChange?: (widget: Widget) => void
+  onTimerFinish?: TimerFinishHandler
 }) => {
-  const { running, durationMs, chime } = item.settings
+  const { id } = item
+  const { running, endsAt, durationMs, chime } = item.settings
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
   const apply = (settings: TimerWidget["settings"]) =>
     onWidgetChange?.({ ...item, settings })
 
-  // Settle the timer the moment it counts down to zero while running, and when this timer opted into a chime, sound it once on that transition.
+  // A running timer keeps its own timeout aimed at the finish rather than waiting for the page clock to notice, because the clock stops while the tab is hidden and a timer is mostly left to run while you are somewhere else.
+  // It is one wake at the end, not a tick, so it costs a hidden tab nothing until then, and background throttling lands it within about a second.
+  // The page clock still runs this when it reads the timer as done, which catches a finish the timeout slept through.
+  // A copy with nowhere to report the finish (the lifted card under a drag) leaves it to the card on the board.
   useEffect(() => {
-    if (running && done) {
-      if (chime) {
-        playChime()
+    if (!running || endsAt == null || !onTimerFinish) {
+      return
+    }
+
+    let timeout: number | undefined
+
+    const wake = () => {
+      const late = Date.now() - endsAt
+
+      if (late < 0) {
+        timeout = window.setTimeout(wake, Math.min(-late, MAX_TIMEOUT_MS))
+        return
       }
 
-      onWidgetChange?.({ ...item, settings: finishTimer(item.settings) })
+      // Another tab or device may have settled this run already, or started a new one, so only a finish the board takes is announced, once it has answered.
+      // The finish is only news as the timer ends: past that a chime would sound at someone already looking at the card (a tab opened later, the archive opened onto it, a computer woken from sleep), so the timer settles quietly.
+      void onTimerFinish(id, endsAt).then((settled) => {
+        if (!settled || late >= FINISH_GRACE_MS) {
+          return
+        }
+
+        // Whether to chime is taken from the board's answer rather than this render, which may not have caught up with a chime switched off in another tab.
+        if (settled.settings.chime) {
+          playChimeOnce(`${id}:${endsAt}`, FINISH_GRACE_MS)
+        }
+      })
     }
-  }, [running, done, item, onWidgetChange, chime])
+
+    wake()
+
+    return () => window.clearTimeout(timeout)
+  }, [running, endsAt, done, id, onTimerFinish])
 
   const handleStart = () => {
-    // Warm up audio from this gesture so the later chime is allowed to sound.
+    // Ready the audio from the press, in case the browser holds sound back from a page that hasn't been used.
     if (chime) {
       primeChime()
     }
@@ -560,7 +600,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
 })
 
 // What a card shows when its body threw while rendering: its own frame and title, so it can still be found, dragged, and edited or deleted from its menu, and the rest of the board carries on around it.
-export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange">>(
+export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange" | "onTimerFinish">>(
   function BoardRowFallback(props, ref) {
     return (
       <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
@@ -578,7 +618,8 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     dragHandleProps,
     className,
     style,
-    onWidgetChange
+    onWidgetChange,
+    onTimerFinish
   },
   ref
 ) {
@@ -638,7 +679,12 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   if (item.kind === "timer") {
     return (
       <CardShell {...shell} ref={ref}>
-        <TimerBody item={item} now={now} onWidgetChange={onWidgetChange} />
+        <TimerBody
+          item={item}
+          now={now}
+          onTimerFinish={onTimerFinish}
+          onWidgetChange={onWidgetChange}
+        />
       </CardShell>
     )
   }

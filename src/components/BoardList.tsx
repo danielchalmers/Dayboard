@@ -22,6 +22,7 @@ import { BOARD_DROP_ID } from "~/components/BoardDnd"
 import {
   BoardRow,
   BoardRowFallback,
+  type TimerFinishHandler,
   type WidgetChangeHandler
 } from "~/components/BoardRow"
 import { CardBoundary } from "~/components/CardBoundary"
@@ -37,6 +38,7 @@ interface BoardListProps {
   hasArchived?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onWidgetChange?: WidgetChangeHandler
+  onTimerFinish?: TimerFinishHandler
 }
 
 // With no cards on the board there is no slot to aim an archived card at, so the empty-state placeholder itself doubles as the restore target while a drag is under way.
@@ -342,6 +344,7 @@ interface SortableBoardRowProps {
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
   onWidgetChange?: WidgetChangeHandler
+  onTimerFinish?: TimerFinishHandler
 }
 
 // Every prop below is stable across a clock tick, so React's shallow compare is the whole memo: a row renders when its own widget, menu state, or callbacks change, and otherwise only when its own clock subscription fires.
@@ -353,7 +356,8 @@ const SortableBoardRow = memo(({
   prefersReducedMotion,
   onCloseMenu,
   onOpenMenu,
-  onWidgetChange
+  onWidgetChange,
+  onTimerFinish
 }: SortableBoardRowProps) => {
   // Each card keeps its own time at the coarsest step it can show, so a note never wakes for a clock and a clock never wakes for a running stopwatch.
   const now = useNow(widgetClockGranularity(item))
@@ -466,7 +470,12 @@ const SortableBoardRow = memo(({
 
   return (
     <CardBoundary fallback={<BoardRowFallback {...shared} />} item={item}>
-      <BoardRow {...shared} now={now} onWidgetChange={onWidgetChange} />
+      <BoardRow
+        {...shared}
+        now={now}
+        onTimerFinish={onTimerFinish}
+        onWidgetChange={onWidgetChange}
+      />
     </CardBoundary>
   )
 })
@@ -476,7 +485,8 @@ export const BoardList = ({
   restoreTarget = false,
   hasArchived = false,
   renderItemActions,
-  onWidgetChange
+  onWidgetChange,
+  onTimerFinish
 }: BoardListProps) => {
   const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null)
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -548,6 +558,7 @@ export const BoardList = ({
               key={item.id}
               onCloseMenu={closeMenu}
               onOpenMenu={handleOpenMenu}
+              onTimerFinish={onTimerFinish}
               onWidgetChange={onWidgetChange}
               prefersReducedMotion={prefersReducedMotion}
             />

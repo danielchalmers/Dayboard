@@ -141,6 +141,7 @@ export function NewTabPage() {
     setWidgets,
     setSettings,
     updateWidget,
+    settleTimer,
     replaceState,
     saveError,
     dismissSaveError
@@ -501,6 +502,7 @@ export function NewTabPage() {
                   hasArchived={archivedWidgets.length > 0}
                   items={activeWidgets}
                   restoreTarget
+                  onTimerFinish={settleTimer}
                   onWidgetChange={updateWidget}
                   renderItemActions={(item, index) => (
                     <>
@@ -592,6 +594,7 @@ export function NewTabPage() {
                     {showArchived ? (
                       <BoardList
                         items={archivedWidgets}
+                        onTimerFinish={settleTimer}
                         onWidgetChange={updateWidget}
                         renderItemActions={(item) => (
                           <>
