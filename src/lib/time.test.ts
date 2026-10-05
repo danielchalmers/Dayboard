@@ -582,6 +582,52 @@ describe("getCountdownParts", () => {
       )
     })
   })
+
+  describe("a span of a year or more", () => {
+    const now = new Date(2026, 9, 7, 10, 0, 0)
+
+    it("reads in years and months", () => {
+      expect(
+        getCountdownParts(countdownWidget(new Date(2027, 10, 11, 16, 30).toISOString()), now)
+          .label
+      ).toBe("1 year, 1 month from now")
+      expect(
+        getCountdownParts(countdownWidget(new Date(2056, 9, 6).toISOString()), now).label
+      ).toBe("29 years, 11 months from now")
+      expect(
+        getCountdownParts(countdownWidget(new Date(1990, 2, 15, 8, 0).toISOString()), now)
+          .label
+      ).toBe("36 years, 6 months ago")
+    })
+
+    it("skips an empty month the way it skips any empty unit", () => {
+      expect(
+        getCountdownParts(countdownWidget(new Date(2027, 9, 20, 10, 0).toISOString()), now)
+          .label
+      ).toBe("1 year from now")
+    })
+
+    it("stays in days until a whole year has gone by", () => {
+      expect(
+        getCountdownParts(countdownWidget(new Date(2027, 9, 6, 10, 0).toISOString()), now)
+          .label
+      ).toBe("364 days from now")
+      expect(
+        getCountdownParts(countdownWidget(new Date(2027, 9, 7, 10, 0).toISOString()), now)
+          .label
+      ).toBe("1 year from now")
+    })
+
+    it("counts a month from the 31st to the end of a shorter one", () => {
+      // Stepped the way a monthly repeat steps, so the last day of February is a whole month on from January 31 rather than a couple of days short of one.
+      expect(
+        getCountdownParts(
+          countdownWidget(new Date(2028, 1, 29, 9, 0).toISOString()),
+          new Date(2027, 0, 31, 9, 0, 0)
+        ).label
+      ).toBe("1 year, 1 month from now")
+    })
+  })
 })
 
 describe("formatCountdownTarget", () => {

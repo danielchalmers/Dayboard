@@ -256,6 +256,25 @@ const calendarDaysBetween = (from: Date, to: Date): number =>
     (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS
   )
 
+// Whole months from one instant to a later one, stepped the way a monthly repeat steps, so the 31st is a month from the last day of a shorter month.
+// Estimated from the span and then nudged into place, the same as the repeat steps above.
+const wholeMonthsBetween = (from: Date, to: Date): number => {
+  let months = Math.max(
+    0,
+    Math.floor((to.getTime() - from.getTime()) / APPROXIMATE_STEP_MS.monthly)
+  )
+
+  while (advanceByRepeat(from, "monthly", months + 1).getTime() <= to.getTime()) {
+    months += 1
+  }
+
+  while (months > 0 && advanceByRepeat(from, "monthly", months).getTime() > to.getTime()) {
+    months -= 1
+  }
+
+  return months
+}
+
 // A target at local midnight is a date rather than a moment: a birthday, a trip, New Year's Day.
 // It counts in calendar days and lasts the whole of its day, which is how people count to a date, and the dialog's When field starts there so a picked date stays one.
 // An hourly or daily repeat is never a date: it comes round every day, so a day-long occurrence would leave it reading Today for good rather than counting down to midnight.
@@ -339,16 +358,30 @@ export const getCountdownParts = (
     // On any day but the eve, a date is whole days away, counted from the start of today so the hour doesn't matter: Christmas is 79 days off all of October 7.
     // The eve itself falls through to hours and minutes, so New Year's Eve still ticks down to midnight.
     if (days !== 1) {
+      const today = startOfLocalDay(now)
+      const years =
+        days > 0 ? describeYears(today, target) : describeYears(target, today)
+
       return {
         status: days > 0 ? "future" : "past",
-        label: `${pluralize(Math.abs(days), "day")} ${days > 0 ? "from now" : "ago"}`
+        label: `${years ?? pluralize(Math.abs(days), "day")} ${days > 0 ? "from now" : "ago"}`
       }
     }
   }
 
+  const status = getCountdownStatus(totalMs)
+  const years =
+    status === "future"
+      ? describeYears(now, target)
+      : status === "past"
+        ? describeYears(target, now)
+        : null
+
   return {
-    status: getCountdownStatus(totalMs),
-    label: formatRelativeCountdown(totalMs)
+    status,
+    label: years
+      ? `${years} ${status === "future" ? "from now" : "ago"}`
+      : formatRelativeCountdown(totalMs)
   }
 }
 
@@ -361,25 +394,36 @@ export const formatRelativeCountdown = (totalMs: number): string => {
 
   const suffix = totalMs >= 0 ? "from now" : "ago"
   const absoluteMinutes = Math.floor(Math.abs(totalMs) / 60_000)
-  const days = Math.floor(absoluteMinutes / 1_440)
-  const hours = Math.floor((absoluteMinutes % 1_440) / 60)
-  const minutes = absoluteMinutes % 60
-  const parts: string[] = []
 
-  if (days > 0) {
-    parts.push(pluralize(days, "day"))
-  }
-
-  if (hours > 0 && parts.length < 2) {
-    parts.push(pluralize(hours, "hour"))
-  }
-
-  if (minutes > 0 && parts.length < 2) {
-    parts.push(pluralize(minutes, "minute"))
-  }
-
-  return `${parts.join(", ")} ${suffix}`
+  return `${describeUnits([
+    [Math.floor(absoluteMinutes / 1_440), "day"],
+    [Math.floor((absoluteMinutes % 1_440) / 60), "hour"],
+    [absoluteMinutes % 60, "minute"]
+  ])} ${suffix}`
 }
+
+// A span of a year or more reads in years and months ("29 years, 11 months"), the way people say it, rather than in thousands of days.
+// Null under a year, where days and hours are still the units that move.
+const describeYears = (from: Date, to: Date): string | null => {
+  const months = wholeMonthsBetween(from, to)
+
+  if (months < 12) {
+    return null
+  }
+
+  return describeUnits([
+    [Math.floor(months / 12), "year"],
+    [months % 12, "month"]
+  ])
+}
+
+// The two largest units that aren't zero, so an empty unit is skipped rather than shown: "2 days, 9 minutes", never "2 days, 0 hours".
+const describeUnits = (units: [value: number, unit: string][]): string =>
+  units
+    .filter(([value]) => value > 0)
+    .slice(0, 2)
+    .map(([value, unit]) => pluralize(value, unit))
+    .join(", ")
 
 const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
   if (Number.isNaN(totalMs) || Math.abs(totalMs) < 60_000) {
