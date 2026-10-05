@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test"
+
 import type { DayboardState } from "../src/lib/types"
 import { expect, test } from "./fixtures"
 import { addWidget, cardByTitle, openNewTab, readWidgetSettings } from "./helpers"
@@ -32,6 +34,63 @@ test.describe("a board too large to sync", () => {
 
     await page.reload()
     await expect(page.getByLabel("Scratch note")).toHaveValue("Keep me")
+  })
+
+  // A quote list has no length cap either, and it is typed into a dialog that used to close before its write was refused.
+  const longQuotes = Array.from(
+    { length: 150 },
+    (_, line) => `Quote ${line + 1}: you have power over your mind, not outside events.`
+  ).join("\n")
+
+  const addLongQuote = async (page: Page) => {
+    await page.getByRole("button", { name: "Add widget" }).click()
+    await page.getByRole("button", { name: "Add quote" }).click()
+    const dialog = page.getByRole("dialog")
+    await dialog.getByLabel("Name").fill("Stoics")
+    await dialog.getByLabel("Quotes (one per line)").fill(longQuotes)
+
+    return dialog
+  }
+
+  test("keeps a dialog open on what was typed into it and says why", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    const dialog = await addLongQuote(page)
+    await dialog.getByRole("button", { name: "Save quote" }).click()
+
+    await expect(dialog.getByRole("alert")).toContainText("more than browser sync can hold")
+    await expect(dialog.getByLabel("Quotes (one per line)")).toHaveValue(longQuotes)
+    await expect(cardByTitle(page, "Stoics")).toHaveCount(0)
+
+    // Trimmed back under the limit, the same draft saves and the dialog closes.
+    const trimmed = longQuotes.split("\n").slice(0, 20).join("\n")
+    await dialog.getByLabel("Quotes (one per line)").fill(trimmed)
+    await dialog.getByRole("button", { name: "Save quote" }).click()
+
+    await expect(dialog).toHaveCount(0)
+    await expect(cardByTitle(page, "Stoics")).toBeVisible()
+    await expect(page.getByRole("alert")).toHaveCount(0)
+  })
+
+  test("lets a dialog refused from the backdrop go with Escape", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    const dialog = await addLongQuote(page)
+
+    // The backdrop saves rather than discards, so a press on it is refused like Save and the dialog stays.
+    await page.mouse.click(4, 4)
+    await expect(dialog.getByRole("alert")).toContainText("more than browser sync can hold")
+
+    // Focus is still in the dialog, so the keyboard can still let the draft go.
+    await page.keyboard.press("Escape")
+
+    await expect(dialog).toHaveCount(0)
+    await expect(cardByTitle(page, "Stoics")).toHaveCount(0)
+    await expect(page.getByRole("alert")).toHaveCount(0)
   })
 })
 
@@ -68,6 +127,57 @@ test("an edit dialog left open keeps what changed on the card meanwhile", async 
   await expect(other.getByLabel("Groceries note")).toHaveValue("Eggs, milk, bread")
 
   await other.close()
+})
+
+test("a save that lands late leaves a dialog opened since alone", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await addWidget(page, "note", "Ideas")
+
+  // Hold the next write the way a slow sync does, until the test lets it land.
+  await page.evaluate(() => {
+    const sync = chrome.storage.sync
+    const set = sync.set.bind(sync)
+    const held = window as typeof window & { landWrite?: () => Promise<void> }
+
+    sync.set = ((items: Record<string, unknown>) => {
+      sync.set = set
+
+      return new Promise<void>((resolve) => {
+        held.landWrite = async () => {
+          await set(items)
+          resolve()
+          // A moment for the page to act on the write before the test looks.
+          await new Promise((settle) => setTimeout(settle, 100))
+        }
+      })
+    }) as typeof sync.set
+  })
+
+  // The note's own field takes a right-click for its copy/paste menu, so its card menu comes from the keyboard.
+  await cardByTitle(page, "Ideas").focus()
+  await page.keyboard.press("Shift+F10")
+  await page.getByRole("menuitem", { name: "Edit Ideas" }).click()
+  await page.getByRole("dialog").getByLabel("Name").fill("Groceries")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  // Let that dialog go while its write is still out, then open the card's dialog again.
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await cardByTitle(page, "Groceries").focus()
+  await page.keyboard.press("Shift+F10")
+  await page.getByRole("menuitem", { name: "Edit Groceries" }).click()
+
+  // The first dialog's write landing is no reason to close the second.
+  await page.evaluate(() =>
+    (window as typeof window & { landWrite: () => Promise<void> }).landWrite()
+  )
+  await expect
+    .poll(() => readWidgetSettings(page, "Groceries"))
+    .toEqual({ text: "" })
+  await expect(page.getByRole("dialog").getByLabel("Name")).toHaveValue("Groceries")
 })
 
 test("a board from a newer Dayboard keeps what this one can't show through a save", async ({

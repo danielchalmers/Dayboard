@@ -24,6 +24,8 @@ import type { Widget, WidgetKind } from "~/lib/types"
 interface EditorState {
   mode: "add" | "edit"
   item: Widget
+  /** Why the last save from this dialog was refused. */
+  error?: string
 }
 
 // Leading icons for the card context menu.
@@ -135,7 +137,10 @@ export function NewTabPage() {
   }
 
   // An edit lands on the card as it is now (see applyDialogEdit), and a card deleted elsewhere while its dialog sat open stays deleted.
-  const saveItem = (item: Widget) => {
+  // The dialog waits for the write before it closes: when storage refuses it, the dialog stays open on everything typed into it and says why, instead of closing on a draft that is about to be rolled back.
+  // A write that lands late closes only the dialog its Save was pressed in, never one opened since, even for the same card.
+  const saveItem = async (item: Widget) => {
+    const opened = editorState?.item
     const latest = state.widgets.find((current) => current.id === item.id)
     const nextWidgets = latest
       ? state.widgets.map((current) =>
@@ -144,9 +149,21 @@ export function NewTabPage() {
       : editorState?.mode === "add"
         ? [...state.widgets, item]
         : null
+    const refused = nextWidgets ? await setWidgets(nextWidgets) : null
 
-    if (nextWidgets) {
-      void setWidgets(nextWidgets)
+    setEditorState((current) =>
+      !current || current.item !== opened
+        ? current
+        : refused
+          ? { ...current, error: refused }
+          : null
+    )
+  }
+
+  // The dialog already said why its own save was refused, so closing it on that draft is the user letting the change go.
+  const closeEditor = () => {
+    if (editorState?.error) {
+      dismissSaveError()
     }
 
     setEditorState(null)
@@ -468,11 +485,12 @@ export function NewTabPage() {
         </BoardDnd>
       </main>
       <ItemDialog
+        error={editorState?.error}
         isOpen={Boolean(editorState)}
         item={editorState?.item ?? null}
         mode={editorState?.mode ?? "add"}
-        onClose={() => setEditorState(null)}
-        onSave={saveItem}
+        onClose={closeEditor}
+        onSave={(item) => void saveItem(item)}
       />
       <DeleteDialog
         isOpen={Boolean(itemPendingDelete)}
@@ -489,7 +507,8 @@ export function NewTabPage() {
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
       />
-      {saveError ? (
+      {/* A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
+      {saveError && !editorState?.error ? (
         <div className="board-notice" role="alert">
           <span className="board-notice__text">{saveError}</span>
           <button

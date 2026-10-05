@@ -23,6 +23,8 @@ interface ItemDialogProps {
   isOpen: boolean
   item: Widget | null
   mode: "add" | "edit"
+  /** Why the last save was refused; the dialog stays open on its draft while this is set, so nothing typed is lost. */
+  error?: string | null
   onClose: () => void
   onSave: (item: Widget) => void
 }
@@ -31,6 +33,7 @@ export const ItemDialog = ({
   isOpen,
   item,
   mode,
+  error,
   onClose,
   onSave
 }: ItemDialogProps) => {
@@ -179,6 +182,12 @@ export const ItemDialog = ({
         // Native form validation still blocks the save and keeps the dialog open if a required field is empty.
         if (event.target === event.currentTarget) {
           formRef.current?.requestSubmit()
+        }
+      }}
+      onMouseDown={(event) => {
+        // The press would otherwise take focus out to the page, beyond the focus trap and the Escape key, and a refused save leaves the dialog open there.
+        if (event.target === event.currentTarget) {
+          event.preventDefault()
         }
       }}>
       <section
@@ -418,6 +427,12 @@ export const ItemDialog = ({
                   </select>
                 </label>
               </>
+            ) : null}
+
+            {error ? (
+              <p className="form-note form-note--error" role="alert">
+                {error}
+              </p>
             ) : null}
           </div>
 
