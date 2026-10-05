@@ -155,6 +155,56 @@ test("an outside click the form refuses keeps focus on the field and Escape work
   await expect(dialog).toHaveCount(0)
 })
 
+test("closing a dialog hands focus back to the card or button that opened it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  const dialog = page.getByRole("dialog", { name: "Edit countdown" })
+
+  // The menu item that opened the dialog is gone by the time it closes, so without this focus fell to the page and a keyboard user started over from the top.
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(card).toBeFocused()
+
+  // A save closes the dialog only once its write has landed, and focus still finds the card after the wait.
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await dialog.getByRole("button", { name: "Save changes" }).press("Enter")
+  await expect(dialog).toHaveCount(0)
+  await expect(card).toBeFocused()
+
+  const addWidgetButton = page.getByRole("button", { name: "Add widget" })
+  await addWidgetButton.press("Enter")
+  await page.getByRole("button", { name: "Add clock" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(addWidgetButton).toBeFocused()
+})
+
+test("a menu opened by a long press hands focus back to its own card", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  await cardByTitle(page, "👋 Welcome").locator("textarea").focus()
+
+  // A touch long-press opens the menu without the press focusing anything, which a bare contextmenu event reproduces.
+  // The note's field was focused before it, and it is where an item chosen with a screen reader or a keyboard would otherwise hand focus back to: off screen on a phone, with the keyboard up.
+  await card.dispatchEvent("contextmenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(card).toBeFocused()
+})
+
 test("picking a color repaints the card and it survives a reload", async ({
   page,
   extensionId

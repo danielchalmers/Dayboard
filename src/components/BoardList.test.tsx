@@ -384,6 +384,21 @@ describe("BoardList", () => {
     expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
   })
 
+  // A touch long-press opens the menu without focusing anything, and the menu hands focus back to whatever held it when it opened, so the card has to be what held it.
+  it("focuses the card its menu opens from, without scrolling to it", () => {
+    const { container } = renderBoard()
+
+    const [card, other] = container.querySelectorAll<HTMLElement>(
+      ".board-row--draggable"
+    )
+    other!.focus()
+    const focus = vi.spyOn(card!, "focus")
+
+    fireEvent.contextMenu(card!, { clientX: 10, clientY: 10 })
+
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
   it("closes the menu when an item is chosen", () => {
     const { container } = renderBoard()
 
@@ -391,5 +406,24 @@ describe("BoardList", () => {
     fireEvent.click(screen.getByLabelText("Edit Local time"))
 
     expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+  })
+
+  // A pointer user has no place on the board to keep, so only an item chosen from the keyboard closes the menu the way that hands focus back to the card.
+  it("hands focus back to the card only for an item chosen from the keyboard", () => {
+    const { container } = renderBoard()
+
+    const chooseEdit = (detail: number) => {
+      openMenu(container, { clientX: 10, clientY: 10 })
+      const hidePopover = vi.spyOn(
+        document.querySelector<HTMLElement>(".card-menu")!,
+        "hidePopover"
+      )
+      fireEvent.click(screen.getByLabelText("Edit Local time"), { detail })
+      return hidePopover
+    }
+
+    // A mouse click counts its clicks, and a key or a screen reader clicks with none.
+    expect(chooseEdit(1)).not.toHaveBeenCalled()
+    expect(chooseEdit(0)).toHaveBeenCalledTimes(1)
   })
 })
