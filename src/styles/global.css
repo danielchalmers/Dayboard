@@ -1558,6 +1558,9 @@ body:has(.board-row--overlay) .board-notice {
 }
 
 .modal-dialog {
+  /* The inline and bottom padding are named because the actions row reaches into them (see `.modal-dialog__actions`). */
+  --modal-pad-inline: 36px;
+  --modal-pad-end: 32px;
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-xl);
@@ -1565,7 +1568,9 @@ body:has(.board-row--overlay) .board-notice {
   inline-size: min(100%, 540px);
   max-block-size: calc(100vh - 48px);
   overflow: auto;
-  padding: 36px 36px 32px;
+  padding: 36px var(--modal-pad-inline) var(--modal-pad-end);
+  /* Room for the pinned actions row (its 16px strip, 44px buttons and the bottom padding, plus a little air), so a field that Tab scrolls to stops above the row rather than under it. */
+  scroll-padding-block-end: calc(var(--modal-pad-end) + 64px);
   animation: modal-enter var(--t-normal) both;
 }
 
@@ -1615,11 +1620,36 @@ body:has(.board-row--overlay) .board-notice {
   gap: 28px;
 }
 
+/* On a screen too short for the whole form (a 1366x768 laptop leaves about 625px) the dialog scrolls, and the actions stay pinned to its bottom edge so Save is never below the fold.
+   The row brings its own surface and takes over the dialog's inline and bottom padding, plus a strip above the buttons, so fields and their focus rings scroll out of sight beneath it.
+   The matching negative margins leave a dialog that fits exactly where it was. */
 .modal-dialog__actions {
+  background: var(--surface);
+  /* A pixel past the padding so a dialog scrolled all the way down, which can stop a fraction short on fractional line heights, reads as at rest rather than pinned. */
+  bottom: calc(-1 * var(--modal-pad-end) - 1px);
+  container-type: scroll-state;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: end;
+  margin: -16px calc(-1 * var(--modal-pad-inline)) calc(-1 * var(--modal-pad-end));
+  padding: 16px var(--modal-pad-inline) var(--modal-pad-end);
+  position: sticky;
+}
+
+/* A hairline marks the edge only while the row is actually pinned with fields tucked beneath it; a dialog that fits, or one scrolled to the end, has nothing under it to separate. */
+.modal-dialog__actions::before {
+  border-block-start: 1px solid var(--line-strong);
+  content: "";
+  inset: 0 var(--modal-pad-inline) auto;
+  opacity: 0;
+  position: absolute;
+}
+
+@container scroll-state(stuck: bottom) {
+  .modal-dialog__actions::before {
+    opacity: 1;
+  }
 }
 
 /* A footer row with something quiet on the left (e.g. the GitHub link) and the primary action on the right. */
@@ -1663,7 +1693,9 @@ body:has(.board-row--overlay) .board-notice {
     padding: 16px;
   }
   .modal-dialog {
-    padding: 28px 24px;
+    --modal-pad-inline: 24px;
+    --modal-pad-end: 28px;
+    padding: 28px var(--modal-pad-inline) var(--modal-pad-end);
     max-block-size: calc(100vh - 32px);
   }
 }

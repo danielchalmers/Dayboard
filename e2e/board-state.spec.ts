@@ -5,6 +5,7 @@ import { expect, test } from "./fixtures"
 import {
   DEFAULT_BOARD_TITLES,
   addWidget,
+  boxOf,
   cardByTitle,
   openNewTab,
   openWidgetMenu,
@@ -93,6 +94,47 @@ test.describe("a board too large to sync", () => {
     await expect(dialog).toHaveCount(0)
     await expect(cardByTitle(page, "Stoics")).toBeVisible()
     await expect(page.getByRole("alert")).toHaveCount(0)
+  })
+
+  // On a short screen Save stays pinned however far up the form is scrolled, while the reason it was refused is written at the form's end.
+  test("brings the reason into view when a pinned Save is refused", async ({
+    page,
+    extensionId
+  }) => {
+    // About what a 1366x768 laptop leaves under the browser's own bars.
+    await page.setViewportSize({ width: 1366, height: 625 })
+    await openNewTab(page, extensionId)
+    const dialog = await addLongQuote(page)
+
+    await dialog.evaluate((el) => (el.scrollTop = 0))
+    await dialog.getByRole("button", { name: "Save quote" }).click()
+    const reason = dialog.getByRole("alert")
+    await expect(reason).toContainText("more than browser sync can hold")
+
+    const dialogBox = await boxOf(dialog, "the quote dialog")
+    const reasonBox = await boxOf(reason, "the reason the save was refused")
+    const actionsBox = await boxOf(
+      dialog.locator(".modal-dialog__actions"),
+      "the pinned actions row"
+    )
+    expect(reasonBox.y).toBeGreaterThanOrEqual(dialogBox.y)
+    expect(reasonBox.y + reasonBox.height).toBeLessThanOrEqual(actionsBox.y)
+
+    // Scrolled back up and refused again for the same reason, the dialog brings it into view afresh, or the pinned Save would look as if it did nothing.
+    // The press lands where the pinned button sits, since a locator click would first scroll the form to its end.
+    await dialog.evaluate((el) => (el.scrollTop = 0))
+    const save = await boxOf(
+      dialog.getByRole("button", { name: "Save quote" }),
+      "the pinned Save"
+    )
+    await page.mouse.click(save.x + save.width / 2, save.y + save.height / 2)
+    await expect
+      .poll(async () => {
+        const box = await reason.boundingBox()
+
+        return box !== null && box.y + box.height <= actionsBox.y
+      })
+      .toBe(true)
   })
 
   test("lets a dialog refused from the backdrop go with Escape", async ({

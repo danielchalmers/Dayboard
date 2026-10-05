@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures"
 import {
+  boxOf,
   cardByTitle,
   DEFAULT_BOARD_TITLES,
   openNewTab,
@@ -203,6 +204,55 @@ test("a menu opened by a long press hands focus back to its own card", async ({
   await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await page.keyboard.press("Escape")
   await expect(card).toBeFocused()
+})
+
+test("Save stays in reach when a laptop screen is too short for the form", async ({
+  page,
+  extensionId
+}) => {
+  // About what a 1366x768 laptop leaves under the browser's own bars.
+  await page.setViewportSize({ width: 1366, height: 625 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  const dialog = page.getByRole("dialog", { name: "Add countdown" })
+  await expect(dialog).toBeVisible()
+  await dialog.evaluate((el) =>
+    Promise.all(el.getAnimations().map((animation) => animation.finished))
+  )
+
+  // The countdown form is taller than this dialog can be, so it scrolls; Save has to stay on screen at the top of that scroll as well as the bottom.
+  expect(
+    await dialog.evaluate((el) => el.scrollHeight > el.clientHeight)
+  ).toBe(true)
+
+  const save = page.getByRole("button", { name: "Save countdown" })
+
+  for (const scrollTo of ["top", "end"] as const) {
+    await dialog.evaluate(
+      (el, to) => (el.scrollTop = to === "top" ? 0 : el.scrollHeight),
+      scrollTo
+    )
+    const box = await boxOf(dialog, "the countdown dialog")
+    const saveBox = await boxOf(save, `Save at the ${scrollTo} of the scroll`)
+    expect(saveBox.y).toBeGreaterThanOrEqual(box.y)
+    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(box.y + box.height)
+  }
+
+  // Pinning the row must not hide what it pins over: a field that Tab scrolls into view has to stop above the row, not slide in under it.
+  await dialog.evaluate((el) => (el.scrollTop = 0))
+  await page.getByLabel("Repeats").focus()
+  await page.keyboard.press("Tab")
+  const start = page.getByLabel("Starting from")
+  await expect(start).toBeFocused()
+
+  const startBox = await boxOf(start, "the Starting from field")
+  const actionsBox = await boxOf(
+    dialog.locator(".modal-dialog__actions"),
+    "the pinned actions row"
+  )
+  expect(startBox.y + startBox.height).toBeLessThanOrEqual(actionsBox.y)
 })
 
 test("picking a color repaints the card and it survives a reload", async ({

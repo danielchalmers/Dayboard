@@ -46,6 +46,7 @@ export const ItemDialog = ({
   const formRef = useRef<HTMLFormElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const lengthRef = useRef<HTMLInputElement>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
 
   // Adopt a newly opened item during render (not in an effect) so the dialog body, and the focusable section that useModalFocus wires into, exist on the very first open render.
   // Deferring the draft to an effect left the section null for one render, after which the focus hook's deps never changed again, so focus-move, the focus trap, and Escape-to-close were silently never attached.
@@ -72,6 +73,15 @@ export const ItemDialog = ({
   useEffect(() => {
     lengthRef.current?.setCustomValidity(isLengthless ? "Give it a length." : "")
   }, [isLengthless])
+
+  // Save stays pinned to the bottom of a dialog that scrolls, so it can be pressed with the end of the form out of sight, and the end is where a refused save says why.
+  // Bring that line into view above the pinned row, which the dialog's bottom scroll padding leaves room for.
+  // The optional call keeps jsdom (which has no scrollIntoView) out of trouble in tests.
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView?.({ block: "nearest" })
+    }
+  }, [error])
 
   const title = useMemo(
     () => (draft ? `${mode === "add" ? "Add" : "Edit"} ${draft.kind}` : ""),
@@ -454,7 +464,10 @@ export const ItemDialog = ({
             ) : null}
 
             {error ? (
-              <p className="form-note form-note--error" role="alert">
+              <p
+                className="form-note form-note--error"
+                ref={errorRef}
+                role="alert">
                 {error}
               </p>
             ) : null}

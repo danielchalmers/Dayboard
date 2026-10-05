@@ -305,6 +305,28 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Quotes (one per line)")).toHaveValue(pasted)
   })
 
+  // Save stays on screen however far up a long form is scrolled, but a refused save says why at the form's end, so the dialog brings that line into view.
+  it("brings the reason its save was refused into view", () => {
+    // jsdom has no scrollIntoView, so lend it one for the length of the test.
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView
+    })
+
+    try {
+      const { rerender } = render(itemDialog({ item: quoteItem }))
+      expect(scrollIntoView).not.toHaveBeenCalled()
+
+      rerender(itemDialog({ item: quoteItem, error: "Couldn’t save — too big." }))
+
+      expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({ block: "nearest" })
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole("alert"))
+    } finally {
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView")
+    }
+  })
+
   // A save from the backdrop can be refused, by the form over an empty field or by storage, and leave the dialog open; Escape only reaches it while focus is still inside.
   it("keeps focus where it was when the backdrop is pressed", () => {
     render(itemDialog())

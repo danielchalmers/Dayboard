@@ -226,6 +226,13 @@ export function NewTabPage() {
       : editorState?.mode === "add"
         ? [...state.widgets, item]
         : null
+
+    // A save tried again drops the last refusal, so a second one is said, and brought into view, afresh.
+    setEditorState((current) =>
+      current?.error && current.item === opened
+        ? { ...current, error: undefined }
+        : current
+    )
     const refused = nextWidgets ? await setWidgets(nextWidgets) : null
 
     setEditorState((current) =>
