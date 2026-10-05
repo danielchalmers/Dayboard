@@ -119,6 +119,21 @@ describe("ItemDialog", () => {
     expect(saved(onSave)).toMatchObject({ id: "clock-1", colorPreset: "rose" })
   })
 
+  it("selects a new item's name so typing replaces it", () => {
+    render(itemDialog({ mode: "add" }))
+
+    const name = screen.getByLabelText<HTMLInputElement>("Name")
+    expect([name.selectionStart, name.selectionEnd]).toEqual([0, name.value.length])
+  })
+
+  // An existing name is more often tweaked than rewritten, so editing leaves it whole rather than one keystroke from gone.
+  it("leaves an edited item's name unselected", () => {
+    render(itemDialog())
+
+    const name = screen.getByLabelText<HTMLInputElement>("Name")
+    expect(name.selectionStart).toBe(name.selectionEnd)
+  })
+
   // The backdrop commits rather than discards, so it has to answer to the same validation the Save button does.
   // Otherwise the easiest way out of the dialog is also the one that saves a nameless card, which then sits on the board with no heading to find it by.
   it("will not commit a nameless item from the backdrop", () => {

@@ -106,6 +106,17 @@ test("clicking away from an add only keeps it once something was changed", async
   await expect(cards).toHaveCount(before + 1)
 })
 
+test("typing replaces a new card's name", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // The helpers fill fields wholesale, which is exactly what hides a default that typing appends to ("New clockTokyo").
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.keyboard.type("Tokyo")
+  await page.keyboard.press("Enter")
+  await expect(cardByTitle(page, "Tokyo", true)).toBeVisible()
+})
+
 test("an outside click the form refuses keeps focus on the field and Escape working", async ({
   page,
   extensionId

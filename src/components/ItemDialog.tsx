@@ -44,6 +44,7 @@ export const ItemDialog = ({
   const [syncedItem, setSyncedItem] = useState(item)
   const dialogRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
   const lengthRef = useRef<HTMLInputElement>(null)
 
   // Adopt a newly opened item during render (not in an effect) so the dialog body, and the focusable section that useModalFocus wires into, exist on the very first open render.
@@ -56,6 +57,14 @@ export const ItemDialog = ({
   }
 
   useModalFocus(isOpen, dialogRef, onClose)
+
+  // A new card's name is a placeholder nearly everyone replaces, so select it once focus has landed there: typing replaces it and Enter keeps it.
+  // An edit leaves the caret at the end, since an existing name is more often tweaked than rewritten.
+  useEffect(() => {
+    if (isOpen && mode === "add") {
+      nameRef.current?.select()
+    }
+  }, [isOpen, mode])
 
   // A timer with no length would read "Time's up" the moment it was saved, and storage reads a zero length back as the default five minutes.
   // Marking the length invalid lets native validation hold the save, the same as an empty required field.
@@ -232,6 +241,7 @@ export const ItemDialog = ({
               <span>Name</span>
               <input
                 onChange={(event) => updateTitle(event.currentTarget.value)}
+                ref={nameRef}
                 required
                 type="text"
                 value={draft.title}
