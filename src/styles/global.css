@@ -480,9 +480,20 @@ details > summary::-webkit-details-marker {
 /* `auto-fill`, not `auto-fit`: auto-fit collapses the tracks nothing landed in, so a lone card (one archived widget, or a board pared down to a single widget) stretched itself across every column it could reach.
    Keeping the empty tracks holds every card at one column's width, whatever the count. */
 .board-list {
+  /* A property so the two-column floor below can leave room for it. */
+  --board-gap: 28px;
   display: grid;
-  gap: 28px;
+  gap: var(--board-gap);
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+}
+
+/* Past the phone layout the board always takes at least two columns, even where two 380px ones don't fit.
+   Left to the rule above, a window snapped to half a laptop screen or a portrait tablet fell back to one column and stretched every card to 640-790px, wide and all but empty at its fixed height.
+   A column there is half the board less half the gap (and a pixel spare for rounding), so two always fit and three never do; once two full columns fit, 380px wins and nothing changes. */
+@media (min-width: 721px) {
+  .board-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, calc(50% - var(--board-gap) / 2 - 1px)), 1fr));
+  }
 }
 
 /* ── Archive ───────────────────────────────────────────────────────────── */

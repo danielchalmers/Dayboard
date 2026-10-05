@@ -107,6 +107,35 @@ test("centers the board in the viewport with no docking option", async ({
   expect(Math.abs(above - below)).toBeLessThan(60)
 })
 
+test("keeps two columns between the phone layout and full-width ones", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  const cards = page.locator(".board-list .board-row")
+
+  // A window snapped to half a laptop screen: too narrow for two 380px columns, too wide to be a phone.
+  // The board shares the width between two columns rather than stretching one card across it.
+  for (const width of [721, 800, 860]) {
+    await page.setViewportSize({ width, height: 900 })
+    const first = await boxOf(cards.nth(0), `the first card at ${width}px`)
+    const second = await boxOf(cards.nth(1), `the second card at ${width}px`)
+    const third = await boxOf(cards.nth(2), `the third card at ${width}px`)
+
+    expect(second.y).toBeCloseTo(first.y, 0)
+    expect(second.x).toBeGreaterThan(first.x + first.width)
+    // Never a third column: the next card starts the second row.
+    expect(third.x).toBeCloseTo(first.x, 0)
+    expect(third.y).toBeGreaterThan(first.y + first.height)
+  }
+
+  // The phone layout still stacks.
+  await page.setViewportSize({ width: 600, height: 900 })
+  const first = await boxOf(cards.nth(0), "the first card on a phone")
+  const second = await boxOf(cards.nth(1), "the second card on a phone")
+  expect(second.y).toBeGreaterThan(first.y + first.height)
+})
+
 test("keeps the board from shifting when a scrollbar appears", async ({
   page,
   extensionId
