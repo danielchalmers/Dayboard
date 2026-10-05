@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent
+} from "react"
 
 import { ArchiveNotice } from "~/components/ArchiveNotice"
 import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
@@ -120,6 +126,13 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
     })
 }
 
+// Focus is looked after only when an action came from the keyboard or assistive tech.
+// A pointer user has no place on the board to keep, and a card left focused without a ring would take their next Space as the start of a drag.
+// A click made by a key or a screen reader carries no click count, and a focus the keyboard placed matches :focus-visible.
+const isKeyboardAction = (event?: { detail: number }) =>
+  event?.detail === 0 ||
+  Boolean(document.activeElement?.matches(":focus-visible"))
+
 export function NewTabPage() {
   const {
     state,
@@ -139,6 +152,12 @@ export function NewTabPage() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
   const [undoableArchive, setUndoableArchive] = useState<UndoableArchive | null>(null)
+  const archiveToggleRef = useRef<HTMLButtonElement>(null)
+
+  // Archiving, restoring, or deleting a card unmounts whatever had focus (the menu item, the dialog's button, the card itself), which drops the keyboard on the page body and sends the next Tab to the far end of the board.
+  // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
+  // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
+  const focusLanding = useRef<{ id?: string } | null>(null)
   const expireUndo = useCallback(() => setUndoableArchive(null), [])
 
   // Undo only stands for an archive that is still in place.
@@ -154,6 +173,27 @@ export function NewTabPage() {
       setUndoableArchive(null)
     }
   }, [undoableArchive, undoableItem])
+
+  useEffect(() => {
+    const landing = focusLanding.current
+
+    if (!landing) {
+      return
+    }
+
+    focusLanding.current = null
+
+    // Only a focus that fell to the page is picked back up; one that is somewhere on purpose stays put.
+    if (document.activeElement && document.activeElement !== document.body) {
+      return
+    }
+
+    const card = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-widget-id]")
+    ).find((element) => element.dataset.widgetId === landing.id)
+
+    ;(card ?? archiveToggleRef.current)?.focus()
+  })
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -216,29 +256,60 @@ export function NewTabPage() {
   }
 
   const deleteItem = (item: Widget) => {
+    if (isKeyboardAction()) {
+      const { previous, next } = neighborsOf(state.widgets, item.id)
+      focusLanding.current = { id: (next ?? previous)?.id }
+    }
+
     closeOpenMenus()
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
   }
 
   // Every archive, from the menu or a drop, goes through here, so each one can be undone back into the slot it left.
-  const archive = (id: string) => {
+  const archive = (id: string, fromKeyboard: boolean) => {
     const { previous, next } = neighborsOf(state.widgets, id)
+
+    if (fromKeyboard) {
+      focusLanding.current = { id: (next ?? previous)?.id }
+    }
+
     setUndoableArchive({ id, previousId: previous?.id, nextId: next?.id })
     void setWidgets(archiveWidget(state.widgets, id))
   }
 
-  const archiveItem = (item: Widget) => {
-    closeOpenMenus()
-    archive(item.id)
+  const restore = (
+    id: string,
+    beforeId: string | undefined,
+    fromKeyboard: boolean
+  ) => {
+    if (fromKeyboard) {
+      focusLanding.current = { id }
+    }
+
+    void setWidgets(restoreWidget(state.widgets, id, beforeId))
   }
 
-  const restoreItem = (item: Widget) => {
+  const archiveItem = (item: Widget, event: ReactMouseEvent) => {
+    const fromKeyboard = isKeyboardAction(event)
     closeOpenMenus()
-    void setWidgets(restoreWidget(state.widgets, item.id))
+    archive(item.id, fromKeyboard)
   }
 
-  const undoArchive = ({ id, ...neighbors }: UndoableArchive) => {
+  const restoreItem = (item: Widget, event: ReactMouseEvent) => {
+    const fromKeyboard = isKeyboardAction(event)
+    closeOpenMenus()
+    restore(item.id, undefined, fromKeyboard)
+  }
+
+  const undoArchive = (
+    { id, ...neighbors }: UndoableArchive,
+    fromKeyboard: boolean
+  ) => {
+    if (fromKeyboard) {
+      focusLanding.current = { id }
+    }
+
     setUndoableArchive(null)
     void setWidgets(undoArchiveWidget(state.widgets, id, neighbors))
   }
@@ -398,9 +469,7 @@ export function NewTabPage() {
           widgets={state.widgets}
           onArchive={archive}
           onReorder={reorderList}
-          onRestore={(id, beforeId) =>
-            void setWidgets(restoreWidget(state.widgets, id, beforeId))
-          }>
+          onRestore={restore}>
           {(displayWidgets) => {
             const activeWidgets = displayWidgets.filter(
               (widget) => !widget.archived
@@ -454,7 +523,7 @@ export function NewTabPage() {
                       <button
                         aria-label={`Archive ${item.title}`}
                         className="menu-button"
-                        onClick={() => archiveItem(item)}
+                        onClick={(event) => archiveItem(item, event)}
                         role="menuitem"
                         type="button">
                         <MenuIcon name="archive" />
@@ -482,6 +551,7 @@ export function NewTabPage() {
                       aria-expanded={showArchived}
                       className="archive-toggle"
                       onClick={() => setShowArchived((shown) => !shown)}
+                      ref={archiveToggleRef}
                       type="button">
                       {showArchived ? "Hide archived" : "Show archived"}
                       {/* The chevron says this is a disclosure; flipping it is the open/closed state made visible. */}
@@ -510,7 +580,7 @@ export function NewTabPage() {
                             <button
                               aria-label={`Restore ${item.title}`}
                               className="menu-button"
-                              onClick={() => restoreItem(item)}
+                              onClick={(event) => restoreItem(item, event)}
                               role="menuitem"
                               type="button">
                               <MenuIcon name="restore" />
@@ -563,7 +633,13 @@ export function NewTabPage() {
       <DeleteDialog
         isOpen={Boolean(itemPendingDelete)}
         item={itemPendingDelete}
-        onCancel={() => setItemPendingDelete(null)}
+        onCancel={() => {
+          if (isKeyboardAction()) {
+            focusLanding.current = { id: itemPendingDelete?.id }
+          }
+
+          setItemPendingDelete(null)
+        }}
         onConfirm={deleteItem}
       />
       <SettingsDialog
@@ -598,7 +674,9 @@ export function NewTabPage() {
             <ArchiveNotice
               key={undoableArchive.id}
               onExpire={expireUndo}
-              onUndo={() => undoArchive(undoableArchive)}
+              onUndo={(event) =>
+                undoArchive(undoableArchive, isKeyboardAction(event))
+              }
               title={undoableItem.title}
             />
           </div>

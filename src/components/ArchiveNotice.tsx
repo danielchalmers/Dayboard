@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type MouseEventHandler } from "react"
 
 // Long enough to read the line and reach for Undo, short enough that the notice is gone before it becomes part of the page.
 export const ARCHIVE_NOTICE_MS = 6000
 
 interface ArchiveNoticeProps {
   title: string
-  onUndo: () => void
+  onUndo: MouseEventHandler<HTMLButtonElement>
   onExpire: () => void
 }
 

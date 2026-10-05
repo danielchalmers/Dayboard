@@ -412,6 +412,8 @@ const SortableBoardRow = memo(({
   const shared = {
     articleProps: {
       "aria-haspopup": hasActions ? ("menu" as const) : undefined,
+      // Lets the page hand focus back to a card by id after the one that had it leaves the board.
+      "data-widget-id": item.id,
       onContextMenu: handleContextMenu,
       onKeyDown: handleKeyDown,
       tabIndex: 0

@@ -152,9 +152,10 @@ interface BoardDndProps {
   // The full storage list, both boards' cards, so any dragged id resolves.
   widgets: Widget[]
   onReorder?: (activeId: string, overId: string) => void
-  onArchive?: (id: string) => void
+  // `fromKeyboard` is set when the drag was made with the keys, whose focus went with the card and needs somewhere to land once the card has left its list.
+  onArchive?: (id: string, fromKeyboard: boolean) => void
   // `beforeId` is the board card whose slot the restored widget takes; omitted when the drop had no specific target (the empty-board zone).
-  onRestore?: (id: string, beforeId?: string) => void
+  onRestore?: (id: string, beforeId: string | undefined, fromKeyboard: boolean) => void
   // Render prop: receives the list to display, which mid-drag may be a preview where the dragged archived card already sits in its board slot.
   children: (widgets: Widget[]) => ReactNode
 }
@@ -225,14 +226,23 @@ export const BoardDnd = ({
   }
 
   // The preview already encodes the final order; persistence still goes through restoreWidget, so hand back the card in front of which it was dropped.
-  const commitRestore = (finalOrder: Widget[], draggedId: string) => {
+  const commitRestore = (
+    finalOrder: Widget[],
+    draggedId: string,
+    fromKeyboard: boolean
+  ) => {
     const board = finalOrder.filter((widget) => !widget.archived)
     const index = board.findIndex((widget) => widget.id === draggedId)
-    onRestore?.(draggedId, index === -1 ? undefined : board[index + 1]?.id)
+    onRestore?.(
+      draggedId,
+      index === -1 ? undefined : board[index + 1]?.id,
+      fromKeyboard
+    )
   }
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+  const handleDragEnd = ({ active, over, activatorEvent }: DragEndEvent) => {
     const preview = restorePreview
+    const fromKeyboard = activatorEvent instanceof KeyboardEvent
     setActiveId(null)
     setRestorePreview(null)
 
@@ -248,14 +258,14 @@ export const BoardDnd = ({
 
     if (over.id === ARCHIVE_DROP_ID) {
       if (!dragged.archived) {
-        onArchive?.(dragged.id)
+        onArchive?.(dragged.id, fromKeyboard)
       }
       return
     }
 
     if (over.id === BOARD_DROP_ID) {
       if (dragged.archived) {
-        onRestore?.(dragged.id)
+        onRestore?.(dragged.id, undefined, fromKeyboard)
       }
       return
     }
@@ -265,12 +275,16 @@ export const BoardDnd = ({
     // A restore drop confirms the preview slot, nudged to the final hovered card if the pointer kept sorting within the board after slotting in.
     if (dragged.archived && preview) {
       if (over.id === active.id) {
-        commitRestore(preview, dragged.id)
+        commitRestore(preview, dragged.id, fromKeyboard)
         return
       }
 
       if (target && !target.archived) {
-        commitRestore(reorderWidgets(preview, dragged.id, target.id), dragged.id)
+        commitRestore(
+          reorderWidgets(preview, dragged.id, target.id),
+          dragged.id,
+          fromKeyboard
+        )
         return
       }
     }
@@ -283,9 +297,9 @@ export const BoardDnd = ({
     if (Boolean(dragged.archived) === Boolean(target.archived)) {
       onReorder?.(dragged.id, target.id)
     } else if (dragged.archived) {
-      onRestore?.(dragged.id, target.id)
+      onRestore?.(dragged.id, target.id, fromKeyboard)
     } else {
-      onArchive?.(dragged.id)
+      onArchive?.(dragged.id, fromKeyboard)
     }
   }
 

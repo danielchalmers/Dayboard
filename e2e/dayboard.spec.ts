@@ -1451,16 +1451,20 @@ test("archiving from the menu hides a widget and it can be restored", async ({
   await expect(
     page.getByRole("status").getByText("Archived 🌅 Tomorrow morning")
   ).toBeVisible()
+  // A pointer user has no place on the board to keep, so no card is handed a focus that the next Space would turn into a drag.
+  await expect(page.locator(".board-row:focus")).toHaveCount(0)
   const toggle = page.getByRole("button", { name: "Show archived" })
   await expect(toggle).toBeVisible()
 
-  // Reveal it, then restore it back to the board.
+  // Reveal it, then restore it back to the board, this time from the keyboard.
   await toggle.click()
-  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
-  await openWidgetMenu(page, "🌅 Tomorrow morning")
+  const archived = cardByTitle(page, "🌅 Tomorrow morning")
+  await expect(archived).toBeVisible()
+  await archived.focus()
+  await archived.press("ContextMenu")
   await page
     .getByRole("menuitem", { name: "Restore 🌅 Tomorrow morning" })
-    .click()
+    .press("Enter")
 
   await expect(
     page.locator(".board-list").first().getByText("🌅 Tomorrow morning")
@@ -1468,6 +1472,8 @@ test("archiving from the menu hides a widget and it can be restored", async ({
   await expect(
     page.getByRole("button", { name: /Show archived/ })
   ).toHaveCount(0)
+  // Focus follows the card home instead of falling to the page with the menu that had it.
+  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeFocused()
   // With the card back on the board there is no archive left to undo.
   await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
 })
@@ -1491,6 +1497,60 @@ test("an archive can be undone back into the slot it left", async ({
   await expect(titles).toHaveText([...DEFAULT_BOARD_TITLES])
   await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
   await expect(page.locator(".board-notice")).toHaveCount(0)
+})
+
+test("archiving or deleting from the keyboard keeps its place on the board", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps every card and its context menu on screen; scrolling dismisses an open widget menu.
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+
+  const welcome = cardByTitle(page, "👋 Welcome")
+  await welcome.focus()
+  await welcome.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Archive 👋 Welcome" }).press("Enter")
+
+  // The card that slid into the slot takes the focus, rather than the page body, from where the next Tab skipped the rest of the board.
+  await expect(cardByTitle(page, "💬 Today's reminder")).toBeFocused()
+
+  // Undo from the keyboard brings focus back with the card.
+  await page.getByRole("button", { name: "Undo" }).press("Enter")
+  await expect(welcome).toBeFocused()
+
+  // The last card has nothing after it, so the one before it does.
+  const year = cardByTitle(page, "📅 This year")
+  await year.focus()
+  await year.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Delete 📅 This year" }).press("Enter")
+  await page.getByRole("button", { name: "Delete widget" }).press("Enter")
+
+  await expect(cardByTitle(page, "🚶 Daily walk")).toBeFocused()
+})
+
+test("a keyboard drag onto the archive zone hands focus to the next card", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🕒 Local time")
+  await card.focus()
+  await page.keyboard.press("Space")
+  await expect(page.locator(".board-row--overlay")).toBeVisible()
+
+  // Step the card down the board until the zone below it is the target.
+  const over = page.locator(".archive-dropzone--over")
+  for (let step = 0; step < 8 && (await over.count()) === 0; step += 1) {
+    await page.keyboard.press("ArrowDown")
+  }
+  await expect(over).toBeVisible()
+  await page.keyboard.press("Space")
+
+  await expect(card).toHaveCount(0)
+  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeFocused()
 })
 
 test.describe("with the clock paused", () => {
@@ -1638,6 +1698,8 @@ test("dragging a widget onto the archive zone archives it", async ({
     page.locator(".board-list").first().getByText("🕒 Local time")
   ).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Show archived" })).toBeVisible()
+  // A pointer drag leaves no focus behind on the board for the next Space to pick up as a drag.
+  await expect(page.locator(".board-row:focus")).toHaveCount(0)
 
   // A drop is as easy to undo as the menu's Archive.
   await page.getByRole("button", { name: "Undo" }).click()
@@ -1842,14 +1904,17 @@ test("dragging an archived widget onto an empty board restores it", async ({
   const lastCard = cardByTitle(page, last!)
   await lastCard.focus()
   await lastCard.press("ContextMenu")
-  await page.getByRole("menuitem", { name: `Archive ${last}` }).click()
+  await page.getByRole("menuitem", { name: `Archive ${last}` }).press("Enter")
 
+  // Focus lands on the way into the archive, the next stop after an empty board.
   await expect(page.locator(".board-row")).toHaveCount(0)
   await expect(
     page.getByRole("heading", { name: "A fresh start" })
   ).toBeVisible()
+  const toggle = page.getByRole("button", { name: "Show archived" })
+  await expect(toggle).toBeFocused()
 
-  await page.getByRole("button", { name: "Show archived" }).click()
+  await toggle.click()
 
   const box = await boxOf(cardByTitle(page, last!), "the archived card")
 
