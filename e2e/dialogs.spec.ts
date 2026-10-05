@@ -1,5 +1,10 @@
 import { expect, test } from "./fixtures"
-import { cardByTitle, openNewTab, openWidgetMenu } from "./helpers"
+import {
+  cardByTitle,
+  DEFAULT_BOARD_TITLES,
+  openNewTab,
+  openWidgetMenu
+} from "./helpers"
 
 test("canceling the delete dialog keeps the widget", async ({
   page,
@@ -20,7 +25,7 @@ test("canceling the delete dialog keeps the widget", async ({
   await expect(cardByTitle(page, "🌅 Tomorrow morning")).not.toBeFocused()
 
   // The three dialogs treat the backdrop differently on purpose, and this is the one where dismissing has to mean "no".
-  // The edit dialog commits from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
+  // The edit dialog commits a change from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
   await openWidgetMenu(page, "🌅 Tomorrow morning")
   await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).click()
   await expect(dialog).toBeVisible()
@@ -70,6 +75,35 @@ test("canceling an add discards it and the options backdrop closes", async ({
 
   await page.mouse.click(8, 8)
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
+})
+
+test("clicking away from an add only keeps it once something was changed", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const cards = page.locator(".board-row")
+  const before = DEFAULT_BOARD_TITLES.length
+  await expect(cards).toHaveCount(before)
+
+  // A look at what a kind offers, then a click back onto the board, is not asking for a card.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+
+  await page.mouse.click(8, 8)
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toHaveCount(0)
+  await expect(cards).toHaveCount(before)
+
+  // Once anything is picked, even only a color, clicking away commits it like the edit dialog does.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add habit" }).click()
+  await page.getByRole("radio", { name: "Rose" }).click()
+
+  await page.mouse.click(8, 8)
+  await expect(page.getByRole("dialog", { name: "Add habit" })).toHaveCount(0)
+  await expect(cards).toHaveCount(before + 1)
 })
 
 test("picking a color repaints the card and it survives a reload", async ({

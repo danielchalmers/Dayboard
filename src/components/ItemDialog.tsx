@@ -77,6 +77,10 @@ export const ItemDialog = ({
 
   const submitLabel = mode === "add" ? `Save ${draft.kind}` : "Save changes"
 
+  // Every edit makes a new draft, so the draft still being the item it opened with means nothing has been typed or picked, short of a date that is only half entered.
+  const isUntouched =
+    draft === item && targetInput === null && startInput === null
+
   // What the Starting from field shows right now: the raw string mid-edit, else the stored start.
   const startValue =
     draft.kind === "countdown"
@@ -178,9 +182,16 @@ export const ItemDialog = ({
     <div
       className="modal-backdrop"
       onPointerDown={(event) => {
-        // Clicking the backdrop commits the edit, the same as pressing Save or Enter, so dismissing the dialog feels fluid instead of throwing the work away.
+        if (event.target !== event.currentTarget) {
+          return
+        }
+
+        // Clicking away from a dialog nothing was done in is only looking, so it closes, and a peek at what a kind offers never leaves a card behind.
+        // Once anything has changed, clicking away commits the edit, the same as pressing Save or Enter, so dismissing the dialog feels fluid instead of throwing the work away.
         // Native form validation still blocks the save and keeps the dialog open if a required field is empty.
-        if (event.target === event.currentTarget) {
+        if (isUntouched) {
+          onClose()
+        } else {
           formRef.current?.requestSubmit()
         }
       }}

@@ -90,6 +90,35 @@ describe("ItemDialog", () => {
     expect(saved(onSave)).toMatchObject({ id: "clock-1", title: "Berlin" })
   })
 
+  // Opening Add to see what a kind offers and clicking away again is looking, not adding, so it must not leave a card behind.
+  it("closes an untouched dialog from the backdrop without saving it", () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+
+    render(itemDialog({ mode: "add", onClose, onSave }))
+
+    const backdrop = document.querySelector(".modal-backdrop") as HTMLElement
+    fireEvent.pointerDown(backdrop)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  // Any change at all is work worth keeping, even one that never touches a text field.
+  it("commits a new item from the backdrop once anything is picked", () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+
+    render(itemDialog({ mode: "add", onClose, onSave }))
+
+    fireEvent.click(screen.getByRole("radio", { name: "Rose" }))
+    const backdrop = document.querySelector(".modal-backdrop") as HTMLElement
+    fireEvent.pointerDown(backdrop)
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect(saved(onSave)).toMatchObject({ id: "clock-1", colorPreset: "rose" })
+  })
+
   // The backdrop commits rather than discards, so it has to answer to the same validation the Save button does.
   // Otherwise the easiest way out of the dialog is also the one that saves a nameless card, which then sits on the board with no heading to find it by.
   it("will not commit a nameless item from the backdrop", () => {
