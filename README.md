@@ -15,7 +15,7 @@ It's a free, open-source browser extension. Everything is stored locally and it 
 Add the widgets you want, edit them in place, and drag to rearrange them:
 
 - **Clock**: the current time in any time zone, in your system's 12- or 24-hour format.
-- **Countdown**: the time left until a date, written in plain language (for example, "5 days, 3 hours from now"). New countdowns fill a progress bar from the moment you add them; clear the start date to show the time remaining instead. They can repeat hourly, daily, weekly, monthly, or yearly.
+- **Countdown**: the time left until a date, written in plain language (for example, "5 days, 3 hours from now"). Give one a start date and it fills a progress bar instead. They can repeat hourly, daily, weekly, monthly, or yearly.
 - **Note**: a short sticky note.
 - **Quote**: cycles through a list of quotes you provide, either once a day or on every new tab.
 - **Stopwatch**: counts up, with start, pause, and reset.
