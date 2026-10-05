@@ -5,13 +5,16 @@ import {
   MeasuringStrategy,
   PointerSensor,
   closestCenter,
+  pointerWithin,
   useDndContext,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
-  type DragStartEvent
+  type DragStartEvent,
+  type UniqueIdentifier
 } from "@dnd-kit/core"
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
 import { useEffect, useState, type ReactNode } from "react"
@@ -28,15 +31,38 @@ export const ARCHIVE_DROP_ID = "dayboard-archive-dropzone"
 // Registered by the active board's empty state, so an archived card can still be dragged home when there are no board cards left to aim at.
 export const BOARD_DROP_ID = "dayboard-board-dropzone"
 
-const ARCHIVE_ICON = (
-  <path
-    d="M4 7.5h16M4 7.5 5.2 19a1.5 1.5 0 0 0 1.5 1.4h10.6a1.5 1.5 0 0 0 1.5-1.4L20 7.5M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2M10 11.5v5M14 11.5v5"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="1.7"
-  />
-)
+// The archive box, shared with the card menu's Archive item so the action has one glyph wherever it is offered.
+// The zone used to draw the lidded bin that the menu keeps for Delete, which read as dropping the card in the trash.
+export const ARCHIVE_ICON_PATH =
+  "M4.5 5h15a.5.5 0 0 1 .5.5V8H4V5.5a.5.5 0 0 1 .5-.5ZM5 8v10.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V8M10 11.5h4"
+
+const isArchiveZone = ({ id }: { id: UniqueIdentifier }) => id === ARCHIVE_DROP_ID
+
+// Cards sort by their centers, which keeps a reorder forgiving about where the card was grabbed.
+// The archive zone is different: it claims a drop only while the pointer is inside the box it draws.
+// Measured by centers too, it won wherever the lifted card's center sat nearer the zone's than any card's, so a card grabbed by its top edge and carried onto the bottom row was archived instead of moved, with the zone it fell into nowhere near the pointer.
+// A keyboard drag has no pointer, so it keeps plain center sorting over everything.
+export const boardCollision: CollisionDetection = (args) => {
+  if (!args.pointerCoordinates) {
+    return closestCenter(args)
+  }
+
+  const archiveHit = pointerWithin({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(isArchiveZone)
+  })
+
+  if (archiveHit.length > 0) {
+    return archiveHit
+  }
+
+  return closestCenter({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(
+      (container) => !isArchiveZone(container)
+    )
+  })
+}
 
 // The archive drop target only exists mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is.
 // Restoring has no counterpart zone: an archived card is dropped straight onto the board, into the exact slot it should take.
@@ -49,7 +75,13 @@ const ArchiveDropZone = () => {
       className={`archive-dropzone${isOver ? " archive-dropzone--over" : ""}`}
       aria-hidden="true">
       <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
-        {ARCHIVE_ICON}
+        <path
+          d={ARCHIVE_ICON_PATH}
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.7"
+        />
       </svg>
       <span>{isOver ? "Release to archive" : "Drag here to archive"}</span>
     </div>
@@ -120,9 +152,10 @@ interface BoardDndProps {
   // The full storage list, both boards' cards, so any dragged id resolves.
   widgets: Widget[]
   onReorder?: (activeId: string, overId: string) => void
-  onArchive?: (id: string) => void
+  // `fromKeyboard` is set when the drag was made with the keys, whose focus went with the card and needs somewhere to land once the card has left its list.
+  onArchive?: (id: string, fromKeyboard: boolean) => void
   // `beforeId` is the board card whose slot the restored widget takes; omitted when the drop had no specific target (the empty-board zone).
-  onRestore?: (id: string, beforeId?: string) => void
+  onRestore?: (id: string, beforeId: string | undefined, fromKeyboard: boolean) => void
   // Render prop: receives the list to display, which mid-drag may be a preview where the dragged archived card already sits in its board slot.
   children: (widgets: Widget[]) => ReactNode
 }
@@ -193,14 +226,23 @@ export const BoardDnd = ({
   }
 
   // The preview already encodes the final order; persistence still goes through restoreWidget, so hand back the card in front of which it was dropped.
-  const commitRestore = (finalOrder: Widget[], draggedId: string) => {
+  const commitRestore = (
+    finalOrder: Widget[],
+    draggedId: string,
+    fromKeyboard: boolean
+  ) => {
     const board = finalOrder.filter((widget) => !widget.archived)
     const index = board.findIndex((widget) => widget.id === draggedId)
-    onRestore?.(draggedId, index === -1 ? undefined : board[index + 1]?.id)
+    onRestore?.(
+      draggedId,
+      index === -1 ? undefined : board[index + 1]?.id,
+      fromKeyboard
+    )
   }
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+  const handleDragEnd = ({ active, over, activatorEvent }: DragEndEvent) => {
     const preview = restorePreview
+    const fromKeyboard = activatorEvent instanceof KeyboardEvent
     setActiveId(null)
     setRestorePreview(null)
 
@@ -216,14 +258,14 @@ export const BoardDnd = ({
 
     if (over.id === ARCHIVE_DROP_ID) {
       if (!dragged.archived) {
-        onArchive?.(dragged.id)
+        onArchive?.(dragged.id, fromKeyboard)
       }
       return
     }
 
     if (over.id === BOARD_DROP_ID) {
       if (dragged.archived) {
-        onRestore?.(dragged.id)
+        onRestore?.(dragged.id, undefined, fromKeyboard)
       }
       return
     }
@@ -233,12 +275,16 @@ export const BoardDnd = ({
     // A restore drop confirms the preview slot, nudged to the final hovered card if the pointer kept sorting within the board after slotting in.
     if (dragged.archived && preview) {
       if (over.id === active.id) {
-        commitRestore(preview, dragged.id)
+        commitRestore(preview, dragged.id, fromKeyboard)
         return
       }
 
       if (target && !target.archived) {
-        commitRestore(reorderWidgets(preview, dragged.id, target.id), dragged.id)
+        commitRestore(
+          reorderWidgets(preview, dragged.id, target.id),
+          dragged.id,
+          fromKeyboard
+        )
         return
       }
     }
@@ -251,9 +297,9 @@ export const BoardDnd = ({
     if (Boolean(dragged.archived) === Boolean(target.archived)) {
       onReorder?.(dragged.id, target.id)
     } else if (dragged.archived) {
-      onRestore?.(dragged.id, target.id)
+      onRestore?.(dragged.id, target.id, fromKeyboard)
     } else {
-      onArchive?.(dragged.id)
+      onArchive?.(dragged.id, fromKeyboard)
     }
   }
 
@@ -264,7 +310,7 @@ export const BoardDnd = ({
 
   return (
     <DndContext
-      collisionDetection={closestCenter}
+      collisionDetection={boardCollision}
       // The preview moves a card between lists mid-drag, reshaping the board, so droppable rects must be re-measured as the layout changes.
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragCancel={handleDragCancel}

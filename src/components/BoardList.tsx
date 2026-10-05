@@ -33,12 +33,20 @@ interface BoardListProps {
   items: Widget[]
   // Marks this list as the place archived cards land when dragged back: the grid highlights while a foreign card is in flight, and the empty state becomes a drop target of its own.
   restoreTarget?: boolean
+  // Something sits in the archive, so an empty board has been tidied away rather than never filled.
+  hasArchived?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
   onWidgetChange?: WidgetChangeHandler
 }
 
 // With no cards on the board there is no slot to aim an archived card at, so the empty-state placeholder itself doubles as the restore target while a drag is under way.
-const EmptyState = ({ restoreTarget }: { restoreTarget: boolean }) => {
+const EmptyState = ({
+  restoreTarget,
+  hasArchived
+}: {
+  restoreTarget: boolean
+  hasArchived: boolean
+}) => {
   const { active } = useDndContext()
   const { setNodeRef, isOver } = useDroppable({
     id: BOARD_DROP_ID,
@@ -61,6 +69,17 @@ const EmptyState = ({ restoreTarget }: { restoreTarget: boolean }) => {
         <>
           <h2>{isOver ? "Release to restore" : "Drop it here to restore"}</h2>
           <p>The card leaves the archive and comes back onto the board.</p>
+        </>
+      ) : hasArchived ? (
+        // Archiving every card is a tidy-up, not a first run, so point at where the cards went before pointing at +.
+        // A no-break space keeps the + with its "button", since a line that ends on a lone + reads as a stray symbol.
+        <>
+          <span aria-hidden="true" className="empty-state__glyph">✦</span>
+          <h2>All tucked away</h2>
+          <p>
+            Your archived cards are just below. The +&nbsp;button up top adds
+            something new.
+          </p>
         </>
       ) : (
         <>
@@ -412,6 +431,8 @@ const SortableBoardRow = memo(({
   const shared = {
     articleProps: {
       "aria-haspopup": hasActions ? ("menu" as const) : undefined,
+      // Lets the page hand focus back to a card by id after the one that had it leaves the board.
+      "data-widget-id": item.id,
       onContextMenu: handleContextMenu,
       onKeyDown: handleKeyDown,
       tabIndex: 0
@@ -438,6 +459,7 @@ const SortableBoardRow = memo(({
 export const BoardList = ({
   items,
   restoreTarget = false,
+  hasArchived = false,
   renderItemActions,
   onWidgetChange
 }: BoardListProps) => {
@@ -474,7 +496,7 @@ export const BoardList = ({
   const initialIds = initialIdsRef.current
 
   if (items.length === 0) {
-    return <EmptyState restoreTarget={restoreTarget} />
+    return <EmptyState hasArchived={hasArchived} restoreTarget={restoreTarget} />
   }
 
   const itemIds = items.map((item) => item.id)

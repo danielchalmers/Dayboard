@@ -303,3 +303,53 @@ export const restoreWidget = (
 
   return [...rest.slice(0, insertAt), restored, ...rest.slice(insertAt)]
 }
+
+// The cards either side of a widget within the list it shows in (the board or the archive), in reading order.
+// When it leaves that list, `next` is the card that slides into its slot.
+export const neighborsOf = (
+  widgets: Widget[],
+  id: string
+): { previous?: Widget; next?: Widget } => {
+  const target = widgets.find((widget) => widget.id === id)
+
+  if (!target) {
+    return {}
+  }
+
+  const list = widgets.filter(
+    (widget) => Boolean(widget.archived) === Boolean(target.archived)
+  )
+  const index = list.indexOf(target)
+
+  return { previous: list[index - 1], next: list[index + 1] }
+}
+
+// Undo puts an archived card back between the board cards it left: in front of the one that followed it, or, when that one has gone since, just behind the one that came before it.
+// A plain restore sends a card to the end of the board, which is right for a card fetched from the archive but not for one taken off a moment ago.
+export const undoArchiveWidget = (
+  widgets: Widget[],
+  id: string,
+  { previousId, nextId }: { previousId?: string; nextId?: string }
+): Widget[] => {
+  const board = widgets.filter((widget) => !widget.archived)
+  const boardIndexOf = (anchorId?: string) =>
+    board.findIndex((widget) => widget.id === anchorId)
+
+  if (nextId && boardIndexOf(nextId) !== -1) {
+    return restoreWidget(widgets, id, nextId)
+  }
+
+  // It led the board, so it leads it again.
+  if (!previousId) {
+    return restoreWidget(widgets, id, board[0]?.id)
+  }
+
+  const previousIndex = boardIndexOf(previousId)
+
+  // With neither neighbor left on the board there is no slot to find, so it rejoins the end like any restore.
+  if (previousIndex === -1) {
+    return restoreWidget(widgets, id)
+  }
+
+  return restoreWidget(widgets, id, board[previousIndex + 1]?.id)
+}

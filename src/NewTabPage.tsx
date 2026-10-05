@@ -1,6 +1,13 @@
-import { useEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent
+} from "react"
 
-import { BoardDnd } from "~/components/BoardDnd"
+import { ArchiveNotice } from "~/components/ArchiveNotice"
+import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
 import { BoardList } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
@@ -20,8 +27,10 @@ import {
   archiveWidget,
   createWidget,
   moveActiveWidget,
+  neighborsOf,
   reorderWidgets,
-  restoreWidget
+  restoreWidget,
+  undoArchiveWidget
 } from "~/lib/widgets"
 import type { DayboardState, Widget, WidgetKind } from "~/lib/types"
 
@@ -39,14 +48,20 @@ interface ImportUndo {
   imported: DayboardState
 }
 
+// The last archive, kept just long enough to undo: the card, and the board cards either side of it when it left.
+interface UndoableArchive {
+  id: string
+  previousId?: string
+  nextId?: string
+}
+
 // Leading icons for the card context menu.
 // The move icons point in reading order (back/forward), matching the "back/next" labels.
 const MENU_ICON_PATHS = {
   moveBack: "M19 12H5m6-6-6 6 6 6",
   moveNext: "M5 12h14m-6-6 6 6-6 6",
   edit: "M4.5 19.5h4L19 9a2.12 2.12 0 0 0-3-3L5.5 16.5l-1 3ZM13.5 5.5l3 3",
-  archive:
-    "M4.5 5h15a.5.5 0 0 1 .5.5V8H4V5.5a.5.5 0 0 1 .5-.5ZM5 8v10.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V8M10 11.5h4",
+  archive: ARCHIVE_ICON_PATH,
   restore: "M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5",
   del: "M4.5 7h15M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7m-8.2 0 .9 11.6a1.5 1.5 0 0 0 1.5 1.4h5.6a1.5 1.5 0 0 0 1.5-1.4L19 7M10 11v5M14 11v5"
 } as const
@@ -111,6 +126,13 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
     })
 }
 
+// Focus is looked after only when an action came from the keyboard or assistive tech.
+// A pointer user has no place on the board to keep, and a card left focused without a ring would take their next Space as the start of a drag.
+// A click made by a key or a screen reader carries no click count, and a focus the keyboard placed matches :focus-visible.
+const isKeyboardAction = (event?: { detail: number }) =>
+  event?.detail === 0 ||
+  Boolean(document.activeElement?.matches(":focus-visible"))
+
 export function NewTabPage() {
   const {
     state,
@@ -129,6 +151,49 @@ export function NewTabPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
+  const [undoableArchive, setUndoableArchive] = useState<UndoableArchive | null>(null)
+  const archiveToggleRef = useRef<HTMLButtonElement>(null)
+
+  // Archiving, restoring, or deleting a card unmounts whatever had focus (the menu item, the dialog's button, the card itself), which drops the keyboard on the page body and sends the next Tab to the far end of the board.
+  // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
+  // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
+  const focusLanding = useRef<{ id?: string } | null>(null)
+  const expireUndo = useCallback(() => setUndoableArchive(null), [])
+
+  // Undo only stands for an archive that is still in place.
+  // Once the card is back on the board (restored by hand, or from another tab) or a failed save has rolled the archive back, there is nothing left to undo, and the notice goes rather than waiting to come back later for an archive made somewhere else.
+  const undoableItem = undoableArchive
+    ? state?.widgets.find(
+        (widget) => widget.id === undoableArchive.id && widget.archived
+      )
+    : undefined
+
+  useEffect(() => {
+    if (undoableArchive && !undoableItem) {
+      setUndoableArchive(null)
+    }
+  }, [undoableArchive, undoableItem])
+
+  useEffect(() => {
+    const landing = focusLanding.current
+
+    if (!landing) {
+      return
+    }
+
+    focusLanding.current = null
+
+    // Only a focus that fell to the page is picked back up; one that is somewhere on purpose stays put.
+    if (document.activeElement && document.activeElement !== document.body) {
+      return
+    }
+
+    const card = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-widget-id]")
+    ).find((element) => element.dataset.widgetId === landing.id)
+
+    ;(card ?? archiveToggleRef.current)?.focus()
+  })
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -191,19 +256,62 @@ export function NewTabPage() {
   }
 
   const deleteItem = (item: Widget) => {
+    if (isKeyboardAction()) {
+      const { previous, next } = neighborsOf(state.widgets, item.id)
+      focusLanding.current = { id: (next ?? previous)?.id }
+    }
+
     closeOpenMenus()
     void setWidgets(state.widgets.filter((current) => current.id !== item.id))
     setItemPendingDelete(null)
   }
 
-  const archiveItem = (item: Widget) => {
-    closeOpenMenus()
-    void setWidgets(archiveWidget(state.widgets, item.id))
+  // Every archive, from the menu or a drop, goes through here, so each one can be undone back into the slot it left.
+  const archive = (id: string, fromKeyboard: boolean) => {
+    const { previous, next } = neighborsOf(state.widgets, id)
+
+    if (fromKeyboard) {
+      focusLanding.current = { id: (next ?? previous)?.id }
+    }
+
+    setUndoableArchive({ id, previousId: previous?.id, nextId: next?.id })
+    void setWidgets(archiveWidget(state.widgets, id))
   }
 
-  const restoreItem = (item: Widget) => {
+  const restore = (
+    id: string,
+    beforeId: string | undefined,
+    fromKeyboard: boolean
+  ) => {
+    if (fromKeyboard) {
+      focusLanding.current = { id }
+    }
+
+    void setWidgets(restoreWidget(state.widgets, id, beforeId))
+  }
+
+  const archiveItem = (item: Widget, event: ReactMouseEvent) => {
+    const fromKeyboard = isKeyboardAction(event)
     closeOpenMenus()
-    void setWidgets(restoreWidget(state.widgets, item.id))
+    archive(item.id, fromKeyboard)
+  }
+
+  const restoreItem = (item: Widget, event: ReactMouseEvent) => {
+    const fromKeyboard = isKeyboardAction(event)
+    closeOpenMenus()
+    restore(item.id, undefined, fromKeyboard)
+  }
+
+  const undoArchive = (
+    { id, ...neighbors }: UndoableArchive,
+    fromKeyboard: boolean
+  ) => {
+    if (fromKeyboard) {
+      focusLanding.current = { id }
+    }
+
+    setUndoableArchive(null)
+    void setWidgets(undoArchiveWidget(state.widgets, id, neighbors))
   }
 
   const addItem = (kind: Widget["kind"]) => {
@@ -240,6 +348,8 @@ export function NewTabPage() {
       const previous = state
 
       if ((await replaceState(imported)) === null) {
+        // An archive still on offer was taken off the board the import replaced, so the import's own Undo takes the notice.
+        setUndoableArchive(null)
         setImportUndo({ previous, imported })
       }
 
@@ -357,11 +467,9 @@ export function NewTabPage() {
             The lists render from BoardDnd's view of the widgets, which mid-drag previews the restore with the dragged card already sitting in its board slot. */}
         <BoardDnd
           widgets={state.widgets}
-          onArchive={(id) => void setWidgets(archiveWidget(state.widgets, id))}
+          onArchive={archive}
           onReorder={reorderList}
-          onRestore={(id, beforeId) =>
-            void setWidgets(restoreWidget(state.widgets, id, beforeId))
-          }>
+          onRestore={restore}>
           {(displayWidgets) => {
             const activeWidgets = displayWidgets.filter(
               (widget) => !widget.archived
@@ -373,6 +481,7 @@ export function NewTabPage() {
             return (
               <>
                 <BoardList
+                  hasArchived={archivedWidgets.length > 0}
                   items={activeWidgets}
                   restoreTarget
                   onWidgetChange={updateWidget}
@@ -415,7 +524,7 @@ export function NewTabPage() {
                       <button
                         aria-label={`Archive ${item.title}`}
                         className="menu-button"
-                        onClick={() => archiveItem(item)}
+                        onClick={(event) => archiveItem(item, event)}
                         role="menuitem"
                         type="button">
                         <MenuIcon name="archive" />
@@ -443,6 +552,7 @@ export function NewTabPage() {
                       aria-expanded={showArchived}
                       className="archive-toggle"
                       onClick={() => setShowArchived((shown) => !shown)}
+                      ref={archiveToggleRef}
                       type="button">
                       {showArchived ? "Hide archived" : "Show archived"}
                       {/* The chevron says this is a disclosure; flipping it is the open/closed state made visible. */}
@@ -471,7 +581,7 @@ export function NewTabPage() {
                             <button
                               aria-label={`Restore ${item.title}`}
                               className="menu-button"
-                              onClick={() => restoreItem(item)}
+                              onClick={(event) => restoreItem(item, event)}
                               role="menuitem"
                               type="button">
                               <MenuIcon name="restore" />
@@ -524,7 +634,13 @@ export function NewTabPage() {
       <DeleteDialog
         isOpen={Boolean(itemPendingDelete)}
         item={itemPendingDelete}
-        onCancel={() => setItemPendingDelete(null)}
+        onCancel={() => {
+          if (isKeyboardAction()) {
+            focusLanding.current = { id: itemPendingDelete?.id }
+          }
+
+          setItemPendingDelete(null)
+        }}
         onConfirm={deleteItem}
       />
       <SettingsDialog
@@ -536,7 +652,8 @@ export function NewTabPage() {
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
       />
-      {/* A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
+      {/* One place at the bottom of the page holds one notice at a time, and a refused save outranks an undo for it.
+          A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
       {saveError && !editorState?.error ? (
         <div className="board-notice" role="alert">
           <span className="board-notice__text">{saveError}</span>
@@ -549,26 +666,41 @@ export function NewTabPage() {
           </button>
         </div>
       ) : null}
-      {/* A refused save outranks the import's undo for the one place a notice sits. */}
-      {!saveError && canUndoImport ? (
-        <div className="board-notice board-notice--quiet" role="status">
-          <span className="board-notice__text">Board imported.</span>
-          <span className="board-notice__actions">
-            <button
-              className="board-notice__action"
-              onClick={() => void undoImport()}
-              type="button">
-              Undo
-            </button>
-            <button
-              className="board-notice__dismiss"
-              onClick={() => setImportUndo(null)}
-              type="button">
-              Dismiss
-            </button>
-          </span>
-        </div>
-      ) : null}
+      {/* The live region stays mounted so an undo is announced as it is offered; one inserted along with its text is easily missed.
+          Archiving and importing each change the board the other's Undo would act on, so only the latest of the two is ever on offer. */}
+      <div role="status">
+        {undoableArchive && undoableItem ? (
+          // A refused save takes the spot, but the archive's few seconds keep running underneath it, so the Undo is not offered long after the fact once that notice goes.
+          <div hidden={Boolean(saveError)}>
+            <ArchiveNotice
+              key={undoableArchive.id}
+              onExpire={expireUndo}
+              onUndo={(event) =>
+                undoArchive(undoableArchive, isKeyboardAction(event))
+              }
+              title={undoableItem.title}
+            />
+          </div>
+        ) : !saveError && canUndoImport ? (
+          <div className="board-notice board-notice--quiet">
+            <span className="board-notice__text">Board imported.</span>
+            <span className="board-notice__actions">
+              <button
+                className="board-notice__action"
+                onClick={() => void undoImport()}
+                type="button">
+                Undo
+              </button>
+              <button
+                className="board-notice__dismiss"
+                onClick={() => setImportUndo(null)}
+                type="button">
+                Dismiss
+              </button>
+            </span>
+          </div>
+        ) : null}
+      </div>
     </>
   )
 }

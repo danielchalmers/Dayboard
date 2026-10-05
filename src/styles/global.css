@@ -175,9 +175,10 @@ a {
 }
 
 @media (max-width: 720px) {
+  /* A narrow board is one tall column that scrolls to its end, so the bottom padding leaves room under Show archived for the one-line notice pinned 28px above the bottom. */
   .page {
     inline-size: calc(100% - 32px);
-    padding: 32px 0 48px;
+    padding: 32px 0 104px;
   }
 }
 
@@ -480,7 +481,8 @@ details > summary::-webkit-details-marker {
 
 /* ── Archive ───────────────────────────────────────────────────────────── */
 
-/* A floating drop target that only appears mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is. */
+/* A floating drop target that only appears mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is.
+   It sits above the lifted card (dnd-kit draws its overlay at 999), so "Release to archive" stays readable at the moment it matters and the card slides under the tray rather than over it. */
 .archive-dropzone {
   align-items: center;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
@@ -501,7 +503,7 @@ details > summary::-webkit-details-marker {
   margin-inline: auto;
   min-block-size: 64px;
   position: fixed;
-  z-index: 300;
+  z-index: 1000;
   animation: fade-in var(--t-fast);
 }
 
@@ -1366,7 +1368,7 @@ select:focus {
   color: var(--danger);
 }
 
-/* A calm, non-blocking notice pinned to the bottom of the viewport (e.g. a failed save). */
+/* A calm, non-blocking notice pinned to the bottom of the viewport (a failed save, or an archive or import to undo). */
 .board-notice {
   align-items: center;
   background: var(--surface);
@@ -1384,7 +1386,14 @@ select:focus {
   padding: 12px 16px;
   position: fixed;
   z-index: 400;
+  transition: opacity var(--t-fast), visibility var(--t-fast);
   animation: fade-in var(--t-fast);
+}
+
+/* A drag brings the archive zone up where the notice sits, so the notice steps aside until the card is put down rather than showing around the edges of the tray. */
+body:has(.board-row--overlay) .board-notice {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .board-notice__text {
@@ -1392,7 +1401,14 @@ select:focus {
   font-weight: 500;
 }
 
-/* A notice about something done rather than something wrong, such as an import, drops the danger tint. */
+/* An archive names its card by title, which can run to any length, so the line is clipped rather than wrapped and the notice keeps one height over the board. */
+.board-notice__text--one-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A notice about something done rather than something wrong, such as an import or an archive, drops the danger tint. */
 .board-notice--quiet {
   border-color: var(--line-strong);
 }
@@ -1414,15 +1430,17 @@ select:focus {
   padding: 0 12px;
 }
 
-/* The way back is the one thing the notice is there to offer, so it reads a step stronger than Dismiss. */
-.board-notice__action {
-  color: var(--text);
-}
-
 .board-notice__action:hover,
 .board-notice__dismiss:hover {
   background: var(--surface-strong);
   color: var(--text);
+}
+
+/* The way back is the one thing the notice is there to offer, so it carries the accent rather than the muted ink of Dismiss.
+   A system accent at full strength sits just under readable contrast on the notice in either scheme (about 4.2:1), so it leans a quarter of the way toward the page ink, which darkens it on light and lifts it on dark. */
+.board-notice__action,
+.board-notice__action:hover {
+  color: color-mix(in srgb, var(--accent) 75%, var(--text));
 }
 
 /* The quote list editor is a multi-line field that matches the other inputs. */

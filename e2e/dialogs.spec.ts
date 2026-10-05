@@ -16,6 +16,8 @@ test("canceling the delete dialog keeps the widget", async ({
   await page.getByRole("button", { name: "Cancel" }).click()
   await expect(dialog).toHaveCount(0)
   await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
+  // A pointer user has no place on the board to keep, so the card is not handed a focus that the next Space would turn into a drag.
+  await expect(cardByTitle(page, "🌅 Tomorrow morning")).not.toBeFocused()
 
   // The three dialogs treat the backdrop differently on purpose, and this is the one where dismissing has to mean "no".
   // The edit dialog commits from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
@@ -26,6 +28,23 @@ test("canceling the delete dialog keeps the widget", async ({
   await page.mouse.click(8, 8)
   await expect(dialog).toHaveCount(0)
   await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
+})
+
+test("canceling the delete dialog from the keyboard goes back to the card", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Delete countdown?" })).toBeVisible()
+
+  // The menu that opened the dialog is gone, so focus goes back to the card it was about rather than falling to the page.
+  await page.keyboard.press("Escape")
+  await expect(card).toBeFocused()
 })
 
 test("canceling an add discards it and the options backdrop closes", async ({
@@ -105,14 +124,17 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 
+  // The card, not the line naming it in the archive notice.
+  const archived = cardByTitle(page, "🌅 Tomorrow morning")
+
   await toggle.click()
-  await expect(page.getByText("🌅 Tomorrow morning")).toBeVisible()
+  await expect(archived).toBeVisible()
   await expect(toggle).toHaveAccessibleName("Hide archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "true")
 
   // The toggle is a two-way disclosure: clicking again puts the archive back out of sight, which is what keeps the active board the focus.
   await toggle.click()
-  await expect(page.getByText("🌅 Tomorrow morning")).toHaveCount(0)
+  await expect(archived).toHaveCount(0)
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 })
