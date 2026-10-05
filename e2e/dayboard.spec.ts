@@ -1344,6 +1344,39 @@ test("a yearly date counts in days", async ({
   )
 })
 
+test("a repeating countdown edits from the occurrence on its card", async ({
+  page,
+  extensionId
+}) => {
+  // A tall viewport keeps the appended widget and its context menu on screen, so editing it never has to scroll (scrolling dismisses an open widget menu).
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await page.getByLabel("Name").fill("Standup")
+  await page.getByLabel("When").fill("2020-01-06T09:00")
+  await page.getByLabel("Repeats").selectOption("weekly")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  // The dialog opens on the coming Monday the card counts to, not the 2020 one it was set from.
+  await openWidgetMenu(page, "Standup")
+  await page.getByRole("menuitem", { name: "Edit Standup" }).click()
+  await expect(page.getByLabel("When")).toHaveValue("2026-03-09T09:00")
+
+  // So letting it repeat no more keeps that Monday rather than reviving one years gone.
+  await page.getByLabel("Repeats").selectOption("none")
+  await page.getByRole("button", { name: "Save changes" }).click()
+
+  const card = cardByTitle(page, "Standup")
+  await expect(card.locator(".board-row__value")).toHaveText("4 days, 23 hours")
+  await expect(card.locator(".board-row__meta")).toHaveText("from now")
+  await expect(card.locator(".board-row__detail")).toHaveText(
+    /^Mon, Mar 9, 9:00\sAM$/
+  )
+})
+
 test("editing a recurring countdown's time keeps its other settings", async ({
   page,
   extensionId

@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   dateTimeInputValueToIsoInstant,
-  isoInstantToDateTimeInputValue
+  isoInstantToDateTimeInputValue,
+  resolveCountdown
 } from "~/lib/time"
 import { quotesToText, textToQuotes } from "~/lib/quotes"
 import { msToParts, partsToMs, type DurationParts } from "~/lib/timers"
@@ -29,6 +30,15 @@ interface ItemDialogProps {
   onSave: (item: Widget) => void
 }
 
+// A repeating countdown is stored as the occurrence it was set on, which can be months or years back by now.
+// Open it on the occurrence its card is showing instead, so the fields agree with the card and switching it to Never keeps that date rather than reviving the old one.
+const toDraft = (item: Widget | null): Widget | null =>
+  item?.kind === "countdown" &&
+  item.settings.repeat &&
+  item.settings.repeat !== "none"
+    ? resolveCountdown(item)
+    : item
+
 export const ItemDialog = ({
   isOpen,
   item,
@@ -37,7 +47,9 @@ export const ItemDialog = ({
   onClose,
   onSave
 }: ItemDialogProps) => {
-  const [draft, setDraft] = useState<Widget | null>(item)
+  // What the dialog opened on, which for a repeating countdown is the occurrence its card shows rather than the item itself.
+  const [openedDraft, setOpenedDraft] = useState<Widget | null>(() => toDraft(item))
+  const [draft, setDraft] = useState<Widget | null>(openedDraft)
   // Raw strings for the datetime-local fields so a cleared/intermediate value is shown as typed instead of snapping back to the stored target.
   const [targetInput, setTargetInput] = useState<string | null>(null)
   const [startInput, setStartInput] = useState<string | null>(null)
@@ -51,8 +63,10 @@ export const ItemDialog = ({
   // Adopt a newly opened item during render (not in an effect) so the dialog body, and the focusable section that useModalFocus wires into, exist on the very first open render.
   // Deferring the draft to an effect left the section null for one render, after which the focus hook's deps never changed again, so focus-move, the focus trap, and Escape-to-close were silently never attached.
   if (item !== syncedItem) {
+    const opened = toDraft(item)
     setSyncedItem(item)
-    setDraft(item)
+    setOpenedDraft(opened)
+    setDraft(opened)
     setTargetInput(null)
     setStartInput(null)
   }
@@ -96,9 +110,9 @@ export const ItemDialog = ({
 
   const submitLabel = mode === "add" ? `Save ${draft.kind}` : "Save changes"
 
-  // Every edit makes a new draft, so the draft still being the item it opened with means nothing has been typed or picked, short of a date that is only half entered.
+  // Every edit makes a new draft, so the draft still being the one the dialog opened on means nothing has been typed or picked, short of a date that is only half entered.
   const isUntouched =
-    draft === item && targetInput === null && startInput === null
+    draft === openedDraft && targetInput === null && startInput === null
 
   // What the Starting from field shows right now: the raw string mid-edit, else the stored start.
   const startValue =
@@ -158,6 +172,24 @@ export const ItemDialog = ({
 
     patchSettings("countdown", { startAt: startAt ?? undefined })
   }
+
+  // Saved with its dates and repeat untouched, a countdown keeps the occurrence it is stored by rather than the one on show.
+  // They read the same today, but a monthly countdown on the 31st shows the 28th in February, and storing that would move it off the 31st for good.
+  const toSaved = (edited: Widget): Widget =>
+    edited.kind === "countdown" &&
+    item?.kind === "countdown" &&
+    targetInput === null &&
+    startInput === null &&
+    edited.settings.repeat === item.settings.repeat
+      ? {
+          ...edited,
+          settings: {
+            ...edited.settings,
+            targetAt: item.settings.targetAt,
+            startAt: item.settings.startAt
+          }
+        }
+      : edited
 
   const updateQuotes = (value: string) => {
     patchSettings("quote", { quotes: textToQuotes(value) })
@@ -244,7 +276,7 @@ export const ItemDialog = ({
           ref={formRef}
           onSubmit={(event) => {
             event.preventDefault()
-            onSave(draft)
+            onSave(toSaved(draft))
           }}>
           <div className="form-grid">
             <label className="form-label-group">

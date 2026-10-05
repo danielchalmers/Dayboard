@@ -107,6 +107,38 @@ test("clicking away from an add only keeps it once something was changed", async
   await expect(cards).toHaveCount(before + 1)
 })
 
+test("clicking away from an untouched edit leaves a change from another tab alone", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  // Past 9 AM the morning card is still stored by today's 9 AM, so its dialog opens on tomorrow's, the occurrence the card shows.
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "🌅 Morning")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).click()
+  const dialog = page.getByRole("dialog", { name: "Edit countdown" })
+  await expect(dialog.getByLabel("When")).toHaveValue("2026-03-05T09:00")
+
+  // A plain goto rather than openNewTab, which clears storage.
+  const other = await context.newPage()
+  await other.goto(`chrome-extension://${extensionId}/newtab.html`)
+  await openWidgetMenu(other, "🌅 Morning")
+  await other.getByRole("menuitem", { name: "Edit 🌅 Morning" }).click()
+  await other.getByLabel("Name").fill("🌅 Sunrise")
+  await other.getByRole("button", { name: "Save changes" }).click()
+  await expect(cardByTitle(page, "🌅 Sunrise")).toHaveCount(1)
+
+  // Opening on another occurrence was the dialog's doing, not an edit, so clicking away only closes it rather than saving the name it opened with over the new one.
+  await page.mouse.click(8, 8)
+  await expect(dialog).toHaveCount(0)
+  await expect(cardByTitle(page, "🌅 Sunrise")).toBeVisible()
+  await expect(cardByTitle(page, "🌅 Morning")).toHaveCount(0)
+
+  await other.close()
+})
+
 test("typing replaces a new card's name", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
