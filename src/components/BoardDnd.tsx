@@ -5,13 +5,16 @@ import {
   MeasuringStrategy,
   PointerSensor,
   closestCenter,
+  pointerWithin,
   useDndContext,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
-  type DragStartEvent
+  type DragStartEvent,
+  type UniqueIdentifier
 } from "@dnd-kit/core"
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
 import { useEffect, useState, type ReactNode } from "react"
@@ -37,6 +40,34 @@ const ARCHIVE_ICON = (
     strokeWidth="1.7"
   />
 )
+
+const isArchiveZone = ({ id }: { id: UniqueIdentifier }) => id === ARCHIVE_DROP_ID
+
+// Cards sort by their centers, which keeps a reorder forgiving about where the card was grabbed.
+// The archive zone is different: it claims a drop only while the pointer is inside the box it draws.
+// Measured by centers too, it won wherever the lifted card's center sat nearer the zone's than any card's, so a card grabbed by its top edge and carried onto the bottom row was archived instead of moved, with the zone it fell into nowhere near the pointer.
+// A keyboard drag has no pointer, so it keeps plain center sorting over everything.
+export const boardCollision: CollisionDetection = (args) => {
+  if (!args.pointerCoordinates) {
+    return closestCenter(args)
+  }
+
+  const archiveHit = pointerWithin({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(isArchiveZone)
+  })
+
+  if (archiveHit.length > 0) {
+    return archiveHit
+  }
+
+  return closestCenter({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(
+      (container) => !isArchiveZone(container)
+    )
+  })
+}
 
 // The archive drop target only exists mid-drag, pinned to the bottom of the viewport so it is always reachable however tall the board is.
 // Restoring has no counterpart zone: an archived card is dropped straight onto the board, into the exact slot it should take.
@@ -264,7 +295,7 @@ export const BoardDnd = ({
 
   return (
     <DndContext
-      collisionDetection={closestCenter}
+      collisionDetection={boardCollision}
       // The preview moves a card between lists mid-drag, reshaping the board, so droppable rects must be re-measured as the layout changes.
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragCancel={handleDragCancel}

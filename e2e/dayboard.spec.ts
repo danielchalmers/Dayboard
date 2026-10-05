@@ -1523,6 +1523,41 @@ test("dragging a widget onto the archive zone archives it", async ({
   await expect(page.getByRole("button", { name: "Show archived" })).toBeVisible()
 })
 
+test("a card carried onto the bottom row by its top edge moves there instead of archiving", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openNewTab(page, extensionId)
+
+  const source = await boxOf(cardByTitle(page, "🕒 Local time"), "the dragged card")
+  // At this width the board is three columns, so the walk is the bottom row's middle card, the one sitting right above the floating zone.
+  const target = await boxOf(cardByTitle(page, "🚶 Daily walk"), "the bottom-middle card")
+
+  // Held by its top edge with the pointer over the bottom-middle card, the lifted card hangs most of its height below the pointer, its center nearer the archive zone's than any card's.
+  // The zone only answers to the pointer, so this is a reorder.
+  const grabX = source.x + source.width / 2
+  const grabY = source.y + 12
+  await page.mouse.move(grabX, grabY)
+  await page.mouse.down()
+  await page.mouse.move(
+    target.x + target.width / 2,
+    target.y + target.height / 2,
+    { steps: 20 }
+  )
+  await expect(page.locator(".archive-dropzone")).toBeVisible()
+  await expect(page.locator(".archive-dropzone--over")).toHaveCount(0)
+  await page.mouse.up()
+
+  await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
+  // It takes the slot of the card it was dropped on.
+  await expect(page.locator(".board-row h2")).toHaveText([
+    ...DEFAULT_BOARD_TITLES.slice(1, 5),
+    "🕒 Local time",
+    "📅 This year"
+  ])
+})
+
 test("a card dragged toward the archive follows the cursor instead of snapping back", async ({
   page,
   extensionId
