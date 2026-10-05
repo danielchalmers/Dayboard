@@ -105,11 +105,13 @@ html {
   min-block-size: 100vh;
 }
 
+/* Chromium styles extension pages with its own `body { font-size: 75% }`, and every field inherits its font, so without the reset what you type in a dialog is 12px: the smallest text in it, under its own label. */
 body {
   margin: 0;
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
+  font-size: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
