@@ -90,6 +90,50 @@ describe("ItemDialog", () => {
     expect(saved(onSave)).toMatchObject({ id: "clock-1", title: "Berlin" })
   })
 
+  // Opening Add to see what a kind offers and clicking away again is looking, not adding, so it must not leave a card behind.
+  it("closes an untouched dialog from the backdrop without saving it", () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+
+    render(itemDialog({ mode: "add", onClose, onSave }))
+
+    const backdrop = document.querySelector(".modal-backdrop") as HTMLElement
+    fireEvent.pointerDown(backdrop)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  // Any change at all is work worth keeping, even one that never touches a text field.
+  it("commits a new item from the backdrop once anything is picked", () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+
+    render(itemDialog({ mode: "add", onClose, onSave }))
+
+    fireEvent.click(screen.getByRole("radio", { name: "Rose" }))
+    const backdrop = document.querySelector(".modal-backdrop") as HTMLElement
+    fireEvent.pointerDown(backdrop)
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect(saved(onSave)).toMatchObject({ id: "clock-1", colorPreset: "rose" })
+  })
+
+  it("selects a new item's name so typing replaces it", () => {
+    render(itemDialog({ mode: "add" }))
+
+    const name = screen.getByLabelText<HTMLInputElement>("Name")
+    expect([name.selectionStart, name.selectionEnd]).toEqual([0, name.value.length])
+  })
+
+  // An existing name is more often tweaked than rewritten, so editing leaves it whole rather than one keystroke from gone.
+  it("leaves an edited item's name unselected", () => {
+    render(itemDialog())
+
+    const name = screen.getByLabelText<HTMLInputElement>("Name")
+    expect(name.selectionStart).toBe(name.selectionEnd)
+  })
+
   // The backdrop commits rather than discards, so it has to answer to the same validation the Save button does.
   // Otherwise the easiest way out of the dialog is also the one that saves a nameless card, which then sits on the board with no heading to find it by.
   it("will not commit a nameless item from the backdrop", () => {
@@ -261,7 +305,29 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Quotes (one per line)")).toHaveValue(pasted)
   })
 
-  // A save from the backdrop can be refused and leave the dialog open, and Escape only reaches it while focus is still inside.
+  // Save stays on screen however far up a long form is scrolled, but a refused save says why at the form's end, so the dialog brings that line into view.
+  it("brings the reason its save was refused into view", () => {
+    // jsdom has no scrollIntoView, so lend it one for the length of the test.
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView
+    })
+
+    try {
+      const { rerender } = render(itemDialog({ item: quoteItem }))
+      expect(scrollIntoView).not.toHaveBeenCalled()
+
+      rerender(itemDialog({ item: quoteItem, error: "Couldn’t save — too big." }))
+
+      expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({ block: "nearest" })
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole("alert"))
+    } finally {
+      Reflect.deleteProperty(Element.prototype, "scrollIntoView")
+    }
+  })
+
+  // A save from the backdrop can be refused, by the form over an empty field or by storage, and leave the dialog open; Escape only reaches it while focus is still inside.
   it("keeps focus where it was when the backdrop is pressed", () => {
     render(itemDialog())
 
@@ -393,6 +459,20 @@ describe("ItemDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
 
     expect(saved(onSave).settings.durationMs).toBe(45_000)
+  })
+
+  // Typed digits would otherwise join the ones already there, so a click into 5 minutes and a typed 25 read 525.
+  it("selects a length part as it takes focus, so typing replaces it", () => {
+    render(itemDialog({ item: timerItem }))
+
+    for (const part of ["hours", "minutes", "seconds"]) {
+      const field = screen.getByLabelText<HTMLInputElement>(part)
+      const select = vi.spyOn(field, "select")
+
+      fireEvent.focus(field)
+
+      expect(select).toHaveBeenCalledTimes(1)
+    }
   })
 
   it("ignores clicks that land inside the dialog", () => {

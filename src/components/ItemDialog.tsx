@@ -44,7 +44,9 @@ export const ItemDialog = ({
   const [syncedItem, setSyncedItem] = useState(item)
   const dialogRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
   const lengthRef = useRef<HTMLInputElement>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
 
   // Adopt a newly opened item during render (not in an effect) so the dialog body, and the focusable section that useModalFocus wires into, exist on the very first open render.
   // Deferring the draft to an effect left the section null for one render, after which the focus hook's deps never changed again, so focus-move, the focus trap, and Escape-to-close were silently never attached.
@@ -57,12 +59,29 @@ export const ItemDialog = ({
 
   useModalFocus(isOpen, dialogRef, onClose)
 
+  // A new card's name is a placeholder nearly everyone replaces, so select it once focus has landed there: typing replaces it and Enter keeps it.
+  // An edit leaves the caret at the end, since an existing name is more often tweaked than rewritten.
+  useEffect(() => {
+    if (isOpen && mode === "add") {
+      nameRef.current?.select()
+    }
+  }, [isOpen, mode])
+
   // A timer with no length would read "Time's up" the moment it was saved, and storage reads a zero length back as the default five minutes.
   // Marking the length invalid lets native validation hold the save, the same as an empty required field.
   const isLengthless = draft?.kind === "timer" && draft.settings.durationMs <= 0
   useEffect(() => {
     lengthRef.current?.setCustomValidity(isLengthless ? "Give it a length." : "")
   }, [isLengthless])
+
+  // Save stays pinned to the bottom of a dialog that scrolls, so it can be pressed with the end of the form out of sight, and the end is where a refused save says why.
+  // Bring that line into view above the pinned row, which the dialog's bottom scroll padding leaves room for.
+  // The optional call keeps jsdom (which has no scrollIntoView) out of trouble in tests.
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView?.({ block: "nearest" })
+    }
+  }, [error])
 
   const title = useMemo(
     () => (draft ? `${mode === "add" ? "Add" : "Edit"} ${draft.kind}` : ""),
@@ -76,6 +95,10 @@ export const ItemDialog = ({
   const widgetDefinition = widgetRegistry[draft.kind]
 
   const submitLabel = mode === "add" ? `Save ${draft.kind}` : "Save changes"
+
+  // Every edit makes a new draft, so the draft still being the item it opened with means nothing has been typed or picked, short of a date that is only half entered.
+  const isUntouched =
+    draft === item && targetInput === null && startInput === null
 
   // What the Starting from field shows right now: the raw string mid-edit, else the stored start.
   const startValue =
@@ -178,14 +201,22 @@ export const ItemDialog = ({
     <div
       className="modal-backdrop"
       onPointerDown={(event) => {
-        // Clicking the backdrop commits the edit, the same as pressing Save or Enter, so dismissing the dialog feels fluid instead of throwing the work away.
+        if (event.target !== event.currentTarget) {
+          return
+        }
+
+        // Clicking away from a dialog nothing was done in is only looking, so it closes, and a peek at what a kind offers never leaves a card behind.
+        // Once anything has changed, clicking away commits the edit, the same as pressing Save or Enter, so dismissing the dialog feels fluid instead of throwing the work away.
         // Native form validation still blocks the save and keeps the dialog open if a required field is empty.
-        if (event.target === event.currentTarget) {
+        if (isUntouched) {
+          onClose()
+        } else {
           formRef.current?.requestSubmit()
         }
       }}
       onMouseDown={(event) => {
-        // The press would otherwise take focus out to the page, beyond the focus trap and the Escape key, and a refused save leaves the dialog open there.
+        // The save the press asks for can be refused, by the form over an empty field or by storage, and either way the dialog stays open.
+        // The press would otherwise take focus out to the page, beyond the focus trap and the Escape key, and an empty field's validation message would go with it.
         if (event.target === event.currentTarget) {
           event.preventDefault()
         }
@@ -220,6 +251,7 @@ export const ItemDialog = ({
               <span>Name</span>
               <input
                 onChange={(event) => updateTitle(event.currentTarget.value)}
+                ref={nameRef}
                 required
                 type="text"
                 value={draft.title}
@@ -366,6 +398,8 @@ export const ItemDialog = ({
                               event.currentTarget.valueAsNumber
                             )
                           }
+                          // Typing into a part replaces it, rather than adding digits to what was there and turning 5 minutes and a typed 25 into 525.
+                          onFocus={(event) => event.currentTarget.select()}
                           type="number"
                           value={msToParts(draft.settings.durationMs)[part]}
                         />
@@ -430,7 +464,10 @@ export const ItemDialog = ({
             ) : null}
 
             {error ? (
-              <p className="form-note form-note--error" role="alert">
+              <p
+                className="form-note form-note--error"
+                ref={errorRef}
+                role="alert">
                 {error}
               </p>
             ) : null}

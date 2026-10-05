@@ -148,6 +148,43 @@ test("opens dialogs centered in the viewport", async ({ page, extensionId }) => 
   )
 })
 
+test("sets what you type in a dialog at the page's own text size", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  await expect(page.getByRole("dialog", { name: "Add countdown" })).toBeVisible()
+
+  // Chromium gives extension pages `body { font-size: 75% }` and every field inherits its font, so this only holds while the stylesheet undoes it.
+  // Nothing else fails when it slips: the fields simply drop to 12px, the smallest text in the dialog.
+  const sizes = await page.evaluate(() =>
+    [".modal-dialog input", ".modal-dialog select"].map(
+      (selector) => getComputedStyle(document.querySelector(selector)!).fontSize
+    )
+  )
+  expect(sizes).toEqual(["16px", "16px"])
+})
+
+test("frosts the board behind menus and dialogs", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // Only the built CSS can show this: handed both spellings of the property, the minifier once kept just the -webkit- one, which Chromium ignores, and every surface shipped unblurred.
+  const blurOf = (selector: string) =>
+    page
+      .locator(selector)
+      .evaluate((element) => getComputedStyle(element).backdropFilter)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  expect(await blurOf(".add-menu__panel")).toContain("blur(")
+
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+  expect(await blurOf(".modal-backdrop")).toContain("blur(")
+})
+
 test("keeps buttons pointer-cursored and still under the pointer", async ({
   page,
   extensionId

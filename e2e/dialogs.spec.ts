@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures"
-import { cardByTitle, openNewTab, openWidgetMenu } from "./helpers"
+import {
+  boxOf,
+  cardByTitle,
+  DEFAULT_BOARD_TITLES,
+  openNewTab,
+  openWidgetMenu
+} from "./helpers"
 
 test("canceling the delete dialog keeps the widget", async ({
   page,
@@ -20,7 +26,7 @@ test("canceling the delete dialog keeps the widget", async ({
   await expect(cardByTitle(page, "🌅 Tomorrow morning")).not.toBeFocused()
 
   // The three dialogs treat the backdrop differently on purpose, and this is the one where dismissing has to mean "no".
-  // The edit dialog commits from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
+  // The edit dialog commits a change from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
   await openWidgetMenu(page, "🌅 Tomorrow morning")
   await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).click()
   await expect(dialog).toBeVisible()
@@ -70,6 +76,183 @@ test("canceling an add discards it and the options backdrop closes", async ({
 
   await page.mouse.click(8, 8)
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
+})
+
+test("clicking away from an add only keeps it once something was changed", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const cards = page.locator(".board-row")
+  const before = DEFAULT_BOARD_TITLES.length
+  await expect(cards).toHaveCount(before)
+
+  // A look at what a kind offers, then a click back onto the board, is not asking for a card.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+
+  await page.mouse.click(8, 8)
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toHaveCount(0)
+  await expect(cards).toHaveCount(before)
+
+  // Once anything is picked, even only a color, clicking away commits it like the edit dialog does.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add habit" }).click()
+  await page.getByRole("radio", { name: "Rose" }).click()
+
+  await page.mouse.click(8, 8)
+  await expect(page.getByRole("dialog", { name: "Add habit" })).toHaveCount(0)
+  await expect(cards).toHaveCount(before + 1)
+})
+
+test("typing replaces a new card's name", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // The helpers fill fields wholesale, which is exactly what hides a default that typing appends to ("New clockTokyo").
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+  await page.keyboard.type("Tokyo")
+  await page.keyboard.press("Enter")
+  await expect(cardByTitle(page, "Tokyo", true)).toBeVisible()
+})
+
+test("typing replaces a timer's length part", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // Five minutes and a typed 25 must read 25 minutes, not 525 normalized to eight hours and change.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("minutes").click()
+  await page.keyboard.type("25")
+  await expect(page.getByLabel("minutes")).toHaveValue("25")
+  await expect(page.getByLabel("hours")).toHaveValue("0")
+
+  await page.keyboard.press("Tab")
+  await page.keyboard.type("30")
+  await expect(page.getByLabel("seconds")).toHaveValue("30")
+})
+
+test("an outside click the form refuses keeps focus on the field and Escape working", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add note" }).click()
+  const dialog = page.getByRole("dialog", { name: "Add note" })
+  await page.getByLabel("Name").fill("")
+
+  // The form refuses the save and focuses the empty Name to say why; the press on the backdrop must not then carry focus out to the page.
+  // A save that storage refuses is held the same way (see board-state.spec.ts).
+  await page.mouse.click(8, 8)
+  await expect(dialog).toBeVisible()
+  await expect(page.getByLabel("Name")).toBeFocused()
+
+  // Escape listens inside the dialog, so it only still works because focus stayed there.
+  await page.keyboard.press("Escape")
+  await expect(dialog).toHaveCount(0)
+})
+
+test("closing a dialog hands focus back to the card or button that opened it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  const dialog = page.getByRole("dialog", { name: "Edit countdown" })
+
+  // The menu item that opened the dialog is gone by the time it closes, so without this focus fell to the page and a keyboard user started over from the top.
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(card).toBeFocused()
+
+  // A save closes the dialog only once its write has landed, and focus still finds the card after the wait.
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await dialog.getByRole("button", { name: "Save changes" }).press("Enter")
+  await expect(dialog).toHaveCount(0)
+  await expect(card).toBeFocused()
+
+  const addWidgetButton = page.getByRole("button", { name: "Add widget" })
+  await addWidgetButton.press("Enter")
+  await page.getByRole("button", { name: "Add clock" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(addWidgetButton).toBeFocused()
+})
+
+test("a menu opened by a long press hands focus back to its own card", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  await cardByTitle(page, "👋 Welcome").locator("textarea").focus()
+
+  // A touch long-press opens the menu without the press focusing anything, which a bare contextmenu event reproduces.
+  // The note's field was focused before it, and it is where an item chosen with a screen reader or a keyboard would otherwise hand focus back to: off screen on a phone, with the keyboard up.
+  await card.dispatchEvent("contextmenu")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(card).toBeFocused()
+})
+
+test("Save stays in reach when a laptop screen is too short for the form", async ({
+  page,
+  extensionId
+}) => {
+  // About what a 1366x768 laptop leaves under the browser's own bars.
+  await page.setViewportSize({ width: 1366, height: 625 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  const dialog = page.getByRole("dialog", { name: "Add countdown" })
+  await expect(dialog).toBeVisible()
+  await dialog.evaluate((el) =>
+    Promise.all(el.getAnimations().map((animation) => animation.finished))
+  )
+
+  // The countdown form is taller than this dialog can be, so it scrolls; Save has to stay on screen at the top of that scroll as well as the bottom.
+  expect(
+    await dialog.evaluate((el) => el.scrollHeight > el.clientHeight)
+  ).toBe(true)
+
+  const save = page.getByRole("button", { name: "Save countdown" })
+
+  for (const scrollTo of ["top", "end"] as const) {
+    await dialog.evaluate(
+      (el, to) => (el.scrollTop = to === "top" ? 0 : el.scrollHeight),
+      scrollTo
+    )
+    const box = await boxOf(dialog, "the countdown dialog")
+    const saveBox = await boxOf(save, `Save at the ${scrollTo} of the scroll`)
+    expect(saveBox.y).toBeGreaterThanOrEqual(box.y)
+    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(box.y + box.height)
+  }
+
+  // Pinning the row must not hide what it pins over: a field that Tab scrolls into view has to stop above the row, not slide in under it.
+  await dialog.evaluate((el) => (el.scrollTop = 0))
+  await page.getByLabel("Repeats").focus()
+  await page.keyboard.press("Tab")
+  const start = page.getByLabel("Starting from")
+  await expect(start).toBeFocused()
+
+  const startBox = await boxOf(start, "the Starting from field")
+  const actionsBox = await boxOf(
+    dialog.locator(".modal-dialog__actions"),
+    "the pinned actions row"
+  )
+  expect(startBox.y + startBox.height).toBeLessThanOrEqual(actionsBox.y)
 })
 
 test("picking a color repaints the card and it survives a reload", async ({

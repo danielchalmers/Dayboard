@@ -8,7 +8,7 @@ import {
 
 import { ArchiveNotice } from "~/components/ArchiveNotice"
 import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
-import { BoardList } from "~/components/BoardList"
+import { BoardList, isKeyboardAction } from "~/components/BoardList"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
 import { SettingsDialog } from "~/components/SettingsDialog"
@@ -116,6 +116,13 @@ const PageGreeting = ({ name }: { name: string }) => {
   )
 }
 
+// Close the add menu the way a native popup closes, putting focus back on its + button.
+// Whatever happens next starts from there rather than from an item that has just been hidden: the next Tab, or a dialog that hands focus back to whatever opened it.
+const closeAddMenuToToggle = (menu: HTMLDetailsElement) => {
+  menu.removeAttribute("open")
+  menu.querySelector<HTMLElement>("summary")?.focus()
+}
+
 const closeOpenMenus = (eventPath?: EventTarget[]) => {
   document
     .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
@@ -125,13 +132,6 @@ const closeOpenMenus = (eventPath?: EventTarget[]) => {
       }
     })
 }
-
-// Focus is looked after only when an action came from the keyboard or assistive tech.
-// A pointer user has no place on the board to keep, and a card left focused without a ring would take their next Space as the start of a drag.
-// A click made by a key or a screen reader carries no click count, and a focus the keyboard placed matches :focus-visible.
-const isKeyboardAction = (event?: { detail: number }) =>
-  event?.detail === 0 ||
-  Boolean(document.activeElement?.matches(":focus-visible"))
 
 export function NewTabPage() {
   const {
@@ -226,6 +226,13 @@ export function NewTabPage() {
       : editorState?.mode === "add"
         ? [...state.widgets, item]
         : null
+
+    // A save tried again drops the last refusal, so a second one is said, and brought into view, afresh.
+    setEditorState((current) =>
+      current?.error && current.item === opened
+        ? { ...current, error: undefined }
+        : current
+    )
     const refused = nextWidgets ? await setWidgets(nextWidgets) : null
 
     setEditorState((current) =>
@@ -409,10 +416,7 @@ export function NewTabPage() {
               onKeyDown={(event) => {
                 // Native <details> ignores Escape; close it and refocus the toggle so the disclosure behaves like a real popup.
                 if (event.key === "Escape" && event.currentTarget.open) {
-                  event.currentTarget.removeAttribute("open")
-                  event.currentTarget
-                    .querySelector<HTMLElement>("summary")
-                    ?.focus()
+                  closeAddMenuToToggle(event.currentTarget)
                 }
               }}>
               <summary
@@ -442,7 +446,14 @@ export function NewTabPage() {
                     aria-label={`Add ${label.toLowerCase()}`}
                     className="menu-button menu-button--described"
                     key={kind}
-                    onClick={() => addItem(kind)}
+                    onClick={(event) => {
+                      // A kind chosen from the keyboard closes the menu onto its + button, which the dialog it opens then hands focus back to.
+                      const menu = event.currentTarget.closest("details")
+                      if (menu && isKeyboardAction(event)) {
+                        closeAddMenuToToggle(menu)
+                      }
+                      addItem(kind)
+                    }}
                     type="button">
                     <span
                       aria-hidden="true"

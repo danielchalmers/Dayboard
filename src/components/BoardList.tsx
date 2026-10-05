@@ -124,6 +124,13 @@ export const hasSelectionWithin = (card: HTMLElement): boolean => {
   return false
 }
 
+// Focus is looked after only when an action came from the keyboard or assistive tech.
+// A pointer user has no place on the board to keep, and a card left focused without a ring would take their next Space as the start of a drag.
+// A click made by a key or a screen reader carries no click count, and a focus the keyboard placed matches :focus-visible.
+export const isKeyboardAction = (event?: { detail: number }) =>
+  event?.detail === 0 ||
+  Boolean(document.activeElement?.matches(":focus-visible"))
+
 interface OpenMenu {
   id: string
   x: number
@@ -308,7 +315,12 @@ const WidgetContextMenu = ({
         className="card-menu__panel"
         onClick={(event) => {
           // Only a chosen item dismisses the menu; clicks on the panel's padding or a separator are inert, like a native menu.
+          // An item chosen from the keyboard hides the menu through the Popover API first, which hands focus back to the card as Escape does, so a dialog the item opens finds the card as what opened it and returns focus there when it closes.
           if ((event.target as HTMLElement).closest("button")) {
+            if (isKeyboardAction(event)) {
+              menuRef.current?.hidePopover()
+            }
+
             onClose()
           }
         }}
@@ -379,6 +391,9 @@ const SortableBoardRow = memo(({
     }
 
     event.preventDefault()
+    // A touch long-press opens the menu without moving focus, and the menu hands focus back to whatever held it when it opened.
+    // Taking focus here makes that this card; otherwise a field left focused on another card would get it back, off screen and with the soft keyboard up.
+    event.currentTarget.focus({ preventScroll: true })
     onOpenMenu(item.id, event.clientX, event.clientY)
   }
 
