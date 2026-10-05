@@ -1318,6 +1318,32 @@ test("an hourly countdown rolls forward within the hour", async ({
   )
 })
 
+test("a yearly date counts in days", async ({
+  page,
+  extensionId
+}) => {
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  // A new countdown points at the start of tomorrow, so picking a day keeps it a date.
+  await expect(page.getByLabel("When")).toHaveValue("2026-03-05T00:00")
+  await page.getByLabel("Name").fill("Birthday")
+  await page.getByLabel("When").fill("2020-03-14T00:00")
+  await page.getByLabel("Repeats").selectOption("yearly")
+  await page.getByRole("button", { name: "Save countdown" }).click()
+
+  const card = cardByTitle(page, "Birthday")
+
+  // Whole days, with no hours left over and no "12:00 AM" under the title.
+  await expect(card.locator(".board-row__value")).toHaveText("10 days")
+  await expect(card.locator(".board-row__meta")).toHaveText("from now")
+  await expect(card.locator(".board-row__detail")).toHaveText(
+    "Sat, Mar 14 · repeats yearly"
+  )
+})
+
 test("editing a recurring countdown's time keeps its other settings", async ({
   page,
   extensionId

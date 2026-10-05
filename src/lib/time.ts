@@ -6,7 +6,8 @@ import {
 } from "./types"
 
 export interface CountdownParts {
-  status: "future" | "due" | "past"
+  /** "today" is a date countdown on its own day, which has no time left to count either way. */
+  status: "future" | "due" | "today" | "past"
   label: string
 }
 
@@ -147,6 +148,7 @@ export const formatTimeZoneName = (date: Date, timeZone: string): string => {
 }
 
 const HOUR_MS = 3_600_000
+const DAY_MS = 86_400_000
 
 // How many days a month holds, asked without `new Date(year, ...)`, whose two-digit-year rule would read a year under 100 as 1900-something.
 const daysInMonth = (year: number, month: number): number => {
@@ -248,8 +250,15 @@ const startOfLocalDay = (date: Date): Date => {
 const isLocalMidnight = (date: Date): boolean =>
   date.getTime() === startOfLocalDay(date).getTime()
 
+// Days between two instants on the local calendar, counted in midnights rather than 24-hour blocks, so a DST change (a 23- or 25-hour day) doesn't land the count a day short or long.
+const calendarDaysBetween = (from: Date, to: Date): number =>
+  Math.round(
+    (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS
+  )
+
 // A target at local midnight is a date rather than a moment: a birthday, a trip, New Year's Day.
-// An hourly or daily repeat is never a date: it comes round every day, so its midnight is a time of day like any other.
+// It counts in calendar days and lasts the whole of its day, which is how people count to a date, and the dialog's When field starts there so a picked date stays one.
+// An hourly or daily repeat is never a date: it comes round every day, so a day-long occurrence would leave it reading Today for good rather than counting down to midnight.
 const isDate = (target: Date, repeat: CountdownRepeat | undefined): boolean =>
   !Number.isNaN(target.getTime()) &&
   isLocalMidnight(target) &&
@@ -275,13 +284,26 @@ export const resolveCountdown = (
   }
 
   const start = startAt ? new Date(startAt) : null
-  const steps = countdownRepeatSteps(targetAt, repeat, now)
+  let steps = countdownRepeatSteps(targetAt, repeat, now)
 
   // A start that does not parse, or that does not sit before the target, is not a span a bar can fill; the card falls back to the remaining-time text.
   const hasSpan =
     start !== null &&
     !Number.isNaN(start.getTime()) &&
     start.getTime() < target.getTime()
+
+  // The steps land on the first occurrence still ahead, but a date outlasts its target, so stay on the one just passed while its day lasts.
+  // That way a birthday reads Today until midnight rather than a year away the moment it begins.
+  // A bar has no Today to read, so a span that ends on a date rolls on at once.
+  if (steps > 0 && !hasSpan) {
+    const previous = advanceByRepeat(target, repeat, steps - 1)
+    const dayAfter = new Date(previous)
+    dayAfter.setDate(dayAfter.getDate() + 1)
+
+    if (isDate(previous, repeat) && now.getTime() < dayAfter.getTime()) {
+      steps -= 1
+    }
+  }
 
   if (steps === 0 && hasSpan === Boolean(startAt)) {
     return widget
@@ -304,7 +326,25 @@ export const getCountdownParts = (
   widget: CountdownWidget,
   now = new Date()
 ): CountdownParts => {
-  const totalMs = new Date(widget.settings.targetAt).getTime() - now.getTime()
+  const target = new Date(widget.settings.targetAt)
+  const totalMs = target.getTime() - now.getTime()
+
+  if (isDateCountdown(widget)) {
+    const days = calendarDaysBetween(now, target)
+
+    if (days === 0) {
+      return { status: "today", label: "Today" }
+    }
+
+    // On any day but the eve, a date is whole days away, counted from the start of today so the hour doesn't matter: Christmas is 79 days off all of October 7.
+    // The eve itself falls through to hours and minutes, so New Year's Eve still ticks down to midnight.
+    if (days !== 1) {
+      return {
+        status: days > 0 ? "future" : "past",
+        label: `${pluralize(Math.abs(days), "day")} ${days > 0 ? "from now" : "ago"}`
+      }
+    }
+  }
 
   return {
     status: getCountdownStatus(totalMs),

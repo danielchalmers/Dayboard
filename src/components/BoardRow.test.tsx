@@ -256,6 +256,27 @@ describe("BoardRow", () => {
     expect(container.querySelector(".board-row__meta")).toHaveTextContent("ago")
   })
 
+  it("reads a date as Today on the day itself, under the date alone", () => {
+    const item: Widget = {
+      id: "birthday",
+      kind: "countdown",
+      title: "Birthday",
+      colorPreset: "rose",
+      settings: { targetAt: new Date(2025, 11, 25).toISOString(), repeat: "yearly" }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2026, 11, 25, 15, 0, 0)} />
+    )
+
+    expect(container.querySelector(".board-row__value")).toHaveTextContent("Today")
+    // "Today" already says everything, so there is no "from now" or "ago" to add.
+    expect(container.querySelector(".board-row__meta")).toBeNull()
+    expect(container.querySelector(".board-row__detail")).toHaveTextContent(
+      /^Fri, Dec 25 · repeats yearly$/
+    )
+  })
+
   it("writes a countdown's date against the card's clock, with no time on a date", () => {
     const item: Widget = {
       id: "retirement",
