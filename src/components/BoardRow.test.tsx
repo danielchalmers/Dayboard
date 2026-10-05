@@ -991,6 +991,10 @@ describe("BoardRow", () => {
 
     afterEach(() => {
       vi.useRealTimers()
+      // Back in view, which hands back any title a finish borrowed while the tab was hidden.
+      vi.restoreAllMocks()
+      document.dispatchEvent(new Event("visibilitychange"))
+      document.title = ""
     })
 
     // The board settles the run and answers with the timer as it now stands, which is what the card announces from.
@@ -1172,6 +1176,122 @@ describe("BoardRow", () => {
       vi.advanceTimersByTime(60_000)
 
       expect(onTimerFinish).not.toHaveBeenCalled()
+    })
+
+    it("says so in the tab's title when it finishes out of sight, until the board is looked at again", async () => {
+      document.title = "New Tab"
+      const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const eggs = { ...running({ endsAt: START + 90_000 }), id: "e", title: "Eggs" }
+
+      render(
+        <>
+          <BoardRow item={tea} now={new Date(START)} onTimerFinish={settledAs(tea)} />
+          <BoardRow item={eggs} now={new Date(START)} onTimerFinish={settledAs(eggs)} />
+        </>
+      )
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(document.title).toBe("Time’s up · Tea")
+
+      // A second finish takes the title over, and coming back still restores the one from before either.
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      visibility.mockReturnValue("visible")
+      document.dispatchEvent(new Event("visibilitychange"))
+      expect(document.title).toBe("New Tab")
+    })
+
+    // The title only says what the cards still show: a timer started again or reset from another tab gives it back early, but only the one whose finish it names.
+    it("gives the title back once the timer it names goes again, and names it as the board does", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const eggs = { ...running({ endsAt: START + 120_000 }), id: "e", title: "Eggs" }
+      const finishedAs = (timer: TimerWidget): TimerWidget => ({
+        ...timer,
+        settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
+      })
+      // Tea was renamed in another tab while it ran.
+      const teaFinish = settledAs({ ...tea, title: "Green tea" })
+      const eggsFinish = settledAs(eggs)
+      const board = (teaNow: TimerWidget, eggsNow: TimerWidget) => (
+        <>
+          <BoardRow item={teaNow} now={new Date(START)} onTimerFinish={teaFinish} />
+          <BoardRow item={eggsNow} now={new Date(START)} onTimerFinish={eggsFinish} />
+        </>
+      )
+
+      const { rerender } = render(board(tea, eggs))
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(document.title).toBe("Time’s up · Green tea")
+
+      rerender(board(finishedAs(tea), eggs))
+      await vi.advanceTimersByTimeAsync(60_000)
+      rerender(board(finishedAs(tea), finishedAs(eggs)))
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      // Tea going again leaves the title to the finish it names now, and Eggs reset takes it back.
+      const teaAgain = running({ endsAt: START + 600_000 })
+      rerender(board(teaAgain, finishedAs(eggs)))
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      rerender(board(teaAgain, { ...eggs, settings: { ...eggs.settings, running: false, endsAt: null } }))
+      expect(document.title).toBe("New Tab")
+    })
+
+    // A refused save puts the run back as storage holds it, still going past its end, and the card settles it again from there.
+    it("keeps the title through a finish that is put back and settled again", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const onTimerFinish = settledAs(tea)
+      const row = (item: TimerWidget) => (
+        <BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />
+      )
+
+      const { rerender } = render(row(tea))
+      await vi.advanceTimersByTimeAsync(60_000)
+      rerender(row({ ...tea, settings: { ...tea.settings, running: false, remainingMs: 0, endsAt: null } }))
+      rerender(row(tea))
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(onTimerFinish).toHaveBeenCalledTimes(2)
+      expect(document.title).toBe("Time’s up · Tea")
+    })
+
+    it("leaves the title alone when it finishes in view", async () => {
+      document.title = "New Tab"
+      const item = running()
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={settledAs(item)} />)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(document.title).toBe("New Tab")
+    })
+
+    // A tab woken hours later, or one whose run another tab already settled, has nothing new to report.
+    it("keeps old news out of the title", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+
+      render(
+        <>
+          <BoardRow item={tea} now={new Date(START)} onTimerFinish={settledAs(tea)} />
+          <BoardRow
+            item={{ ...running(), id: "e", title: "Eggs" }}
+            now={new Date(START)}
+            onTimerFinish={vi.fn(async () => null)}
+          />
+        </>
+      )
+
+      vi.setSystemTime(START + 2 * 3_600_000)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(document.title).toBe("New Tab")
     })
 
     // The lifted copy under a drag is the same card with no way to report back, and the card left on the board settles the run.

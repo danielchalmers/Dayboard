@@ -183,6 +183,42 @@ const FINISH_GRACE_MS = 60_000
 // setTimeout keeps its delay in a signed 32-bit count of milliseconds, so a longer wait (an imported timer weeks from its end) would fire at once; such a wait is taken in pieces instead.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1
 
+// The tab's title from before a finished timer borrowed it, and which timer's finish it shows now.
+// A second timer finishing out of sight takes the title over rather than saving the first one's as the title to go back to.
+let borrowedTitle: { resting: string; by: string } | null = null
+
+const giveTitleBack = () => {
+  if (!borrowedTitle) {
+    return
+  }
+
+  document.title = borrowedTitle.resting
+  borrowedTitle = null
+  document.removeEventListener("visibilitychange", giveTitleBackOnLook)
+}
+
+const giveTitleBackOnLook = () => {
+  if (document.visibilityState !== "hidden") {
+    giveTitleBack()
+  }
+}
+
+// A hidden tab can only be seen from the tab strip, so a timer that finishes out of sight says so in the tab's title until the board is looked at again.
+// It is set once at the finish rather than counting down there, which would mean per-second work in a tab nobody is looking at.
+// The title is the page's rather than the card's, so it comes back on the next look even if the card has gone by then.
+const showFinishInTitle = (id: string, title: string) => {
+  if (document.visibilityState !== "hidden") {
+    return
+  }
+
+  if (!borrowedTitle) {
+    document.addEventListener("visibilitychange", giveTitleBackOnLook)
+  }
+
+  borrowedTitle = { resting: borrowedTitle?.resting ?? document.title, by: id }
+  document.title = `Time’s up · ${title}`
+}
+
 const TimerBody = ({
   item,
   now,
@@ -198,8 +234,17 @@ const TimerBody = ({
   const { running, endsAt, durationMs, chime } = item.settings
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
+  const finished = done && !running
   const apply = (settings: TimerWidget["settings"]) =>
     onWidgetChange?.({ ...item, settings })
+
+  // The title only speaks for a finish the card still shows, so a timer started again or reset from another tab gives it back without waiting for this one to be looked at.
+  // A run put back by a refused save hands the title back here, and its finish borrows it again only once the board has answered, which is always after this has run.
+  useEffect(() => {
+    if (!finished && borrowedTitle?.by === id) {
+      giveTitleBack()
+    }
+  }, [finished, id])
 
   // A running timer keeps its own timeout aimed at the finish rather than waiting for the page clock to notice, because the clock stops while the tab is hidden and a timer is mostly left to run while you are somewhere else.
   // It is one wake at the end, not a tick, so it costs a hidden tab nothing until then, and background throttling lands it within about a second.
@@ -221,16 +266,18 @@ const TimerBody = ({
       }
 
       // Another tab or device may have settled this run already, or started a new one, so only a finish the board takes is announced, once it has answered.
-      // The finish is only news as the timer ends: past that a chime would sound at someone already looking at the card (a tab opened later, the archive opened onto it, a computer woken from sleep), so the timer settles quietly.
+      // The finish is only news as the timer ends: past that a chime would sound at someone already looking at the card (a tab opened later, the archive opened onto it, a computer woken from sleep), and a tab woken hours later would report it in its title as if it had just happened, so the timer settles quietly.
       void onTimerFinish(id, endsAt).then((settled) => {
         if (!settled || late >= FINISH_GRACE_MS) {
           return
         }
 
-        // Whether to chime is taken from the board's answer rather than this render, which may not have caught up with a chime switched off in another tab.
+        // The chime and the name are taken from the board's answer rather than this render, which may not have caught up with a chime switched off or a rename made in another tab.
         if (settled.settings.chime) {
           playChimeOnce(`${id}:${endsAt}`, FINISH_GRACE_MS)
         }
+
+        showFinishInTitle(id, settled.title)
       })
     }
 

@@ -977,10 +977,11 @@ test("timer counts down to a finished state and resets", async ({
 })
 
 // A headless page never really goes into the background, so its visibility is taken over, and each oscillator the chime starts is counted.
-const watchTimerFinish = async (page: Page) => {
-  await page.addInitScript(() => {
+// `startHidden` has the page open in the background from its first frame.
+const watchTimerFinish = async (page: Page, { startHidden = false } = {}) => {
+  await page.addInitScript((hidden) => {
     const lab = window as unknown as { __hidden: boolean; __tones: number }
-    lab.__hidden = false
+    lab.__hidden = hidden
     lab.__tones = 0
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
@@ -991,7 +992,7 @@ const watchTimerFinish = async (page: Page) => {
       lab.__tones += 1
       return createOscillator.call(this)
     }
-  })
+  }, startHidden)
 
   return {
     setHidden: (hidden: boolean) =>
@@ -1022,6 +1023,8 @@ test("a timer finishes on time while its tab is in the background", async ({
   // Off to another tab: the page clock stops here, so the timer has to finish without it.
   await setHidden(true)
 
+  // The tab strip is all there is to see of a hidden tab, so the title says so.
+  await expect.poll(() => page.title()).toBe("Time’s up · Steep")
   // The chime is two notes, sounded once while the tab is still out of sight.
   await expect.poll(tones).toBe(2)
   expect(await page.evaluate(() => document.visibilityState)).toBe("hidden")
@@ -1030,18 +1033,20 @@ test("a timer finishes on time while its tab is in the background", async ({
     remainingMs: 0
   })
 
-  // Coming back shows the finish and does not chime a second time.
+  // Coming back gives the tab its title back, shows the finish, and does not chime a second time.
   await setHidden(false)
+  await expect(page).toHaveTitle("New Tab")
   await expect(cardByTitle(page, "Steep").getByText("Time’s up")).toBeVisible()
   expect(await tones()).toBe(2)
 })
 
-// A finish nobody was there for is old news by the time the card is seen, and a chime then would sound at someone who is already looking at it.
-test("a timer found long after its finish settles without a chime", async ({
+// A finish nobody was there for is old news by the time the card is seen: a chime then would sound at someone who is already looking at it, and a title would report it as fresh.
+test("a timer found long after its finish settles without a chime or a title", async ({
   page,
   extensionId
 }) => {
-  const { tones } = await watchTimerFinish(page)
+  // The tab opens in the background, where a finish that had only just happened would take its title.
+  const { setHidden, tones } = await watchTimerFinish(page, { startHidden: true })
 
   // Storage already holds both timers running as the tab opens, the way it does when no board was open at their finish, so this page is the first to find them.
   // Seeding from an open board instead would have that board settle them before the page being watched ever saw them.
@@ -1072,12 +1077,15 @@ test("a timer found long after its finish settles without a chime", async ({
   await page.goto(`chrome-extension://${extensionId}/newtab.html`)
 
   await expect(cardByTitle(page, "Laundry").getByText("Time’s up")).toBeVisible()
+  await expect.poll(() => readWidgetSettings(page, "Laundry")).toMatchObject({ running: false })
+  expect(await page.title()).toBe("New Tab")
+
   // The archived one is only seen, and so only settled, once the archive is opened onto it.
+  await setHidden(false)
   await page.getByRole("button", { name: "Show archived" }).click()
   await expect(cardByTitle(page, "Bread").getByText("Time’s up")).toBeVisible()
+  await expect.poll(() => readWidgetSettings(page, "Bread")).toMatchObject({ running: false })
 
-  expect(await readWidgetSettings(page, "Laundry")).toMatchObject({ running: false })
-  expect(await readWidgetSettings(page, "Bread")).toMatchObject({ running: false })
   expect(await tones()).toBe(0)
 })
 
