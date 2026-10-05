@@ -65,6 +65,30 @@ test("new tab page renders the default widgets and editing controls", async ({
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
+  // The kinds that keep time sit together, so a countdown and a timer are weighed side by side.
+  expect(
+    await page
+      .locator(".add-menu__panel > button")
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("aria-label"))
+      )
+  ).toEqual([
+    "Add clock",
+    "Add countdown",
+    "Add timer",
+    "Add stopwatch",
+    "Add note",
+    "Add todo",
+    "Add habit",
+    "Add quote"
+  ])
+  // A countdown runs to a date and a timer through a length of time, and their lines say which is which.
+  await expect(
+    page.getByRole("button", { name: "Add countdown" })
+  ).toHaveAccessibleDescription("Time left until a date")
+  await expect(
+    page.getByRole("button", { name: "Add timer" })
+  ).toHaveAccessibleDescription("A length of time, counted down")
 
   await openWidgetMenu(page, "🌅 Morning")
   await expect(

@@ -4,7 +4,7 @@
 [![Build status](https://img.shields.io/github/actions/workflow/status/danielchalmers/Dayboard/ci.yml?label=build)](https://github.com/danielchalmers/Dayboard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/danielchalmers/Dayboard/blob/main/LICENSE)
 
-Dayboard is a new tab page for Chrome and Edge. It replaces the blank tab with a board of small widgets (clocks, countdowns, notes, quotes, stopwatches, timers, habit trackers, todo lists) so a new tab can show the few things you want to keep an eye on.
+Dayboard is a new tab page for Chrome and Edge. It replaces the blank tab with a board of small widgets (clocks, countdowns, timers, stopwatches, notes, todo lists, habit trackers, quotes) so a new tab can show the few things you want to keep an eye on.
 
 It's a free, open-source browser extension. Everything is stored locally and it makes no network requests.
 
@@ -16,12 +16,12 @@ Add the widgets you want, edit them in place, and drag to rearrange them:
 
 - **Clock**: the current time in any time zone, in your system's 12- or 24-hour format.
 - **Countdown**: the time left until a date, written in plain language (for example, "5 days, 3 hours from now"). Give one a start date and it fills a progress bar instead. They can repeat hourly, daily, weekly, monthly, or yearly.
-- **Note**: a short sticky note.
-- **Quote**: cycles through a list of quotes you provide, either once a day or on every new tab.
-- **Stopwatch**: counts up, with start, pause, and reset.
 - **Timer**: counts down from a duration you set, with an optional chime when it reaches zero.
-- **Habit**: mark any day of the current week done and see it at a glance.
+- **Stopwatch**: counts up, with start, pause, and reset.
+- **Note**: a short sticky note.
 - **Todo**: four tasks you type onto the card and check off as you go.
+- **Habit**: mark any day of the current week done and see it at a glance.
+- **Quote**: cycles through a list of quotes you provide, either once a day or on every new tab.
 
 ## Install
 
