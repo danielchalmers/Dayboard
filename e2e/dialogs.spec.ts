@@ -117,6 +117,22 @@ test("typing replaces a new card's name", async ({ page, extensionId }) => {
   await expect(cardByTitle(page, "Tokyo", true)).toBeVisible()
 })
 
+test("typing replaces a timer's length part", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // Five minutes and a typed 25 must read 25 minutes, not 525 normalized to eight hours and change.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("minutes").click()
+  await page.keyboard.type("25")
+  await expect(page.getByLabel("minutes")).toHaveValue("25")
+  await expect(page.getByLabel("hours")).toHaveValue("0")
+
+  await page.keyboard.press("Tab")
+  await page.keyboard.type("30")
+  await expect(page.getByLabel("seconds")).toHaveValue("30")
+})
+
 test("an outside click the form refuses keeps focus on the field and Escape working", async ({
   page,
   extensionId

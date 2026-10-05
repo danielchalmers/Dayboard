@@ -388,6 +388,8 @@ export const ItemDialog = ({
                               event.currentTarget.valueAsNumber
                             )
                           }
+                          // Typing into a part replaces it, rather than adding digits to what was there and turning 5 minutes and a typed 25 into 525.
+                          onFocus={(event) => event.currentTarget.select()}
                           type="number"
                           value={msToParts(draft.settings.durationMs)[part]}
                         />

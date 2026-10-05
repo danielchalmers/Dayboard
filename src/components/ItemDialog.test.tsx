@@ -439,6 +439,20 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.durationMs).toBe(45_000)
   })
 
+  // Typed digits would otherwise join the ones already there, so a click into 5 minutes and a typed 25 read 525.
+  it("selects a length part as it takes focus, so typing replaces it", () => {
+    render(itemDialog({ item: timerItem }))
+
+    for (const part of ["hours", "minutes", "seconds"]) {
+      const field = screen.getByLabelText<HTMLInputElement>(part)
+      const select = vi.spyOn(field, "select")
+
+      fireEvent.focus(field)
+
+      expect(select).toHaveBeenCalledTimes(1)
+    }
+  })
+
   it("ignores clicks that land inside the dialog", () => {
     const onSave = vi.fn()
     const onClose = vi.fn()
