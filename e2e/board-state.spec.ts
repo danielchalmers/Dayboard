@@ -292,6 +292,38 @@ test.describe("a board saved too often", () => {
     ])
   })
 
+  // A short laptop screen fits the first-run board with no scroll to spare, so the notice lands over its bottom row.
+  test("keeps the bottom row of a board that fits a short screen within reach of the mouse under the notice, without moving the board", async ({
+    page,
+    extensionId
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await openNewTab(page, extensionId)
+    const firstCard = page.locator(".board-list .board-row").first()
+    const before = await boxOf(firstCard, "the first card before the notice")
+
+    await refuseNextWrite(page)
+    const markToday = cardByTitle(page, "🚶 Daily walk").getByRole("button", { name: "Mark today" })
+    await markToday.click()
+    const notice = page.locator(".board-notice[role=alert]")
+    await expect(notice).toContainText("too many changes in a row")
+
+    // The board stays where it was rather than making way for the notice.
+    expect((await boxOf(firstCard, "the first card with the notice up")).y).toBeCloseTo(before.y, 0)
+
+    // Scrolled as far as the page goes, the habit's button sits clear above the notice, so a click reaches it.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const button = await boxOf(markToday, "Mark today scrolled to the end")
+    const pinned = await boxOf(notice, "the notice")
+    expect(button.y + button.height).toBeLessThan(pinned.y)
+
+    await markToday.click()
+    await expect(notice).toHaveCount(0)
+    await expect(
+      cardByTitle(page, "🚶 Daily walk").getByRole("button", { name: /Done today/ })
+    ).toBeVisible()
+  })
+
   test("keeps a refused name in Options, says why there, and saves it on leaving the field", async ({
     page,
     extensionId

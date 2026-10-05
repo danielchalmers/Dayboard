@@ -136,6 +136,51 @@ test("keeps two columns between the phone layout and full-width ones", async ({
   expect(second.y).toBeGreaterThan(first.y + first.height)
 })
 
+test("fits the first-run board on a short laptop screen", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  const cards = page.locator(".board-list .board-row")
+  await expect(cards).toHaveCount(DEFAULT_BOARD_TITLES.length)
+
+  // A 1080p screen at 125% once the taskbar and the browser's own chrome are counted: the whole board fits with no scrollbar.
+  await page.setViewportSize({ width: 1536, height: 714 })
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollHeight <=
+        document.documentElement.clientHeight
+    )
+  ).toBe(true)
+
+  // A 1366x768 laptop: the page may scroll by its bottom padding, but every card is on screen, the habit's button included.
+  await page.setViewportSize({ width: 1366, height: 657 })
+  const lastCard = await boxOf(cards.last(), "the last card on a short screen")
+  expect(lastCard.y + lastCard.height).toBeLessThanOrEqual(657)
+  await expect(
+    cardByTitle(page, "🚶 Daily walk").getByRole("button", { name: "Mark today" })
+  ).toBeInViewport()
+
+  // The roomy board fits from 759px of height, so it keeps its full spacing there and only a pixel less tightens it.
+  const headerGap = async (height: number) => {
+    await page.setViewportSize({ width: 1440, height })
+    const header = await boxOf(page.locator(".page-header"), `the header at 1440x${height}`)
+    const first = await boxOf(cards.first(), `the first card at 1440x${height}`)
+    return first.y - (header.y + header.height)
+  }
+  const roomyGap = await headerGap(900)
+  expect(await headerGap(759)).toBeCloseTo(roomyGap, 0)
+  expect(await headerGap(758)).toBeLessThan(roomyGap)
+
+  // A phone's one column scrolls whatever the height, so a short phone keeps the spacing a tall one has.
+  await page.setViewportSize({ width: 375, height: 1000 })
+  const tallPhone = await boxOf(page.locator(".page-header"), "the header on a tall phone")
+  await page.setViewportSize({ width: 375, height: 667 })
+  const shortPhone = await boxOf(page.locator(".page-header"), "the header on a short phone")
+  expect(shortPhone.y).toBeCloseTo(tallPhone.y, 0)
+})
+
 test("keeps the board from shifting when a scrollbar appears", async ({
   page,
   extensionId

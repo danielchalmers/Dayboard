@@ -184,6 +184,31 @@ a {
   }
 }
 
+/* Two rows of cards with the full breathing room need 759px of height, and most laptops leave a new tab less than that once the taskbar and the browser's own chrome are counted: the second row slipped past the fold, pushed there by nothing but padding.
+   A short screen gets a tighter vertical rhythm instead, so the first-run board fits and centers again; the header keeps a little more room below it than the cards keep between them.
+   The board was never going to clear the omnibox suggestions on a screen that size anyway, and the phone layout is one tall column that scrolls regardless, so it keeps its own spacing.
+   The header is reached through the page so this outranks its own rule further down. */
+@media (max-height: 758px) and (min-width: 721px) {
+  .page {
+    padding-block: 28px 32px;
+  }
+
+  .page > .page-header {
+    margin-block-end: 36px;
+  }
+
+  /* A board that fits leaves no scroll to bring its bottom row out from under the notice pinned near the bottom of the window.
+     While a notice is up, a strip under the board lets the page scroll far enough to clear one at its tallest (two lines) by about a card gap.
+     The strip's negative margin gives back the room it takes, so it only adds scroll: a board with room to spare stays where it is rather than jumping up as a notice appears and back as it goes.
+     An archive's notice hidden behind a refused save's doesn't count. */
+  body:has(.board-notice:not([hidden] *)) .page::after {
+    block-size: 128px;
+    content: "";
+    display: block;
+    margin-block-end: -128px;
+  }
+}
+
 /* ── Page Header ───────────────────────────────────────────────────────── */
 
 .page-header {
