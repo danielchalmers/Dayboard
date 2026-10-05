@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures"
 import {
+  addWidget,
   boxOf,
   cardByTitle,
   DEFAULT_BOARD_TITLES,
@@ -51,6 +52,34 @@ test("canceling the delete dialog from the keyboard goes back to the card", asyn
   // The menu that opened the dialog is gone, so focus goes back to the card it was about rather than falling to the page.
   await page.keyboard.press("Escape")
   await expect(card).toBeFocused()
+})
+
+test("the delete dialog wraps a title that is one long word", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  const title = "Supercalifragilisticexpialidocious".repeat(2)
+  await addWidget(page, "note", title)
+
+  const card = cardByTitle(page, title)
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: `Delete ${title}` }).click()
+
+  // The line quotes the title, which ran out past the dialog's edge while it had nowhere to break.
+  const subtitle = page
+    .getByRole("dialog", { name: "Delete note?" })
+    .locator(".modal-dialog__subtitle")
+  await expect(subtitle).toContainText(title)
+
+  const width = await subtitle.evaluate((element) => ({
+    box: element.clientWidth,
+    text: element.scrollWidth
+  }))
+  expect(width.text).toBeLessThanOrEqual(width.box)
 })
 
 test("canceling an add discards it and the options backdrop closes", async ({

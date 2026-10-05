@@ -151,6 +151,51 @@ test("shows a time-aware greeting that can be personalized", async ({
   await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
 })
 
+test("a long name breaks inside the greeting rather than pushing the page sideways", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByLabel("Your name").fill("Wolfeschlegelsteinhausenbergerdorff")
+  await page.getByRole("button", { name: "Done" }).click()
+  await expect(page.locator(".page-header__greeting")).toHaveText(
+    /, Wolfeschlegelsteinhausenbergerdorff$/
+  )
+
+  // One word with nowhere to break once made the page twice the phone's width, with the header's buttons out past its edge.
+  const layout = await page.evaluate(() => ({
+    width: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth
+  }))
+  expect(layout.content).toBeLessThanOrEqual(layout.width)
+
+  const add = await boxOf(page.getByRole("button", { name: "Add widget" }), "the Add widget button")
+  expect(add.x + add.width).toBeLessThanOrEqual(layout.width)
+})
+
+test("the greeting shrinks with a window narrower than a phone", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  const fontSize = () =>
+    page
+      .locator(".page-header__greeting")
+      .evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
+
+  // A phone's width is where the greeting comes down to 2.1rem.
+  expect(await fontSize()).toBeCloseTo(33.6, 1)
+
+  // Narrower still, at 2.1rem an everyday name such as Bartholomew had no room beside the buttons and broke mid-word, so the greeting keeps shrinking in step with the window.
+  await page.setViewportSize({ width: 320, height: 844 })
+  await expect.poll(fontSize).toBeCloseTo((33.6 * 320) / 390, 1)
+})
+
 test("exports the board to a file and imports one back", async ({
   page,
   extensionId

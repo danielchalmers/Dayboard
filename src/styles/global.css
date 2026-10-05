@@ -198,11 +198,15 @@ a {
    Set in the plain text color: quiet confidence, no effects. */
 .page-header__greeting {
   color: var(--text);
-  font-size: clamp(2.1rem, 4vw, 2.8rem);
+  /* Narrower than a phone (390px, where 2.1rem is 8.62vw) the greeting shrinks in step with the window.
+     Beside two buttons that keep their size, an everyday name such as Bartholomew would otherwise have to break mid-word to fit. */
+  font-size: min(clamp(2.1rem, 4vw, 2.8rem), 8.62vw);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0;
+  /* A long name with nowhere to break would otherwise push the page sideways and the header's buttons off a narrow screen. */
+  overflow-wrap: anywhere;
 }
 
 .page-header__date {
@@ -1609,11 +1613,13 @@ body:has(.board-row--overlay) .board-notice {
   margin: 0;
 }
 
+/* The subtitle can quote a card's title, which may be one long word with nowhere to break, so it breaks anywhere rather than run past the dialog's edge. */
 .modal-dialog__subtitle {
   color: var(--muted);
   font-size: 0.98rem;
   margin: 10px 0 0;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .dialog-form {
