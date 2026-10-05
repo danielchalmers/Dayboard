@@ -10,19 +10,33 @@ import { WidgetIcon } from "~/components/WidgetIcon"
 import { useDayboardState } from "~/hooks/useDayboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting, getHeaderDate } from "~/lib/greeting"
-import { parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
+  isSameData,
+  parseDayboardState,
+  serializeDayboardState
+} from "~/lib/storage"
+import {
+  applyDialogEdit,
   archiveWidget,
   createWidget,
   moveActiveWidget,
   reorderWidgets,
   restoreWidget
 } from "~/lib/widgets"
-import type { Widget, WidgetKind } from "~/lib/types"
+import type { DayboardState, Widget, WidgetKind } from "~/lib/types"
 
 interface EditorState {
   mode: "add" | "edit"
   item: Widget
+  /** Why the last save from this dialog was refused. */
+  error?: string
+}
+
+interface ImportUndo {
+  /** The board the import replaced. */
+  previous: DayboardState
+  /** The board as it was imported. */
+  imported: DayboardState
 }
 
 // Leading icons for the card context menu.
@@ -114,6 +128,7 @@ export function NewTabPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(wantsSettingsView)
   const [showArchived, setShowArchived] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
 
   useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
@@ -133,13 +148,36 @@ export function NewTabPage() {
     return <ErrorView message={error || "Unable to load Dayboard"} />
   }
 
-  const saveItem = (item: Widget) => {
-    const nextWidgets =
-      editorState?.mode === "edit"
-        ? state.widgets.map((current) => (current.id === item.id ? item : current))
-        : [...state.widgets, item]
+  // An edit lands on the card as it is now (see applyDialogEdit), and a card deleted elsewhere while its dialog sat open stays deleted.
+  // The dialog waits for the write before it closes: when storage refuses it, the dialog stays open on everything typed into it and says why, instead of closing on a draft that is about to be rolled back.
+  // A write that lands late closes only the dialog its Save was pressed in, never one opened since, even for the same card.
+  const saveItem = async (item: Widget) => {
+    const opened = editorState?.item
+    const latest = state.widgets.find((current) => current.id === item.id)
+    const nextWidgets = latest
+      ? state.widgets.map((current) =>
+          current === latest ? applyDialogEdit(latest, item) : current
+        )
+      : editorState?.mode === "add"
+        ? [...state.widgets, item]
+        : null
+    const refused = nextWidgets ? await setWidgets(nextWidgets) : null
 
-    void setWidgets(nextWidgets)
+    setEditorState((current) =>
+      !current || current.item !== opened
+        ? current
+        : refused
+          ? { ...current, error: refused }
+          : null
+    )
+  }
+
+  // The dialog already said why its own save was refused, so closing it on that draft is the user letting the change go.
+  const closeEditor = () => {
+    if (editorState?.error) {
+      dismissSaveError()
+    }
+
     setEditorState(null)
   }
 
@@ -194,11 +232,17 @@ export function NewTabPage() {
     URL.revokeObjectURL(url)
   }
 
+  // An import replaces the whole board, the name included, so the board it replaced is kept for an Undo in the notice that follows rather than a confirmation asked up front.
   const importBoard = async (file: File) => {
     setImportError(null)
     try {
       const imported = parseDayboardState(await file.text())
-      await replaceState(imported)
+      const previous = state
+
+      if ((await replaceState(imported)) === null) {
+        setImportUndo({ previous, imported })
+      }
+
       setIsSettingsOpen(false)
     } catch (cause) {
       setImportError(
@@ -210,6 +254,17 @@ export function NewTabPage() {
   const closeSettings = () => {
     setIsSettingsOpen(false)
     setImportError(null)
+  }
+
+  // The undo is only offered while the board is still exactly what was imported: once anything has changed since, putting the old board back would quietly throw that change away too.
+  // The board is compared by what it holds, since a late echo of an earlier write can swap the board object out and back with nothing changed.
+  const canUndoImport =
+    importUndo !== null && isSameData(state, importUndo.imported)
+
+  const undoImport = async () => {
+    if (importUndo && (await replaceState(importUndo.previous)) === null) {
+      setImportUndo(null)
+    }
   }
 
   return (
@@ -459,11 +514,12 @@ export function NewTabPage() {
         </BoardDnd>
       </main>
       <ItemDialog
+        error={editorState?.error}
         isOpen={Boolean(editorState)}
         item={editorState?.item ?? null}
         mode={editorState?.mode ?? "add"}
-        onClose={() => setEditorState(null)}
-        onSave={saveItem}
+        onClose={closeEditor}
+        onSave={(item) => void saveItem(item)}
       />
       <DeleteDialog
         isOpen={Boolean(itemPendingDelete)}
@@ -480,7 +536,8 @@ export function NewTabPage() {
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
       />
-      {saveError ? (
+      {/* A refused dialog save is told inside the dialog, beside the draft it kept, rather than twice. */}
+      {saveError && !editorState?.error ? (
         <div className="board-notice" role="alert">
           <span className="board-notice__text">{saveError}</span>
           <button
@@ -490,6 +547,26 @@ export function NewTabPage() {
             type="button">
             Dismiss
           </button>
+        </div>
+      ) : null}
+      {/* A refused save outranks the import's undo for the one place a notice sits. */}
+      {!saveError && canUndoImport ? (
+        <div className="board-notice board-notice--quiet" role="status">
+          <span className="board-notice__text">Board imported.</span>
+          <span className="board-notice__actions">
+            <button
+              className="board-notice__action"
+              onClick={() => void undoImport()}
+              type="button">
+              Undo
+            </button>
+            <button
+              className="board-notice__dismiss"
+              onClick={() => setImportUndo(null)}
+              type="button">
+              Dismiss
+            </button>
+          </span>
         </div>
       ) : null}
     </>

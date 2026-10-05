@@ -1,4 +1,5 @@
 import { randomColorPreset } from "./colors"
+import { resetTimer } from "./timers"
 import {
   type ClockWidget,
   type CountdownWidget,
@@ -147,6 +148,49 @@ export const createWidget = <K extends WidgetKind>(
   kind: K,
   now = new Date()
 ): Extract<Widget, { kind: K }> => widgetRegistry[kind].createDefault(now)
+
+// The settings the Edit dialog has fields for, by kind.
+// A note's text, a habit's marks, a todo's tasks, and a stopwatch's run all change on the card itself, so those kinds bring nothing here.
+const dialogSettings = (draft: Widget): Partial<Widget["settings"]> => {
+  switch (draft.kind) {
+    case "clock":
+      return { timeZone: draft.settings.timeZone }
+    case "countdown":
+      return {
+        targetAt: draft.settings.targetAt,
+        startAt: draft.settings.startAt,
+        repeat: draft.settings.repeat
+      }
+    case "quote":
+      return { quotes: draft.settings.quotes, rotation: draft.settings.rotation }
+    case "timer":
+      return { durationMs: draft.settings.durationMs, chime: draft.settings.chime }
+    default:
+      return {}
+  }
+}
+
+// The Edit dialog takes a copy of the card when it opens, and the card goes on changing underneath it: the note gets typed in, a task ticked, a timer finishes, or another tab archives it.
+// So a save lays only what the dialog owns (the name, the color, and the fields it shows) over the card as it is now, rather than writing back the copy and undoing all of that.
+export const applyDialogEdit = (latest: Widget, draft: Widget): Widget => {
+  const edited = {
+    ...latest,
+    title: draft.title,
+    colorPreset: draft.colorPreset,
+    settings: { ...latest.settings, ...dialogSettings(draft) }
+  } as Widget
+
+  // A new length starts the timer over from it; a dialog that left the length alone leaves a running timer running.
+  if (
+    edited.kind === "timer" &&
+    latest.kind === "timer" &&
+    edited.settings.durationMs !== latest.settings.durationMs
+  ) {
+    return { ...edited, settings: resetTimer(edited.settings) }
+  }
+
+  return edited
+}
 
 export const moveWidgetToIndex = (
   widgets: Widget[],

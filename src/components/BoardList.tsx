@@ -19,7 +19,11 @@ import {
 } from "react"
 
 import { BOARD_DROP_ID } from "~/components/BoardDnd"
-import { BoardRow, BoardRowFallback } from "~/components/BoardRow"
+import {
+  BoardRow,
+  BoardRowFallback,
+  type WidgetChangeHandler
+} from "~/components/BoardRow"
 import { CardBoundary } from "~/components/CardBoundary"
 import { useNow } from "~/hooks/useNow"
 import { widgetClockGranularity } from "~/lib/clock"
@@ -30,7 +34,7 @@ interface BoardListProps {
   // Marks this list as the place archived cards land when dragged back: the grid highlights while a foreign card is in flight, and the empty state becomes a drop target of its own.
   restoreTarget?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: WidgetChangeHandler
 }
 
 // With no cards on the board there is no slot to aim an archived card at, so the empty-state placeholder itself doubles as the restore target while a drag is under way.
@@ -306,7 +310,7 @@ interface SortableBoardRowProps {
   prefersReducedMotion: boolean
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number) => void
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: WidgetChangeHandler
 }
 
 // Every prop below is stable across a clock tick, so React's shallow compare is the whole memo: a row renders when its own widget, menu state, or callbacks change, and otherwise only when its own clock subscription fires.

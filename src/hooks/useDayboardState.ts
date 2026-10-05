@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
+  isSameData,
   readCachedDayboardState,
   readDayboardState,
   shareUnchanged,
@@ -9,16 +10,36 @@ import {
 } from "~/lib/storage"
 import type { DayboardSettings, DayboardState, Widget } from "~/lib/types"
 
+// Each change resolves to why storage refused it, or null once it is saved (or there was nothing to save), so whatever the user typed for it can be held on to until it lands.
+type Save<T> = (value: T) => Promise<string | null>
+
 interface UseDayboardStateResult {
   state: DayboardState | null
   isLoading: boolean
   error: string | null
-  setWidgets: (widgets: Widget[]) => Promise<void>
-  setSettings: (settings: DayboardSettings) => Promise<void>
-  updateWidget: (widget: Widget) => Promise<void>
-  replaceState: (state: DayboardState) => Promise<void>
+  setWidgets: Save<Widget[]>
+  setSettings: Save<DayboardSettings>
+  updateWidget: Save<Widget>
+  replaceState: Save<DayboardState>
   saveError: string | null
   dismissSaveError: () => void
+}
+
+// chrome.storage.sync refuses a write for two reasons worth telling apart, because they ask opposite things of the user: a board grown past what one sync item holds needs something shortened, while a burst of writes only needs a moment.
+// The message is the only place Chrome says which quota it hit, as in "Resource::kQuotaBytesPerItem quota exceeded" or "This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota".
+// A wording it doesn't recognise gets no guess at a cause, since a wrong one sends the user off shortening notes for nothing.
+export const describeSaveError = (cause: unknown): string => {
+  const message = cause instanceof Error ? cause.message : String(cause)
+
+  if (/quota_?bytes/i.test(message)) {
+    return "Couldn’t save — that’s more than browser sync can hold. Try shortening a long note or list."
+  }
+
+  if (/write_?operations/i.test(message)) {
+    return "Couldn’t save — too many changes in a row. Give it a moment, then try again."
+  }
+
+  return "Couldn’t save that change. Try again in a moment."
 }
 
 export const useDayboardState = (): UseDayboardStateResult => {
@@ -31,6 +52,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
   // The latest board, for the callbacks below to build on without depending on it.
   // It moves the moment a change is made rather than on the next render: two changes in one tick (two timers finishing together) would otherwise both start from the board before either, and the second would write the first one back out.
   const stateRef = useRef(state)
+
+  // Notes still showing words storage refused, by id.
+  // Every other card shows what the board rolled back to, but a note keeps refused words on screen (see NoteField), so the notice stays up until each of them has saved or let its words go rather than going at the first unrelated save that lands.
+  const heldRef = useRef(new Set<string>())
 
   const commit = useCallback((next: DayboardState) => {
     stateRef.current = next
@@ -83,11 +108,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
     async (nextState: DayboardState) => {
       const previous = stateRef.current
       commit(nextState)
-      setSaveError(null)
 
       try {
         await writeDayboardState(nextState)
-      } catch {
+      } catch (cause) {
         // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit), so put the board back to what storage holds and surface a calm notice instead of silently diverging.
         // Storage is asked rather than the board from before this change being restored, because a later change made while this write was in flight may have landed, and restoring the snapshot would take it off the screen while it sits in storage.
         let restored = previous
@@ -102,23 +126,39 @@ export const useDayboardState = (): UseDayboardStateResult => {
           adopt(restored)
         }
 
-        setSaveError("Couldn’t save — this board may be too large to sync.")
+        const reason = describeSaveError(cause)
+        setSaveError(reason)
+        return reason
       }
+
+      // The notice stays up until something actually saves, rather than blinking off at the start of every attempt, a retry refused again included.
+      if (heldRef.current.size === 0) {
+        setSaveError(null)
+      }
+
+      return null
     },
     [adopt, commit]
   )
 
   const dismissSaveError = useCallback(() => setSaveError(null), [])
 
+  // A note's refused words have saved, or there is nothing left of them to save, so the notice goes once no other note holds any.
+  const release = useCallback((id: string) => {
+    if (heldRef.current.delete(id) && heldRef.current.size === 0) {
+      setSaveError(null)
+    }
+  }, [])
+
   // Read state through the ref so these stay referentially stable across renders, which lets the memoized board rows skip unrelated re-renders.
   const setWidgets = useCallback(
     async (widgets: Widget[]) => {
       const current = stateRef.current
       if (!current) {
-        return
+        return null
       }
 
-      await saveState({ ...current, widgets })
+      return saveState({ ...current, widgets })
     },
     [saveState]
   )
@@ -127,10 +167,10 @@ export const useDayboardState = (): UseDayboardStateResult => {
     async (settings: DayboardSettings) => {
       const current = stateRef.current
       if (!current) {
-        return
+        return null
       }
 
-      await saveState({ ...current, settings })
+      return saveState({ ...current, settings })
     },
     [saveState]
   )
@@ -138,20 +178,34 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const updateWidget = useCallback(
     async (widget: Widget) => {
       const current = stateRef.current
+      const existing = current?.widgets.find((candidate) => candidate.id === widget.id)
 
-      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), and writing the board back unchanged would only spend sync quota.
-      if (!current?.widgets.some((existing) => existing.id === widget.id)) {
-        return
+      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), or one that leaves it as it is (a note typed back to what it held), and writing the board back unchanged would only spend sync quota.
+      if (!current || !existing || isSameData(existing.settings, widget.settings)) {
+        release(widget.id)
+        return null
       }
 
-      await saveState({
+      // A card only ever changes its own settings, so those are laid over the card as it stands.
+      // A note offers refused words again from the copy it last rendered, even as it unmounts on being archived, and writing that whole copy back would undo the archive.
+      const refused = await saveState({
         ...current,
-        widgets: current.widgets.map((existing) =>
-          existing.id === widget.id ? widget : existing
+        widgets: current.widgets.map((candidate) =>
+          candidate === existing
+            ? ({ ...existing, settings: widget.settings } as Widget)
+            : candidate
         )
       })
+
+      if (!refused) {
+        release(widget.id)
+      } else if (widget.kind === "note") {
+        heldRef.current.add(widget.id)
+      }
+
+      return refused
     },
-    [saveState]
+    [release, saveState]
   )
 
   return {

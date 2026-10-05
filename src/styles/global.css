@@ -1392,6 +1392,18 @@ select:focus {
   font-weight: 500;
 }
 
+/* A notice about something done rather than something wrong, such as an import, drops the danger tint. */
+.board-notice--quiet {
+  border-color: var(--line-strong);
+}
+
+.board-notice__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.board-notice__action,
 .board-notice__dismiss {
   border-radius: var(--radius-sm);
   color: var(--muted);
@@ -1402,6 +1414,12 @@ select:focus {
   padding: 0 12px;
 }
 
+/* The way back is the one thing the notice is there to offer, so it reads a step stronger than Dismiss. */
+.board-notice__action {
+  color: var(--text);
+}
+
+.board-notice__action:hover,
 .board-notice__dismiss:hover {
   background: var(--surface-strong);
   color: var(--text);

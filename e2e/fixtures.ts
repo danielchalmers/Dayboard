@@ -108,7 +108,7 @@ export const test = base.extend<
       }
 
       const notice = await page
-        .getByText("this board may be too large to sync")
+        .getByText(/Couldn’t save/)
         .count()
         .catch(() => 0)
 

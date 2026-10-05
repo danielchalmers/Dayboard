@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  applyDialogEdit,
   archiveWidget,
   createWidget as createActualWidget,
   moveActiveWidget,
@@ -247,5 +248,83 @@ describe("archiveWidget / restoreWidget", () => {
     expect(
       restoreWidget(archived, "gamma", "beta").map((widget) => widget.id)
     ).toEqual(["alpha", "gamma", "beta"])
+  })
+})
+
+describe("applyDialogEdit", () => {
+  const timer: Widget = {
+    id: "tea",
+    kind: "timer",
+    title: "Tea",
+    colorPreset: "teal",
+    settings: { durationMs: 180_000, running: true, remainingMs: 180_000, endsAt: 40_000, chime: true }
+  }
+
+  it("lays the dialog's fields over the card as it is now, not as it was when the dialog opened", () => {
+    // Opened on an empty list and renamed; meanwhile another tab ticked a task and archived the card.
+    const opened: Widget = {
+      id: "today",
+      kind: "todo",
+      title: "Today",
+      colorPreset: "mint",
+      settings: { tasks: [] }
+    }
+    const latest: Widget = {
+      ...opened,
+      archived: true,
+      settings: { tasks: [{ id: "a", text: "Call Sam", done: true }] }
+    }
+
+    expect(
+      applyDialogEdit(latest, { ...opened, title: "Errands", colorPreset: "rose" })
+    ).toEqual({ ...latest, title: "Errands", colorPreset: "rose" })
+  })
+
+  it("takes the settings the dialog has fields for", () => {
+    const countdown: Widget = {
+      id: "launch",
+      kind: "countdown",
+      title: "Launch",
+      colorPreset: "indigo",
+      settings: { targetAt: "2026-12-01T09:00:00.000Z", startAt: "2026-11-01T09:00:00.000Z" }
+    }
+    const draft: Widget = {
+      ...countdown,
+      settings: { targetAt: "2027-01-01T09:00:00.000Z", repeat: "yearly" }
+    }
+
+    // Clearing the start in the dialog clears it on the card.
+    expect(applyDialogEdit(countdown, draft).settings).toEqual({
+      targetAt: "2027-01-01T09:00:00.000Z",
+      repeat: "yearly"
+    })
+  })
+
+  it("leaves a timer that finished behind the dialog finished when its length didn't change", () => {
+    const finished: Widget = {
+      ...timer,
+      settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
+    }
+
+    // The draft still holds the run from when the dialog opened; writing that back would set the timer running into the past to finish, and chime, all over again.
+    expect(applyDialogEdit(finished, { ...timer, title: "Green tea" })).toEqual({
+      ...finished,
+      title: "Green tea"
+    })
+  })
+
+  it("starts a timer over when the dialog gave it a new length", () => {
+    const draft: Widget = {
+      ...timer,
+      settings: { ...timer.settings, durationMs: 300_000, chime: false }
+    }
+
+    expect(applyDialogEdit(timer, draft).settings).toEqual({
+      durationMs: 300_000,
+      running: false,
+      remainingMs: 300_000,
+      endsAt: null,
+      chime: false
+    })
   })
 })

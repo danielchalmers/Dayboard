@@ -91,4 +91,10 @@ describe("normalizeTasks", () => {
       MAX_TASKS
     )
   })
+
+  it("keeps what a newer build stores on a task", () => {
+    expect(
+      normalizeTasks([{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }])
+    ).toEqual([{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }])
+  })
 })

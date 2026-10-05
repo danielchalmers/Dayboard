@@ -28,6 +28,8 @@ export const addWidget = async (page: Page, kind: string, title: string) => {
   await page.getByRole("button", { name: `Add ${kind}` }).click()
   await page.getByLabel("Name").fill(title)
   await page.getByRole("button", { name: `Save ${kind}` }).click()
+  // Save closes the dialog once its write lands, so wait for that before the caller reaches for the board.
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
 }
 
 // Right-clicks the card, which opens its menu under the cursor.

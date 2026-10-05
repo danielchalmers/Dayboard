@@ -6,6 +6,7 @@ import {
   type CountdownWidget,
   type DayboardSettings,
   type DayboardState,
+  type UnknownWidget,
   type Widget
 } from "./types"
 import { normalizeHistory } from "./habit"
@@ -20,24 +21,30 @@ const hasWidgets = (value: unknown): value is { widgets: unknown[] } =>
   value !== null &&
   Array.isArray((value as { widgets?: unknown }).widgets)
 
-// Keep only entries that look like widgets of a known kind, so a hand-edited or imported file with junk rows renders the valid widgets instead of blank cards.
+type StoredWidget = UnknownWidget["widget"]
+
+// Keep only entries that look like widgets, so a hand-edited or imported file with junk rows renders the valid widgets instead of blank cards.
 // A settings object has to be among them: normalization and the cards both read straight through it, so an entry missing one throws on the way in and takes the whole board with it rather than being dropped like the rest of the junk.
-const isValidWidget = (value: unknown): value is Widget =>
+const isWidgetShaped = (value: unknown): value is StoredWidget =>
   typeof value === "object" &&
   value !== null &&
-  typeof (value as Widget).id === "string" &&
-  // An own key, not `in`: the registry is a plain object, so `in` also lets through kinds such as "toString" off its prototype.
-  Object.hasOwn(widgetRegistry, (value as Widget).kind) &&
-  typeof (value as Widget).settings === "object" &&
-  (value as Widget).settings !== null
+  typeof (value as StoredWidget).id === "string" &&
+  typeof (value as StoredWidget).kind === "string" &&
+  typeof (value as StoredWidget).settings === "object" &&
+  (value as StoredWidget).settings !== null
 
-// Fill any missing or malformed fields with their defaults so a partial or hand-edited imported board still loads cleanly.
+// An own key, not `in`: the registry is a plain object, so `in` also lets through kinds such as "toString" off its prototype.
+const isKnownWidget = (widget: StoredWidget): widget is Widget =>
+  Object.hasOwn(widgetRegistry, widget.kind)
+
+// Fill any missing or malformed fields with their defaults so a partial or hand-edited imported board still loads cleanly, and carry the rest through for the version that wrote them.
 const normalizeSettings = (value: unknown): DayboardSettings => {
-  const stored = (typeof value === "object" && value !== null
+  const stored = (typeof value === "object" && value !== null && !Array.isArray(value)
     ? value
     : {}) as Partial<DayboardSettings>
 
   return {
+    ...stored,
     name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name
   }
 }
@@ -81,6 +88,7 @@ const normalizeCountdown = ({
 // So each field a card reads is checked here and falls back to what a new card starts with, while fields this build doesn't know are carried through untouched for the version that wrote them.
 // Habit history is pruned to the visible week: it was once stored unbounded, which after a year or two blew the sync per-item quota and made every save fail.
 // Todo lists are held to the same limits the card enforces, so an imported file cannot arrive carrying more than a board can save.
+// Neither rebuilds the settings around that one field, though: an older build that did would strip whatever a newer one keeps beside it the first time it saved.
 const normalizeWidgetSettings = (
   kind: Widget["kind"],
   settings: StoredSettings
@@ -124,9 +132,9 @@ const normalizeWidgetSettings = (
       }
     }
     case "habit":
-      return { history: normalizeHistory(settings.history) }
+      return { ...settings, history: normalizeHistory(settings.history) }
     case "todo":
-      return { tasks: normalizeTasks(settings.tasks) }
+      return { ...settings, tasks: normalizeTasks(settings.tasks) }
   }
 }
 
@@ -145,7 +153,7 @@ const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
   }) as Widget
 
 // A widget whose id repeats one already seen is dropped: the board keys cards and routes edits by id, so a second card under the same one would render twice and take the first one's edits.
-const uniqueIds = (widgets: Widget[]): Widget[] => {
+const uniqueIds = (widgets: StoredWidget[]): StoredWidget[] => {
   const seen = new Set<string>()
 
   return widgets.filter((widget) => {
@@ -158,19 +166,46 @@ const uniqueIds = (widgets: Widget[]): Widget[] => {
   })
 }
 
+// A kind this build doesn't know is a card a newer Dayboard made on another synced device, not junk.
+// It stays off the board, since there is nothing here that can draw it, but it is set aside with its place in the list rather than dropped: the whole board is written back on every save, so dropping it would delete it from every device the first time this one saved anything.
 const normalizeState = (value: unknown): DayboardState => {
   if (!hasWidgets(value)) {
     return createDefaultState()
   }
 
+  const widgets: Widget[] = []
+  const unknownWidgets: UnknownWidget[] = []
+
+  uniqueIds(value.widgets.filter(isWidgetShaped)).forEach((widget, index) => {
+    if (isKnownWidget(widget)) {
+      widgets.push(normalizeWidget(widget))
+    } else {
+      unknownWidgets.push({ index, widget })
+    }
+  })
+
   return {
-    widgets: uniqueIds(value.widgets.filter(isValidWidget)).map(normalizeWidget),
-    settings: normalizeSettings((value as { settings?: unknown }).settings)
+    widgets,
+    settings: normalizeSettings((value as { settings?: unknown }).settings),
+    ...(unknownWidgets.length > 0 ? { unknownWidgets } : {})
   }
 }
 
+// The board as storage and an exported file hold it: one list of cards, with any this build can't show put back where they were.
+// The places are where they stood when last read, so once the board around them has changed they are near where they were rather than exact, which is all a card this build never shows needs.
+const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
+  if (!unknownWidgets) {
+    return state
+  }
+
+  const widgets: (Widget | StoredWidget)[] = [...state.widgets]
+  unknownWidgets.forEach(({ index, widget }) => widgets.splice(index, 0, widget))
+
+  return { ...state, widgets }
+}
+
 // Structural equality over plain JSON data, blind to key order, which differs between a widget built in the page and the same widget read back out of storage.
-const isSameData = (a: unknown, b: unknown): boolean => {
+export const isSameData = (a: unknown, b: unknown): boolean => {
   if (a === b) {
     return true
   }
@@ -213,20 +248,27 @@ export const shareUnchanged = (
   const settings = isSameData(previous.settings, next.settings)
     ? previous.settings
     : next.settings
+  // A card only a newer build can show still changes when that build edits it, and this tab has to take the change, or its next save would put the old card back.
+  const unknownWidgets = isSameData(previous.unknownWidgets, next.unknownWidgets)
+    ? previous.unknownWidgets
+    : next.unknownWidgets
 
   const isUnchanged =
     settings === previous.settings &&
+    unknownWidgets === previous.unknownWidgets &&
     widgets.length === previous.widgets.length &&
     widgets.every((widget, index) => widget === previous.widgets[index])
 
-  return isUnchanged ? previous : { widgets, settings }
+  return isUnchanged
+    ? previous
+    : { widgets, settings, ...(unknownWidgets ? { unknownWidgets } : {}) }
 }
 
 // chrome.storage.sync reads are async IPC, so every new tab would open blank for a few frames while waiting on them.
 // Mirroring the last-known board into localStorage lets the first render hydrate synchronously; the authoritative sync read then reconciles anything that changed on another device.
 const cacheDayboardState = (state: DayboardState) => {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(state))
+    localStorage.setItem(CACHE_KEY, JSON.stringify(toStoredState(state)))
   } catch {
     // Best effort: an unavailable or full localStorage only costs speed.
   }
@@ -253,7 +295,7 @@ export const readDayboardState = async (): Promise<DayboardState> => {
 
 // Pretty-printed JSON for the Export option.
 export const serializeDayboardState = (state: DayboardState): string =>
-  JSON.stringify(state, null, 2)
+  JSON.stringify(toStoredState(state), null, 2)
 
 const NOT_A_BOARD = "That file is not a Dayboard board."
 
@@ -272,13 +314,17 @@ export const parseDayboardState = (text: string): DayboardState => {
     throw new Error(NOT_A_BOARD)
   }
 
-  return normalizeState(parsed)
+  // A file is one the user chose to bring in, often by hand, so a kind this build doesn't know there is likelier a typo than a card from a newer build.
+  // It is dropped as junk, as it always was, rather than kept somewhere nobody could see or remove it; only a synced board carries such cards, since there a newer device is still using them.
+  const { unknownWidgets: _unshown, ...board } = normalizeState(parsed)
+
+  return board
 }
 
 export const writeDayboardState = async (
   state: DayboardState
 ): Promise<void> => {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: state })
+  await chrome.storage.sync.set({ [STORAGE_KEY]: toStoredState(state) })
   cacheDayboardState(state)
 }
 

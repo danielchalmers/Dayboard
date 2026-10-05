@@ -245,6 +245,33 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.rotation).toBe("daily")
   })
 
+  // The page keeps the dialog open when storage refuses its save, so what was typed has to survive the error arriving and the dialog has to say why.
+  it("keeps the draft and says why when its save was refused", () => {
+    const onSave = vi.fn()
+    const { rerender } = render(itemDialog({ item: quoteItem, onSave }))
+    const pasted = "Begin where you are.\nQuiet days still count."
+
+    fireEvent.change(screen.getByLabelText("Quotes (one per line)"), {
+      target: { value: pasted }
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+    rerender(itemDialog({ item: quoteItem, onSave, error: "Couldn’t save — too big." }))
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn’t save — too big.")
+    expect(screen.getByLabelText("Quotes (one per line)")).toHaveValue(pasted)
+  })
+
+  // A save from the backdrop can be refused and leave the dialog open, and Escape only reaches it while focus is still inside.
+  it("keeps focus where it was when the backdrop is pressed", () => {
+    render(itemDialog())
+
+    const backdrop = document.querySelector(".modal-backdrop") as HTMLElement
+
+    // A cancelled mousedown is what stops the browser moving focus to the page behind.
+    expect(fireEvent.mouseDown(backdrop)).toBe(false)
+    expect(fireEvent.mouseDown(screen.getByLabelText("Name"))).toBe(true)
+  })
+
   it("changes a quote's rotation without disturbing its list", () => {
     const onSave = vi.fn()
 

@@ -34,6 +34,7 @@ export const removeTask = (tasks: TodoTask[], id: string): TodoTask[] =>
   tasks.filter((task) => task.id !== id)
 
 // Accept whatever a stored or imported board carries: drop rows that aren't tasks and hold the rest to the same limits the card enforces.
+// Anything else a task carries is left on it for the version that wrote it.
 export const normalizeTasks = (value: unknown): TodoTask[] =>
   (Array.isArray(value) ? value : [])
     .filter(
@@ -43,8 +44,8 @@ export const normalizeTasks = (value: unknown): TodoTask[] =>
         cleanText(entry.text) !== ""
     )
     .slice(0, MAX_TASKS)
-    .map(({ id, text, done }) => ({
-      id,
-      text: cleanText(text),
-      done: done === true
+    .map((task) => ({
+      ...task,
+      text: cleanText(task.text),
+      done: task.done === true
     }))
