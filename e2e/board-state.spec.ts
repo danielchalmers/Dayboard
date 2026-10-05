@@ -171,9 +171,9 @@ test.describe("a board too large to sync", () => {
     const notice = page.getByRole("alert")
     await expect(notice).toContainText("more than browser sync can hold")
 
-    await openWidgetMenu(page, "🌅 Tomorrow morning")
-    await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
-    await expect(cardByTitle(page, "🌅 Tomorrow morning")).toHaveCount(0)
+    await openWidgetMenu(page, "🌅 Morning")
+    await page.getByRole("menuitem", { name: "Archive 🌅 Morning" }).click()
+    await expect(cardByTitle(page, "🌅 Morning")).toHaveCount(0)
 
     await expect(notice).toContainText("more than browser sync can hold")
     await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
@@ -252,8 +252,8 @@ test.describe("a board saved too often", () => {
     const notice = page.getByRole("alert")
     await expect(notice).toContainText("too many changes in a row")
 
-    await openWidgetMenu(page, "🌅 Tomorrow morning")
-    await page.getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" }).click()
+    await openWidgetMenu(page, "🌅 Morning")
+    await page.getByRole("menuitem", { name: "Archive 🌅 Morning" }).click()
 
     await expect(notice).toHaveCount(0)
     await page.getByRole("status").getByRole("button", { name: "Undo" }).click()

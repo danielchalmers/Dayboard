@@ -236,6 +236,29 @@ describe("BoardRow", () => {
     )
   })
 
+  it("keeps a repeating bar complete between one span and the next", () => {
+    const item: Widget = {
+      id: "workday",
+      kind: "countdown",
+      title: "Workday",
+      colorPreset: "sky",
+      settings: {
+        startAt: new Date(2026, 5, 17, 9, 0, 0).toISOString(),
+        targetAt: new Date(2026, 5, 17, 17, 0, 0).toISOString(),
+        repeat: "daily"
+      }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2026, 5, 19, 22, 0, 0)} />
+    )
+
+    expect(screen.getByText("100%")).toBeInTheDocument()
+    expect(container.querySelector(".board-row__meta")).toHaveTextContent(
+      "Complete"
+    )
+  })
+
   it("splits a passed countdown into the span and an ago line", () => {
     const item: Widget = {
       id: "shipped",
@@ -254,6 +277,46 @@ describe("BoardRow", () => {
       "2 days"
     )
     expect(container.querySelector(".board-row__meta")).toHaveTextContent("ago")
+  })
+
+  it("reads a date as Today on the day itself, under the date alone", () => {
+    const item: Widget = {
+      id: "birthday",
+      kind: "countdown",
+      title: "Birthday",
+      colorPreset: "rose",
+      settings: { targetAt: new Date(2025, 11, 25).toISOString(), repeat: "yearly" }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2026, 11, 25, 15, 0, 0)} />
+    )
+
+    expect(container.querySelector(".board-row__value")).toHaveTextContent("Today")
+    // "Today" already says everything, so there is no "from now" or "ago" to add.
+    expect(container.querySelector(".board-row__meta")).toBeNull()
+    expect(container.querySelector(".board-row__detail")).toHaveTextContent(
+      /^Fri, Dec 25 · repeats yearly$/
+    )
+  })
+
+  it("writes a countdown's date against the card's clock, with no time on a date", () => {
+    const item: Widget = {
+      id: "retirement",
+      kind: "countdown",
+      title: "Retirement",
+      colorPreset: "sky",
+      settings: { targetAt: new Date(2056, 9, 6).toISOString() }
+    }
+
+    const { container } = render(
+      <BoardRow item={item} now={new Date(2056, 0, 2, 9, 0, 0)} />
+    )
+
+    // The card's own now is in 2056, so the year is this one and stays off; read against the real clock it would show.
+    expect(container.querySelector(".board-row__detail")).toHaveTextContent(
+      /^Fri, Oct 6$/
+    )
   })
 
   // The habit tests all want the same card and differ only in which days are already marked; unlike the other kinds, none of them assert on the title or the preset.

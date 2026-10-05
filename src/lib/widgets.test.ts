@@ -48,15 +48,15 @@ describe("createWidget", () => {
     expect(createActualWidget("clock").settings.timeZone).toBe("")
   })
 
-  it("leaves a new countdown's start empty, so the card shows time remaining", () => {
+  it("leaves a new countdown's start empty and points it at tomorrow", () => {
     const now = new Date(2026, 5, 19, 12, 34, 0)
     const countdown = createActualWidget("countdown", now)
 
     // A start is what makes the card a progress bar, and that is opt-in from the dialog's Starting from field rather than pre-filled.
     expect(countdown.settings.startAt).toBeUndefined()
-    // The target defaults to the top of the coming hour.
+    // The target defaults to the start of tomorrow, a date, so picking another day in the dialog keeps it a date.
     expect(countdown.settings.targetAt).toBe(
-      new Date(2026, 5, 19, 13, 0, 0).toISOString()
+      new Date(2026, 5, 20, 0, 0, 0).toISOString()
     )
   })
 })

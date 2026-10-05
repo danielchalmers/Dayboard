@@ -138,6 +138,29 @@ const normalizeWidgetSettings = (
   }
 }
 
+// The first-run "This year" card used to be saved as that one year's span with no repeat, so from New Year's Day it sat at Complete for good.
+// It starts out repeating yearly now; a board saved with the old card, its span still the calendar year it was made in, reads as that too.
+const renewFirstRunYear = (widget: Widget): Widget => {
+  if (
+    widget.id !== "year-progress" ||
+    widget.kind !== "countdown" ||
+    widget.settings.repeat !== undefined ||
+    !widget.settings.startAt
+  ) {
+    return widget
+  }
+
+  const start = new Date(widget.settings.startAt)
+  const isCalendarYear =
+    start.getTime() === new Date(start.getFullYear(), 0, 1).getTime() &&
+    new Date(widget.settings.targetAt).getTime() ===
+      new Date(start.getFullYear() + 1, 0, 1).getTime()
+
+  return isCalendarYear
+    ? { ...widget, settings: { ...widget.settings, repeat: "yearly" } }
+    : widget
+}
+
 const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
   ({
     ...widget,
@@ -178,7 +201,7 @@ const normalizeState = (value: unknown): DayboardState => {
 
   uniqueIds(value.widgets.filter(isWidgetShaped)).forEach((widget, index) => {
     if (isKnownWidget(widget)) {
-      widgets.push(normalizeWidget(widget))
+      widgets.push(renewFirstRunYear(normalizeWidget(widget)))
     } else {
       unknownWidgets.push({ index, widget })
     }

@@ -761,7 +761,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     item.settings.repeat && item.settings.repeat !== "none"
       ? ` · repeats ${item.settings.repeat}`
       : ""
-  const countdownDetail = `${formatCountdownTarget(countdownItem)}${repeatLabel}`
+  const countdownDetail = `${formatCountdownTarget(countdownItem, now)}${repeatLabel}`
 
   const countdown = getCountdownParts(countdownItem, now)
 
@@ -793,16 +793,17 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     )
   }
 
+  // "right now" and "Today" already say everything, so they go without a "from now" or "ago" line.
   const value =
     countdown.status === "due"
       ? "right now"
       : countdown.label.replace(/ (from now|ago)$/, "")
   const context =
-    countdown.status === "due"
-      ? ""
-      : countdown.label.endsWith("ago")
+    countdown.status === "future"
+      ? "from now"
+      : countdown.status === "past"
         ? "ago"
-        : "from now"
+        : ""
 
   return (
     <CardShell {...shell} detail={countdownDetail} ref={ref}>

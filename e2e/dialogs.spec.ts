@@ -15,25 +15,25 @@ test("canceling the delete dialog keeps the widget", async ({
 
   const dialog = page.getByRole("dialog", { name: "Delete countdown?" })
 
-  await openWidgetMenu(page, "🌅 Tomorrow morning")
-  await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).click()
+  await openWidgetMenu(page, "🌅 Morning")
+  await page.getByRole("menuitem", { name: "Delete 🌅 Morning" }).click()
   await expect(dialog).toBeVisible()
 
   await page.getByRole("button", { name: "Cancel" }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
+  await expect(cardByTitle(page, "🌅 Morning")).toBeVisible()
   // A pointer user has no place on the board to keep, so the card is not handed a focus that the next Space would turn into a drag.
-  await expect(cardByTitle(page, "🌅 Tomorrow morning")).not.toBeFocused()
+  await expect(cardByTitle(page, "🌅 Morning")).not.toBeFocused()
 
   // The three dialogs treat the backdrop differently on purpose, and this is the one where dismissing has to mean "no".
   // The edit dialog commits a change from its backdrop; a destructive dialog that did the same would delete a widget the user only clicked away from.
-  await openWidgetMenu(page, "🌅 Tomorrow morning")
-  await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).click()
+  await openWidgetMenu(page, "🌅 Morning")
+  await page.getByRole("menuitem", { name: "Delete 🌅 Morning" }).click()
   await expect(dialog).toBeVisible()
 
   await page.mouse.click(8, 8)
   await expect(dialog).toHaveCount(0)
-  await expect(cardByTitle(page, "🌅 Tomorrow morning")).toBeVisible()
+  await expect(cardByTitle(page, "🌅 Morning")).toBeVisible()
 })
 
 test("canceling the delete dialog from the keyboard goes back to the card", async ({
@@ -42,10 +42,10 @@ test("canceling the delete dialog from the keyboard goes back to the card", asyn
 }) => {
   await openNewTab(page, extensionId)
 
-  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  const card = cardByTitle(page, "🌅 Morning")
   await card.focus()
   await card.press("ContextMenu")
-  await page.getByRole("menuitem", { name: "Delete 🌅 Tomorrow morning" }).press("Enter")
+  await page.getByRole("menuitem", { name: "Delete 🌅 Morning" }).press("Enter")
   await expect(page.getByRole("dialog", { name: "Delete countdown?" })).toBeVisible()
 
   // The menu that opened the dialog is gone, so focus goes back to the card it was about rather than falling to the page.
@@ -107,6 +107,38 @@ test("clicking away from an add only keeps it once something was changed", async
   await expect(cards).toHaveCount(before + 1)
 })
 
+test("clicking away from an untouched edit leaves a change from another tab alone", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  // Past 9 AM the morning card is still stored by today's 9 AM, so its dialog opens on tomorrow's, the occurrence the card shows.
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  await openWidgetMenu(page, "🌅 Morning")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).click()
+  const dialog = page.getByRole("dialog", { name: "Edit countdown" })
+  await expect(dialog.getByLabel("When")).toHaveValue("2026-03-05T09:00")
+
+  // A plain goto rather than openNewTab, which clears storage.
+  const other = await context.newPage()
+  await other.goto(`chrome-extension://${extensionId}/newtab.html`)
+  await openWidgetMenu(other, "🌅 Morning")
+  await other.getByRole("menuitem", { name: "Edit 🌅 Morning" }).click()
+  await other.getByLabel("Name").fill("🌅 Sunrise")
+  await other.getByRole("button", { name: "Save changes" }).click()
+  await expect(cardByTitle(page, "🌅 Sunrise")).toHaveCount(1)
+
+  // Opening on another occurrence was the dialog's doing, not an edit, so clicking away only closes it rather than saving the name it opened with over the new one.
+  await page.mouse.click(8, 8)
+  await expect(dialog).toHaveCount(0)
+  await expect(cardByTitle(page, "🌅 Sunrise")).toBeVisible()
+  await expect(cardByTitle(page, "🌅 Morning")).toHaveCount(0)
+
+  await other.close()
+})
+
 test("typing replaces a new card's name", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
@@ -162,20 +194,20 @@ test("closing a dialog hands focus back to the card or button that opened it", a
 }) => {
   await openNewTab(page, extensionId)
 
-  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  const card = cardByTitle(page, "🌅 Morning")
   const dialog = page.getByRole("dialog", { name: "Edit countdown" })
 
   // The menu item that opened the dialog is gone by the time it closes, so without this focus fell to the page and a keyboard user started over from the top.
   await card.focus()
   await card.press("ContextMenu")
-  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).press("Enter")
   await expect(dialog).toBeVisible()
   await page.keyboard.press("Escape")
   await expect(card).toBeFocused()
 
   // A save closes the dialog only once its write has landed, and focus still finds the card after the wait.
   await card.press("ContextMenu")
-  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).press("Enter")
   await dialog.getByRole("button", { name: "Save changes" }).press("Enter")
   await expect(dialog).toHaveCount(0)
   await expect(card).toBeFocused()
@@ -194,13 +226,13 @@ test("a menu opened by a long press hands focus back to its own card", async ({
 }) => {
   await openNewTab(page, extensionId)
 
-  const card = cardByTitle(page, "🌅 Tomorrow morning")
+  const card = cardByTitle(page, "🌅 Morning")
   await cardByTitle(page, "👋 Welcome").locator("textarea").focus()
 
   // A touch long-press opens the menu without the press focusing anything, which a bare contextmenu event reproduces.
   // The note's field was focused before it, and it is where an item chosen with a screen reader or a keyboard would otherwise hand focus back to: off screen on a phone, with the keyboard up.
   await card.dispatchEvent("contextmenu")
-  await page.getByRole("menuitem", { name: "Edit 🌅 Tomorrow morning" }).press("Enter")
+  await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).press("Enter")
   await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await page.keyboard.press("Escape")
   await expect(card).toBeFocused()
@@ -296,9 +328,9 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
 
-  await openWidgetMenu(page, "🌅 Tomorrow morning")
+  await openWidgetMenu(page, "🌅 Morning")
   await page
-    .getByRole("menuitem", { name: "Archive 🌅 Tomorrow morning" })
+    .getByRole("menuitem", { name: "Archive 🌅 Morning" })
     .click()
 
   // One locator for both states, since the label is the thing under test and an exact name would stop matching the moment it flips.
@@ -308,7 +340,7 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 
   // The card, not the line naming it in the archive notice.
-  const archived = cardByTitle(page, "🌅 Tomorrow morning")
+  const archived = cardByTitle(page, "🌅 Morning")
 
   await toggle.click()
   await expect(archived).toBeVisible()

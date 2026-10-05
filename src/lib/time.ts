@@ -6,7 +6,8 @@ import {
 } from "./types"
 
 export interface CountdownParts {
-  status: "future" | "due" | "past"
+  /** "today" is a date countdown on its own day, which has no time left to count either way. */
+  status: "future" | "due" | "today" | "past"
   label: string
 }
 
@@ -147,6 +148,7 @@ export const formatTimeZoneName = (date: Date, timeZone: string): string => {
 }
 
 const HOUR_MS = 3_600_000
+const DAY_MS = 86_400_000
 
 // How many days a month holds, asked without `new Date(year, ...)`, whose two-digit-year rule would read a year under 100 as 1900-something.
 const daysInMonth = (year: number, month: number): number => {
@@ -238,6 +240,53 @@ const countdownRepeatSteps = (
   return steps
 }
 
+const startOfLocalDay = (date: Date): Date => {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+
+  return start
+}
+
+const isLocalMidnight = (date: Date): boolean =>
+  date.getTime() === startOfLocalDay(date).getTime()
+
+// Days between two instants on the local calendar, counted in midnights rather than 24-hour blocks, so a DST change (a 23- or 25-hour day) doesn't land the count a day short or long.
+const calendarDaysBetween = (from: Date, to: Date): number =>
+  Math.round(
+    (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS
+  )
+
+// Whole months from one instant to a later one, stepped the way a monthly repeat steps, so the 31st is a month from the last day of a shorter month.
+// Estimated from the span and then nudged into place, the same as the repeat steps above.
+const wholeMonthsBetween = (from: Date, to: Date): number => {
+  let months = Math.max(
+    0,
+    Math.floor((to.getTime() - from.getTime()) / APPROXIMATE_STEP_MS.monthly)
+  )
+
+  while (advanceByRepeat(from, "monthly", months + 1).getTime() <= to.getTime()) {
+    months += 1
+  }
+
+  while (months > 0 && advanceByRepeat(from, "monthly", months).getTime() > to.getTime()) {
+    months -= 1
+  }
+
+  return months
+}
+
+// A target at local midnight is a date rather than a moment: a birthday, a trip, New Year's Day.
+// It counts in calendar days and lasts the whole of its day, which is how people count to a date, and the dialog's When field starts there so a picked date stays one.
+// An hourly or daily repeat is never a date: it comes round every day, so a day-long occurrence would leave it reading Today for good rather than counting down to midnight.
+const isDate = (target: Date, repeat: CountdownRepeat | undefined): boolean =>
+  !Number.isNaN(target.getTime()) &&
+  isLocalMidnight(target) &&
+  repeat !== "hourly" &&
+  repeat !== "daily"
+
+const isDateCountdown = (widget: CountdownWidget): boolean =>
+  isDate(new Date(widget.settings.targetAt), widget.settings.repeat)
+
 // Resolve what a countdown means right now: a repeating one shows its next occurrence, and a start that cannot fill a bar is dropped.
 // Both ends of a repeating span move together so the bar keeps its length each cycle instead of stretching from the original start forever.
 // The result is computed on the fly, so the stored widget stays the anchor and every tab agrees without writes.
@@ -254,13 +303,33 @@ export const resolveCountdown = (
   }
 
   const start = startAt ? new Date(startAt) : null
-  const steps = countdownRepeatSteps(targetAt, repeat, now)
+  let steps = countdownRepeatSteps(targetAt, repeat, now)
 
   // A start that does not parse, or that does not sit before the target, is not a span a bar can fill; the card falls back to the remaining-time text.
   const hasSpan =
     start !== null &&
     !Number.isNaN(start.getTime()) &&
     start.getTime() < target.getTime()
+
+  // The steps land on the first occurrence still ahead, but two kinds of occurrence outlast their target, so stay on the one just passed while it lasts.
+  if (steps > 0) {
+    if (hasSpan && start) {
+      // A finished span stays full until the next one starts, so a workday bar reads Complete through the evening rather than an empty bar with nineteen hours to go.
+      // Spans that run straight into each other, like the year card, have no gap to hold and roll on at once.
+      if (now.getTime() < advanceByRepeat(start, repeat, steps).getTime()) {
+        steps -= 1
+      }
+    } else {
+      // A date lasts all day, so a birthday reads Today until midnight rather than a year away the moment it begins.
+      const previous = advanceByRepeat(target, repeat, steps - 1)
+      const dayAfter = new Date(previous)
+      dayAfter.setDate(dayAfter.getDate() + 1)
+
+      if (isDate(previous, repeat) && now.getTime() < dayAfter.getTime()) {
+        steps -= 1
+      }
+    }
+  }
 
   if (steps === 0 && hasSpan === Boolean(startAt)) {
     return widget
@@ -283,11 +352,43 @@ export const getCountdownParts = (
   widget: CountdownWidget,
   now = new Date()
 ): CountdownParts => {
-  const totalMs = new Date(widget.settings.targetAt).getTime() - now.getTime()
+  const target = new Date(widget.settings.targetAt)
+  const totalMs = target.getTime() - now.getTime()
+
+  if (isDateCountdown(widget)) {
+    const days = calendarDaysBetween(now, target)
+
+    if (days === 0) {
+      return { status: "today", label: "Today" }
+    }
+
+    // On any day but the eve, a date is whole days away, counted from the start of today so the hour doesn't matter: Christmas is 79 days off all of October 7.
+    // The eve itself falls through to hours and minutes, so New Year's Eve still ticks down to midnight.
+    if (days !== 1) {
+      const today = startOfLocalDay(now)
+      const years =
+        days > 0 ? describeYears(today, target) : describeYears(target, today)
+
+      return {
+        status: days > 0 ? "future" : "past",
+        label: `${years ?? pluralize(Math.abs(days), "day")} ${days > 0 ? "from now" : "ago"}`
+      }
+    }
+  }
+
+  const status = getCountdownStatus(totalMs)
+  const years =
+    status === "future"
+      ? describeYears(now, target)
+      : status === "past"
+        ? describeYears(target, now)
+        : null
 
   return {
-    status: getCountdownStatus(totalMs),
-    label: formatRelativeCountdown(totalMs)
+    status,
+    label: years
+      ? `${years} ${status === "future" ? "from now" : "ago"}`
+      : formatRelativeCountdown(totalMs)
   }
 }
 
@@ -300,25 +401,36 @@ export const formatRelativeCountdown = (totalMs: number): string => {
 
   const suffix = totalMs >= 0 ? "from now" : "ago"
   const absoluteMinutes = Math.floor(Math.abs(totalMs) / 60_000)
-  const days = Math.floor(absoluteMinutes / 1_440)
-  const hours = Math.floor((absoluteMinutes % 1_440) / 60)
-  const minutes = absoluteMinutes % 60
-  const parts: string[] = []
 
-  if (days > 0) {
-    parts.push(pluralize(days, "day"))
-  }
-
-  if (hours > 0 && parts.length < 2) {
-    parts.push(pluralize(hours, "hour"))
-  }
-
-  if (minutes > 0 && parts.length < 2) {
-    parts.push(pluralize(minutes, "minute"))
-  }
-
-  return `${parts.join(", ")} ${suffix}`
+  return `${describeUnits([
+    [Math.floor(absoluteMinutes / 1_440), "day"],
+    [Math.floor((absoluteMinutes % 1_440) / 60), "hour"],
+    [absoluteMinutes % 60, "minute"]
+  ])} ${suffix}`
 }
+
+// A span of a year or more reads in years and months ("29 years, 11 months"), the way people say it, rather than in thousands of days.
+// Null under a year, where days and hours are still the units that move.
+const describeYears = (from: Date, to: Date): string | null => {
+  const months = wholeMonthsBetween(from, to)
+
+  if (months < 12) {
+    return null
+  }
+
+  return describeUnits([
+    [Math.floor(months / 12), "year"],
+    [months % 12, "month"]
+  ])
+}
+
+// The two largest units that aren't zero, so an empty unit is skipped rather than shown: "2 days, 9 minutes", never "2 days, 0 hours".
+const describeUnits = (units: [value: number, unit: string][]): string =>
+  units
+    .filter(([value]) => value > 0)
+    .slice(0, 2)
+    .map(([value, unit]) => pluralize(value, unit))
+    .join(", ")
 
 const getCountdownStatus = (totalMs: number): CountdownParts["status"] => {
   if (Number.isNaN(totalMs) || Math.abs(totalMs) < 60_000) {
@@ -373,19 +485,28 @@ export const getCountdownPercent = (fraction: number): number => {
   return Math.min(99, Math.max(1, Math.round(fraction * 100)))
 }
 
-export const formatCountdownTarget = (widget: CountdownWidget): string => {
+// The detail line reads the way a date is written by hand: a date has no "12:00 AM", and the year appears once it isn't this one.
+// A repeating countdown leaves the year off, since its next occurrence is always the coming one.
+export const formatCountdownTarget = (
+  widget: CountdownWidget,
+  now = new Date()
+): string => {
   const target = new Date(widget.settings.targetAt)
 
   if (Number.isNaN(target.getTime())) {
     return "Invalid target"
   }
 
+  const { repeat } = widget.settings
+  const showsYear =
+    (!repeat || repeat === "none") && target.getFullYear() !== now.getFullYear()
+
   return getFormatter({
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
+    ...(showsYear ? { year: "numeric" } : {}),
+    ...(isDateCountdown(widget) ? {} : { hour: "numeric", minute: "2-digit" })
   }).format(target)
 }
 

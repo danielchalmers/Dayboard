@@ -318,6 +318,34 @@ describe("normalizing widgets read from storage or an import", () => {
     })
   })
 
+  describe("the first-run year card", () => {
+    const calendarYear = {
+      targetAt: new Date(2027, 0, 1).toISOString(),
+      startAt: new Date(2026, 0, 1).toISOString()
+    }
+    const yearCard = (settings: object) =>
+      widget("countdown", settings, { id: "year-progress", title: "📅 This year" })
+
+    it("repeats yearly when it was saved before it did, so it refills in January", async () => {
+      const [renewed, ownCard] = await parse([
+        yearCard(calendarYear),
+        widget("countdown", calendarYear, { id: "fiscal" })
+      ])
+
+      expect(renewed!.settings).toEqual({ ...calendarYear, repeat: "yearly" })
+      // A span someone set up on a card of their own is theirs to keep as it is.
+      expect(ownCard!.settings).toEqual(calendarYear)
+    })
+
+    it("stays as it is once its span or repeat has been changed", async () => {
+      const shortened = { ...calendarYear, targetAt: new Date(2026, 11, 31).toISOString() }
+      const once = { ...calendarYear, repeat: "none" }
+
+      expect((await parse([yearCard(shortened)]))[0]!.settings).toEqual(shortened)
+      expect((await parse([yearCard(once)]))[0]!.settings).toEqual(once)
+    })
+  })
+
   it("drops a widget whose id repeats, and a kind that only exists on Object's prototype", async () => {
     const widgets = await parse([
       widget("note", { text: "first" }),

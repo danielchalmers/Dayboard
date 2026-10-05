@@ -39,9 +39,11 @@ const createClockWidget = (): ClockWidget => ({
 })
 
 // A new countdown has no start, so the card shows the time remaining; setting a start in the dialog is what turns it into a progress bar.
+// The target is the start of tomorrow, a date: the field keeps its time when a day is picked, so picking one leaves a date counted in days, and a time of day is there only once one is set.
 const createCountdownWidget = (now = new Date()): CountdownWidget => {
   const target = new Date(now)
-  target.setHours(target.getHours() + 1, 0, 0, 0)
+  target.setDate(target.getDate() + 1)
+  target.setHours(0, 0, 0, 0)
 
   return {
     ...createBase("countdown", "New countdown"),

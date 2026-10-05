@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import type { ComponentProps } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ItemDialog } from "./ItemDialog"
 import type { CountdownWidget, Widget } from "~/lib/types"
@@ -410,6 +410,82 @@ describe("ItemDialog", () => {
       targetAt: new Date(2026, 0, 3, 9, 0, 0).toISOString(),
       startAt: countdownItem.settings.startAt,
       repeat: "hourly"
+    })
+  })
+
+  describe("a repeating countdown", () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("opens on the occurrence its card shows, and keeps it when set to repeat no more", () => {
+      // A birthday set last March, edited the following February.
+      vi.useFakeTimers({ now: new Date(2027, 1, 20, 12, 0, 0), toFake: ["Date"] })
+      const onSave = vi.fn()
+      const birthday: CountdownWidget = {
+        ...countdownItem,
+        settings: { targetAt: new Date(2026, 2, 14).toISOString(), repeat: "yearly" }
+      }
+
+      render(itemDialog({ item: birthday, onSave }))
+
+      expect(screen.getByLabelText("When")).toHaveValue("2027-03-14T00:00")
+
+      fireEvent.change(screen.getByLabelText("Repeats"), {
+        target: { value: "none" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      expect(saved(onSave).settings).toEqual({
+        targetAt: new Date(2027, 2, 14).toISOString(),
+        repeat: "none"
+      })
+    })
+
+    it("keeps the date it is stored by when saved with its dates untouched", () => {
+      // A monthly countdown on the 31st shows the 28th in February; storing that would move it off the 31st for good.
+      vi.useFakeTimers({ now: new Date(2026, 1, 15, 12, 0, 0), toFake: ["Date"] })
+      const onSave = vi.fn()
+      const rent: CountdownWidget = {
+        ...countdownItem,
+        settings: {
+          targetAt: new Date(2026, 0, 31, 9, 0, 0).toISOString(),
+          repeat: "monthly"
+        }
+      }
+
+      render(itemDialog({ item: rent, onSave }))
+
+      expect(screen.getByLabelText("When")).toHaveValue("2026-02-28T09:00")
+
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Rent" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      expect(saved(onSave).title).toBe("Rent")
+      expect(saved(onSave).settings.targetAt).toBe(rent.settings.targetAt)
+    })
+
+    // Opening on a later occurrence is the dialog's own doing, not an edit, so clicking away from it is still only looking.
+    it("closes from the backdrop without saving when nothing was changed", () => {
+      vi.useFakeTimers({ now: new Date(2027, 1, 20, 12, 0, 0), toFake: ["Date"] })
+      const onSave = vi.fn()
+      const onClose = vi.fn()
+      const birthday: CountdownWidget = {
+        ...countdownItem,
+        settings: { targetAt: new Date(2026, 2, 14).toISOString(), repeat: "yearly" }
+      }
+
+      // The board keeps the dialog mounted and hands it the item when it opens, which is the path taken here.
+      const { rerender } = render(itemDialog({ isOpen: false, item: null }))
+      rerender(itemDialog({ item: birthday, onClose, onSave }))
+      expect(screen.getByLabelText("When")).toHaveValue("2027-03-14T00:00")
+
+      fireEvent.pointerDown(document.querySelector(".modal-backdrop") as HTMLElement)
+
+      expect(onClose).toHaveBeenCalledTimes(1)
+      expect(onSave).not.toHaveBeenCalled()
     })
   })
 
