@@ -168,13 +168,10 @@ describe("useDayboardState change handling", () => {
 
     await waitFor(() => expect(result.current.state).not.toBeNull())
 
-    // Two timers finishing on the same tick report from the same commit, before the board has re-rendered in between.
+    // Two timers finishing on the same tick settle from the same commit, before the board has re-rendered in between.
     await act(async () => {
       for (const timer of result.current.state!.widgets as TimerWidget[]) {
-        void result.current.updateWidget({
-          ...timer,
-          settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
-        })
+        void result.current.settleTimer(timer.id, timer.settings.endsAt!)
       }
     })
 
@@ -284,6 +281,146 @@ describe("useDayboardState change handling", () => {
     unmount()
   })
 
+  it("settles a timer's run from the card as it stands, once", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    // The chime was switched on in the run's own dialog after its timeout was set, which leaves the run going.
+    const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
+    const chimed = {
+      ...board,
+      widgets: board.widgets.map((widget) =>
+        widget.id === "t1" && widget.kind === "timer"
+          ? { ...widget, settings: { ...widget.settings, chime: true } }
+          : widget
+      )
+    }
+    act(() => {
+      listener({ "dayboard-state": { newValue: chimed } }, "sync")
+    })
+
+    let settled: (TimerWidget | null)[] = []
+    await act(async () => {
+      settled = await Promise.all([
+        result.current.settleTimer("t1", 1),
+        result.current.settleTimer("t1", 1)
+      ])
+    })
+
+    // The second report of the same finish finds nothing left to settle.
+    expect(settled[1]).toBeNull()
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
+    // The card hears the timer as the board now holds it, so the chime it announces with is the one switched on since.
+    expect(settled[0]).toBe(result.current.state!.widgets[0])
+    expect(result.current.state!.widgets[0]!.settings).toEqual({
+      durationMs: 1000,
+      running: false,
+      remainingMs: 0,
+      endsAt: null,
+      chime: true
+    })
+
+    unmount()
+  })
+
+  // A board can hear of a newer board from storage before it has rendered it, so the card asks about the run it last saw.
+  it("leaves a run started since alone when an older finish is reported", async () => {
+    stubChrome({ get: async (key) => ({ [key]: board }) })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+
+    const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
+    const restarted = {
+      ...board,
+      widgets: board.widgets.map((widget) =>
+        widget.id === "t1" && widget.kind === "timer"
+          ? { ...widget, settings: { ...widget.settings, endsAt: 9000 } }
+          : widget
+      )
+    }
+
+    let settling: Promise<TimerWidget | null> = Promise.resolve(null)
+    act(() => {
+      listener({ "dayboard-state": { newValue: restarted } }, "sync")
+      settling = result.current.settleTimer("t1", 1)
+    })
+
+    expect(await settling).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(result.current.state!.widgets[0]!.settings).toMatchObject({
+      running: true,
+      endsAt: 9000
+    })
+
+    unmount()
+  })
+
+  // A new tab paints from its localStorage mirror, which stood still while no board was open here.
+  // Since then another device settled Tea and changed the greeting name, and Eggs is still going in storage too.
+  it("waits for storage's own board before settling a finish the mirror shows", async () => {
+    const stored: DayboardState = {
+      widgets: board.widgets.map((widget) =>
+        widget.id === "t1" && widget.kind === "timer"
+          ? {
+              ...widget,
+              settings: { ...widget.settings, running: false, remainingMs: 0, endsAt: null }
+            }
+          : widget
+      ),
+      settings: { name: "Sam" }
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(board))
+    let answerRead = () => {}
+    stubChrome({
+      get: (key) =>
+        new Promise((resolve) => {
+          answerRead = () => resolve({ [key]: stored })
+        })
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const { result, unmount } = renderHook(() => useDayboardState())
+
+    // Both timers are going on the mirror, but writing it back would undo the other device's changes, so their finishes wait for storage's answer.
+    expect(result.current.state!.widgets[0]!.settings).toMatchObject({ running: true })
+    let settling: Promise<(TimerWidget | null)[]> = Promise.resolve([])
+    await act(async () => {
+      settling = Promise.all([
+        result.current.settleTimer("t1", 1),
+        result.current.settleTimer("t2", 1)
+      ])
+    })
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+
+    let settled: (TimerWidget | null)[] = []
+    await act(async () => {
+      answerRead()
+      settled = await settling
+    })
+
+    // Tea was settled on the other device, so only Eggs is, and on the board as storage has it.
+    expect(settled[0]).toBeNull()
+    expect(settled[1]?.title).toBe("Eggs")
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
+    const written = vi.mocked(chrome.storage.sync.set).mock.calls[0]![0] as
+      Record<string, DayboardState>
+    const saved = Object.values(written)[0]!
+    expect(saved.settings).toEqual({ name: "Sam" })
+    expect(saved.widgets.map((widget) => widget.settings)).toMatchObject([
+      { running: false, remainingMs: 0 },
+      { running: false, remainingMs: 0 }
+    ])
+
+    unmount()
+  })
+
   it("saves new settings alongside the board as it stands", async () => {
     stubChrome({ get: async (key) => ({ [key]: board }) })
 
@@ -322,7 +459,7 @@ const groceries = (text: string): NoteWidget => ({
   settings: { text }
 })
 
-// What the timer card hands up as its run ends.
+// A timer as its finish leaves it.
 const finished = (timer: TimerWidget): TimerWidget => ({
   ...timer,
   settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
@@ -374,14 +511,14 @@ describe("useDayboardState in a tab waking from being frozen", () => {
       document.dispatchEvent(new Event("resume"))
     })
 
-    // Back in view, the timer settles the run the tab froze with, before the tab has heard that another one finished it, started it again, and edited the note.
-    let settling: Promise<string | null> = Promise.resolve(null)
+    // Back in view, a word is added to the note as the tab froze with it, before the tab has heard that another tab added to it too.
+    let saving: Promise<string | null> = Promise.resolve(null)
     act(() => {
-      settling = result.current.updateWidget(finished(tea(1_000)))
+      saving = result.current.updateWidget(groceries("Milk, tea"))
     })
 
     const meanwhile: DayboardState = {
-      widgets: [tea(99_000), groceries("Milk, eggs, bread")],
+      widgets: [tea(1_000), groceries("Milk, eggs, bread")],
       settings: { name: "" }
     }
     deliver(meanwhile)
@@ -389,7 +526,7 @@ describe("useDayboardState in a tab waking from being frozen", () => {
     let refused: string | null = "unset"
     await act(async () => {
       answerWake(meanwhile)
-      refused = await settling
+      refused = await saving
     })
 
     expect(refused).toBeNull()
@@ -406,33 +543,66 @@ describe("useDayboardState in a tab waking from being frozen", () => {
       document.dispatchEvent(new Event("resume"))
     })
 
-    // Nobody else touched the timer, so its run really did end while the tab slept.
-    let settling: Promise<string | null> = Promise.resolve(null)
+    // Another tab started the timer again while this one slept, but nobody else touched the note.
+    let saving: Promise<string | null> = Promise.resolve(null)
     act(() => {
-      settling = result.current.updateWidget(finished(tea(1_000)))
+      saving = result.current.updateWidget(groceries("Milk, tea"))
     })
 
     const meanwhile: DayboardState = {
-      widgets: [tea(1_000), groceries("Milk, eggs, bread")],
+      widgets: [tea(99_000), groceries("Milk")],
       settings: { name: "" }
     }
     deliver(meanwhile)
 
-    // The board has heard the note changed, but not yet that there is nothing more to hear.
+    // The board has heard the timer changed, but not yet that there is nothing more to hear.
     expect(chrome.storage.sync.set).not.toHaveBeenCalled()
 
     await act(async () => {
       answerWake(meanwhile)
-      await settling
+      await saving
     })
 
     const expected = {
-      widgets: [finished(tea(1_000)), groceries("Milk, eggs, bread")],
+      widgets: [tea(99_000), groceries("Milk, tea")],
       settings: { name: "" }
     }
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
     expect(result.current.state).toEqual(expected)
+
+    unmount()
+  })
+
+  // The timer's own timeout, long overdue, runs as the tab wakes, before the tab has heard that another tab finished the run and started a new one.
+  it("answers a finish the tab froze with only once it has caught up, and then with no", async () => {
+    const { result, unmount, answerWake, deliver } = await render()
+
+    act(() => {
+      document.dispatchEvent(new Event("resume"))
+    })
+
+    let settling: Promise<TimerWidget | null> = Promise.resolve(null)
+    act(() => {
+      settling = result.current.settleTimer("tea", 1_000)
+    })
+
+    const meanwhile: DayboardState = {
+      widgets: [tea(99_000), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    deliver(meanwhile)
+
+    let settled: TimerWidget | null | undefined
+    await act(async () => {
+      answerWake(meanwhile)
+      settled = await settling
+    })
+
+    // So the card has no finish to chime or set the title for, and the board stays as the other tab left it.
+    expect(settled).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(result.current.state).toEqual(meanwhile)
 
     unmount()
   })
@@ -446,7 +616,16 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
     settings: { name: "" }
   }
 
-  // A board whose timer card settles a run that has ended from its own effect as it mounts, the way the real card does, which is before the hook's effects have run and so before its first read has even started.
+  // Meanwhile, on another device, the timer was reset and the note added to.
+  const movedOn: DayboardState = {
+    widgets: [
+      { ...tea(1_000), settings: { ...tea(1_000).settings, running: false, endsAt: null } },
+      groceries("Milk, eggs, bread")
+    ],
+    settings: { name: "" }
+  }
+
+  // A board whose timer card reports its run's end from its own effect as it mounts, the way the real card does, which is before the hook's effects have run and so before its first read has even started.
   const render = async () => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(remembered))
 
@@ -460,12 +639,12 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
 
     const { useDayboardState } = await import("./useDayboardState")
     const board: { current: ReturnType<typeof useDayboardState> | null } = { current: null }
-    const settled: Promise<string | null>[] = []
+    const settled: Promise<TimerWidget | null>[] = []
 
-    const Settles = ({ timer, onChange }: { timer: TimerWidget; onChange: (widget: TimerWidget) => Promise<string | null> }) => {
+    const Settles = ({ timer, settleTimer }: { timer: TimerWidget; settleTimer: (id: string, endsAt: number) => Promise<TimerWidget | null> }) => {
       useEffect(() => {
-        settled.push(onChange(finished(timer)))
-      }, [onChange, timer])
+        settled.push(settleTimer(timer.id, timer.settings.endsAt!))
+      }, [settleTimer, timer])
 
       return null
     }
@@ -476,37 +655,30 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
         (widget): widget is TimerWidget => widget.kind === "timer" && widget.settings.running
       )
 
-      return timer ? createElement(Settles, { timer, onChange: board.current.updateWidget }) : null
+      return timer ? createElement(Settles, { timer, settleTimer: board.current.settleTimer }) : null
     }
 
     const view = renderComponent(createElement(Board))
 
-    // The board painted from the mirror, and its timer settled as it did.
+    // The board painted from the mirror, and its timer reported the end of its run as it did.
     expect(board.current!.state).toEqual(remembered)
     expect(settled).toHaveLength(1)
 
     return { ...view, board, settled, answerFirstRead: (state: DayboardState) => answerFirstRead(state) }
   }
 
-  it("drops a change worked out from a card storage has moved on from", async () => {
+  it("answers a finish storage has moved on from with no, and writes nothing", async () => {
     const { board, settled, answerFirstRead, unmount } = await render()
 
-    // Meanwhile, on another device, the timer was reset and the note added to.
-    const stored: DayboardState = {
-      widgets: [
-        { ...tea(1_000), settings: { ...tea(1_000).settings, running: false, endsAt: null } },
-        groceries("Milk, eggs, bread")
-      ],
-      settings: { name: "" }
-    }
-
+    let answers: (TimerWidget | null)[] = []
     await act(async () => {
-      answerFirstRead(stored)
-      await Promise.all(settled)
+      answerFirstRead(movedOn)
+      answers = await Promise.all(settled)
     })
 
+    expect(answers).toEqual([null])
     expect(chrome.storage.sync.set).not.toHaveBeenCalled()
-    expect(board.current!.state).toEqual(stored)
+    expect(board.current!.state).toEqual(movedOn)
 
     unmount()
   })
@@ -520,18 +692,44 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
       settings: { name: "" }
     }
 
+    let answers: (TimerWidget | null)[] = []
     await act(async () => {
       answerFirstRead(stored)
-      await Promise.all(settled)
+      answers = await Promise.all(settled)
     })
 
     const expected = {
       widgets: [finished(tea(1_000)), groceries("Milk, eggs, bread")],
       settings: { name: "" }
     }
+    expect(answers).toEqual([finished(tea(1_000))])
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
     expect(board.current!.state).toEqual(expected)
+
+    unmount()
+  })
+
+  // A word added to the note in the moment the board shows the mirror, before the first read has landed.
+  it("drops a change worked out from a card storage has moved on from", async () => {
+    const { board, settled, answerFirstRead, unmount } = await render()
+
+    let saving: Promise<string | null> = Promise.resolve(null)
+    act(() => {
+      saving = board.current!.updateWidget(groceries("Milk, tea"))
+    })
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+
+    let refused: string | null = "unset"
+    await act(async () => {
+      answerFirstRead(movedOn)
+      await Promise.all(settled)
+      refused = await saving
+    })
+
+    expect(refused).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(board.current!.state).toEqual(movedOn)
 
     unmount()
   })

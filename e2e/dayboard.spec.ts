@@ -947,8 +947,10 @@ test("stopwatch counts up, keeps running across a reload, and resets", async ({
   await expect(reloaded.locator(".board-row__value")).not.toHaveText("0:00")
 
   await reloaded.getByRole("button", { name: "Pause" }).click()
+  await expect(reloaded.getByRole("button", { name: "Resume" })).toBeVisible()
   await reloaded.getByRole("button", { name: "Reset" }).click()
   await expect(reloaded.locator(".board-row__value")).toHaveText("0:00")
+  await expect(reloaded.getByRole("button", { name: "Start" })).toBeVisible()
 })
 
 test("timer counts down to a finished state and resets", async ({
@@ -969,11 +971,196 @@ test("timer counts down to a finished state and resets", async ({
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
 
   await card.getByRole("button", { name: "Start" }).click()
-  await expect(card.getByText("Time’s up")).toBeVisible()
-  await expect(card.locator(".board-row__value")).toHaveText("0:00")
+  // The words take the digits' place rather than a line under "0:00".
+  await expect(card.locator(".board-row__value")).toHaveText("Time’s up")
 
   await card.getByRole("button", { name: "Reset" }).click()
   await expect(card.locator(".board-row__value")).toHaveText("0:01")
+})
+
+test("a finished timer with a two-line title keeps its buttons on the card", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("Name").fill("Laundry in the basement machine, then the dryer")
+  await page.getByLabel("minutes").fill("0")
+  await page.getByLabel("seconds").fill("1")
+  await page.getByRole("button", { name: "Save timer" }).click()
+
+  const card = cardByTitle(page, "Laundry in the basement")
+  await card.getByRole("button", { name: "Start" }).click()
+  await expect(card.locator(".board-row__value")).toHaveText("Time’s up")
+
+  const title = await boxOf(card.locator(".board-row__title"), "the timer's title")
+  const lineHeight = await card
+    .locator(".board-row__title")
+    .evaluate((node) => parseFloat(getComputedStyle(node).lineHeight))
+  expect(Math.round(title.height / lineHeight)).toBe(2)
+
+  // The card is a fixed size, so anything that adds a line pushes the buttons through its bottom padding.
+  const cardBox = await boxOf(card, "the timer card")
+  const padding = await card.evaluate((node) =>
+    parseFloat(getComputedStyle(node).paddingBottom)
+  )
+  const reset = await boxOf(card.getByRole("button", { name: "Reset" }), "the Reset button")
+  expect(reset.y + reset.height).toBeLessThanOrEqual(cardBox.y + cardBox.height - padding + 0.5)
+})
+
+// A headless page never really goes into the background, so its visibility is taken over, and each oscillator the chime starts is counted.
+// `startHidden` has the page open in the background from its first frame.
+const watchTimerFinish = async (page: Page, { startHidden = false } = {}) => {
+  await page.addInitScript((hidden) => {
+    const lab = window as unknown as { __hidden: boolean; __tones: number }
+    lab.__hidden = hidden
+    lab.__tones = 0
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => (lab.__hidden ? "hidden" : "visible")
+    })
+    const createOscillator = AudioContext.prototype.createOscillator
+    AudioContext.prototype.createOscillator = function () {
+      lab.__tones += 1
+      return createOscillator.call(this)
+    }
+  }, startHidden)
+
+  return {
+    setHidden: (hidden: boolean) =>
+      page.evaluate((value) => {
+        ;(window as unknown as { __hidden: boolean }).__hidden = value
+        document.dispatchEvent(new Event("visibilitychange"))
+      }, hidden),
+    tones: () => page.evaluate(() => (window as unknown as { __tones: number }).__tones)
+  }
+}
+
+test("a timer finishes on time while its tab is in the background", async ({
+  page,
+  extensionId
+}) => {
+  const { setHidden, tones } = await watchTimerFinish(page)
+
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add timer" }).click()
+  await page.getByLabel("Name").fill("Steep")
+  await page.getByLabel("minutes").fill("0")
+  await page.getByLabel("seconds").fill("2")
+  await page.getByRole("switch", { name: "Chime when it ends" }).click()
+  await page.getByRole("button", { name: "Save timer" }).click()
+
+  await cardByTitle(page, "Steep").getByRole("button", { name: "Start" }).click()
+  // Off to another tab: the page clock stops here, so the timer has to finish without it.
+  await setHidden(true)
+
+  // The tab strip is all there is to see of a hidden tab, so the title says so.
+  await expect.poll(() => page.title()).toBe("Time’s up · Steep")
+  // The chime is two notes, sounded once while the tab is still out of sight.
+  await expect.poll(tones).toBe(2)
+  expect(await page.evaluate(() => document.visibilityState)).toBe("hidden")
+  expect(await readWidgetSettings(page, "Steep")).toMatchObject({
+    running: false,
+    remainingMs: 0
+  })
+
+  // Coming back gives the tab its title back, shows the finish, and does not chime a second time.
+  await setHidden(false)
+  await expect(page).toHaveTitle("New Tab")
+  await expect(cardByTitle(page, "Steep").locator(".board-row__value")).toHaveText("Time’s up")
+  expect(await tones()).toBe(2)
+})
+
+// A finish nobody was there for is old news by the time the card is seen: a chime then would sound at someone who is already looking at it, and a title would report it as fresh.
+test("a timer found long after its finish settles without a chime or a title", async ({
+  page,
+  extensionId
+}) => {
+  // The tab opens in the background, where a finish that had only just happened would take its title.
+  const { setHidden, tones } = await watchTimerFinish(page, { startHidden: true })
+
+  // Storage already holds both timers running as the tab opens, the way it does when no board was open at their finish, so this page is the first to find them.
+  // Seeding from an open board instead would have that board settle them before the page being watched ever saw them.
+  await page.addInitScript(() => {
+    const endedAt = Date.now() - 2 * 3_600_000
+    const timer = (id: string, title: string, archived: boolean) => ({
+      id,
+      kind: "timer",
+      title,
+      colorPreset: "rose",
+      ...(archived ? { archived } : {}),
+      settings: {
+        durationMs: 2_700_000,
+        running: true,
+        remainingMs: 2_700_000,
+        endsAt: endedAt,
+        chime: true
+      }
+    })
+
+    void chrome.storage.sync.set({
+      "dayboard-state": {
+        widgets: [timer("laundry", "Laundry", false), timer("bread", "Bread", true)],
+        settings: { name: "" }
+      }
+    })
+  })
+  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
+
+  await expect(cardByTitle(page, "Laundry").getByText("Time’s up")).toBeVisible()
+  await expect.poll(() => readWidgetSettings(page, "Laundry")).toMatchObject({ running: false })
+  expect(await page.title()).toBe("New Tab")
+
+  // The archived one is only seen, and so only settled, once the archive is opened onto it.
+  await setHidden(false)
+  await page.getByRole("button", { name: "Show archived" }).click()
+  await expect(cardByTitle(page, "Bread").getByText("Time’s up")).toBeVisible()
+  await expect.poll(() => readWidgetSettings(page, "Bread")).toMatchObject({ running: false })
+
+  expect(await tones()).toBe(0)
+})
+
+// A new tab first paints the board this device last had, which can still show a run going that ended while no board was open here.
+// Whether that finish is this tab's to announce is storage's to say, since another device may have settled the run already.
+test("a new tab chimes for a run storage still has going, not one only its mirror remembers", async ({
+  page,
+  extensionId
+}) => {
+  const { tones } = await watchTimerFinish(page)
+
+  // Both runs ended moments ago, well within the time a finish is still news, and both opted into the chime.
+  // Another device has settled Tea since; Eggs is still going in storage, so this page is the first board to reach its end.
+  await page.addInitScript(() => {
+    const endsAt = Date.now() - 20_000
+    const timer = (id: string, title: string, running: boolean) => ({
+      id,
+      kind: "timer",
+      title,
+      colorPreset: "rose",
+      settings: running
+        ? { durationMs: 600_000, running, remainingMs: 600_000, endsAt, chime: true }
+        : { durationMs: 600_000, running, remainingMs: 0, endsAt: null, chime: true }
+    })
+    const board = (teaRunning: boolean) => ({
+      widgets: [timer("tea", "Tea", teaRunning), timer("eggs", "Eggs", true)],
+      settings: { name: "" }
+    })
+
+    void chrome.storage.sync.set({ "dayboard-state": board(false) })
+    localStorage.setItem("dayboard-state-cache", JSON.stringify(board(true)))
+  })
+  await page.goto(`chrome-extension://${extensionId}/newtab.html`)
+
+  // Eggs' two notes, and none for Tea.
+  await expect.poll(() => readWidgetSettings(page, "Eggs")).toMatchObject({ running: false })
+  await expect.poll(tones).toBe(2)
+  await expect(cardByTitle(page, "Tea").getByText("Time’s up")).toBeVisible()
+  await expect(cardByTitle(page, "Eggs").getByText("Time’s up")).toBeVisible()
+  expect(await tones()).toBe(2)
 })
 
 test("a timer's per-widget chime is opt-in, persists, and still finishes", async ({

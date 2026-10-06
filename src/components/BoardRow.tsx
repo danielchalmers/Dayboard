@@ -33,7 +33,7 @@ import type {
 import { getPresetCssVars } from "~/lib/colors"
 import { WidgetIcon } from "~/components/WidgetIcon"
 import { useAutoSave } from "~/hooks/useAutoSave"
-import { playChime, primeChime } from "~/lib/chime"
+import { playChimeOnce, primeChime } from "~/lib/chime"
 import {
   formatDayLabel,
   formatWeekRange,
@@ -54,7 +54,6 @@ import {
   type TodoTask
 } from "~/lib/todo"
 import {
-  finishTimer,
   formatDuration,
   pauseStopwatch,
   pauseTimer,
@@ -69,6 +68,9 @@ import {
 // A card hands its change up and may hear back why storage refused it (null once it is saved), which only a card holding typed text has a use for.
 export type WidgetChangeHandler = (widget: Widget) => Promise<string | null> | void
 
+// A timer reports the run that has ended by its finish time, and hears back, once the board has checked it, the timer as that finish left it, or null when that run was no longer the one going.
+export type TimerFinishHandler = (id: string, endsAt: number) => Promise<TimerWidget | null>
+
 interface BoardRowProps {
   item: Widget
   now: Date
@@ -77,6 +79,7 @@ interface BoardRowProps {
   className?: string
   style?: CSSProperties
   onWidgetChange?: WidgetChangeHandler
+  onTimerFinish?: TimerFinishHandler
 }
 
 const NoteField = ({
@@ -159,7 +162,7 @@ const StopwatchBody = ({
             )
           }
           type="button">
-          {running ? "Pause" : "Start"}
+          {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
         </button>
         <button
           className="timer-button"
@@ -173,34 +176,118 @@ const StopwatchBody = ({
   )
 }
 
+// How late a timer's finish can be and still be news worth announcing.
+// A hidden tab's timeout lands within about a second; a minute leaves room for heavier throttling without announcing a finish that was missed.
+const FINISH_GRACE_MS = 60_000
+
+// setTimeout keeps its delay in a signed 32-bit count of milliseconds, so a longer wait (an imported timer weeks from its end) would fire at once; such a wait is taken in pieces instead.
+const MAX_TIMEOUT_MS = 2 ** 31 - 1
+
+// The tab's title from before a finished timer borrowed it, and which timer's finish it shows now.
+// A second timer finishing out of sight takes the title over rather than saving the first one's as the title to go back to.
+let borrowedTitle: { resting: string; by: string } | null = null
+
+const giveTitleBack = () => {
+  if (!borrowedTitle) {
+    return
+  }
+
+  document.title = borrowedTitle.resting
+  borrowedTitle = null
+  document.removeEventListener("visibilitychange", giveTitleBackOnLook)
+}
+
+const giveTitleBackOnLook = () => {
+  if (document.visibilityState !== "hidden") {
+    giveTitleBack()
+  }
+}
+
+// A hidden tab can only be seen from the tab strip, so a timer that finishes out of sight says so in the tab's title until the board is looked at again.
+// It is set once at the finish rather than counting down there, which would mean per-second work in a tab nobody is looking at.
+// The title is the page's rather than the card's, so it comes back on the next look even if the card has gone by then.
+const showFinishInTitle = (id: string, title: string) => {
+  if (document.visibilityState !== "hidden") {
+    return
+  }
+
+  if (!borrowedTitle) {
+    document.addEventListener("visibilitychange", giveTitleBackOnLook)
+  }
+
+  borrowedTitle = { resting: borrowedTitle?.resting ?? document.title, by: id }
+  document.title = `Time’s up · ${title}`
+}
+
 const TimerBody = ({
   item,
   now,
-  onWidgetChange
+  onWidgetChange,
+  onTimerFinish
 }: {
   item: TimerWidget
   now: Date
   onWidgetChange?: (widget: Widget) => void
+  onTimerFinish?: TimerFinishHandler
 }) => {
-  const { running, durationMs, chime } = item.settings
+  const { id } = item
+  const { running, endsAt, durationMs, chime } = item.settings
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
+  const finished = done && !running
   const apply = (settings: TimerWidget["settings"]) =>
     onWidgetChange?.({ ...item, settings })
 
-  // Settle the timer the moment it counts down to zero while running, and when this timer opted into a chime, sound it once on that transition.
+  // The title only speaks for a finish the card still shows, so a timer started again or reset from another tab gives it back without waiting for this one to be looked at.
+  // A run put back by a refused save hands the title back here, and its finish borrows it again only once the board has answered, which is always after this has run.
   useEffect(() => {
-    if (running && done) {
-      if (chime) {
-        playChime()
+    if (!finished && borrowedTitle?.by === id) {
+      giveTitleBack()
+    }
+  }, [finished, id])
+
+  // A running timer keeps its own timeout aimed at the finish rather than waiting for the page clock to notice, because the clock stops while the tab is hidden and a timer is mostly left to run while you are somewhere else.
+  // It is one wake at the end, not a tick, so it costs a hidden tab nothing until then, and background throttling lands it within about a second.
+  // The page clock still runs this when it reads the timer as done, which catches a finish the timeout slept through.
+  // A copy with nowhere to report the finish (the lifted card under a drag) leaves it to the card on the board.
+  useEffect(() => {
+    if (!running || endsAt == null || !onTimerFinish) {
+      return
+    }
+
+    let timeout: number | undefined
+
+    const wake = () => {
+      const late = Date.now() - endsAt
+
+      if (late < 0) {
+        timeout = window.setTimeout(wake, Math.min(-late, MAX_TIMEOUT_MS))
+        return
       }
 
-      onWidgetChange?.({ ...item, settings: finishTimer(item.settings) })
+      // Another tab or device may have settled this run already, or started a new one, so only a finish the board takes is announced, once it has answered.
+      // The finish is only news as the timer ends: past that a chime would sound at someone already looking at the card (a tab opened later, the archive opened onto it, a computer woken from sleep), and a tab woken hours later would report it in its title as if it had just happened, so the timer settles quietly.
+      void onTimerFinish(id, endsAt).then((settled) => {
+        if (!settled || late >= FINISH_GRACE_MS) {
+          return
+        }
+
+        // The chime and the name are taken from the board's answer rather than this render, which may not have caught up with a chime switched off or a rename made in another tab.
+        if (settled.settings.chime) {
+          playChimeOnce(`${id}:${endsAt}`, FINISH_GRACE_MS)
+        }
+
+        showFinishInTitle(id, settled.title)
+      })
     }
-  }, [running, done, item, onWidgetChange, chime])
+
+    wake()
+
+    return () => window.clearTimeout(timeout)
+  }, [running, endsAt, done, id, onTimerFinish])
 
   const handleStart = () => {
-    // Warm up audio from this gesture so the later chime is allowed to sound.
+    // Ready the audio from the press, in case the browser holds sound back from a page that hasn't been used.
     if (chime) {
       primeChime()
     }
@@ -216,15 +303,16 @@ const TimerBody = ({
 
   return (
     <>
-      <p
-        className={`board-row__value board-row__value--timer${
-          done && !running ? " board-row__value--timer-done" : ""
-        }`}>
-        {formatDuration(remaining)}
-      </p>
+      {/* Finished, the words take the place of the digits rather than a line of their own: "0:00" tells a finished timer nothing, and the extra line pushed the buttons off a card with a two-line title. */}
       {done && !running ? (
-        <p className="board-row__meta board-row__meta--alert">Time&rsquo;s up</p>
-      ) : null}
+        <p className="board-row__value board-row__value--countdown board-row__value--timer-done">
+          Time&rsquo;s up
+        </p>
+      ) : (
+        <p className="board-row__value board-row__value--timer">
+          {formatDuration(remaining)}
+        </p>
+      )}
       {/* A polite live region announces the finish once (the visible text above is decorative for screen readers).
           It stays mounted and empty until the timer is done so the change is what gets read out. */}
       <span className="sr-only" role="status">
@@ -560,7 +648,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
 })
 
 // What a card shows when its body threw while rendering: its own frame and title, so it can still be found, dragged, and edited or deleted from its menu, and the rest of the board carries on around it.
-export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange">>(
+export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange" | "onTimerFinish">>(
   function BoardRowFallback(props, ref) {
     return (
       <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
@@ -578,7 +666,8 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     dragHandleProps,
     className,
     style,
-    onWidgetChange
+    onWidgetChange,
+    onTimerFinish
   },
   ref
 ) {
@@ -638,7 +727,12 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   if (item.kind === "timer") {
     return (
       <CardShell {...shell} ref={ref}>
-        <TimerBody item={item} now={now} onWidgetChange={onWidgetChange} />
+        <TimerBody
+          item={item}
+          now={now}
+          onTimerFinish={onTimerFinish}
+          onWidgetChange={onWidgetChange}
+        />
       </CardShell>
     )
   }

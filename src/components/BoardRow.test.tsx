@@ -5,15 +5,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BoardRow, BoardRowFallback } from "./BoardRow"
 import { CardBoundary } from "./CardBoundary"
-import { playChime, primeChime } from "~/lib/chime"
+import { playChimeOnce, primeChime } from "~/lib/chime"
 import { formatDayLabel, toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
 import { MAX_TASKS, type TodoTask } from "~/lib/todo"
-import type { HabitWidget, NoteWidget, TodoWidget, Widget } from "~/lib/types"
+import type {
+  HabitWidget,
+  NoteWidget,
+  TimerWidget,
+  TodoWidget,
+  Widget
+} from "~/lib/types"
 
 // Sound is the one thing a test cannot observe by rendering, so the chime module is stubbed for the whole file and asserted on by call.
 vi.mock("~/lib/chime", () => ({
-  playChime: vi.fn(),
+  playChimeOnce: vi.fn(),
   primeChime: vi.fn()
 }))
 
@@ -825,6 +831,32 @@ describe("BoardRow", () => {
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 
+  it("offers to resume a paused stopwatch, and resets it from there", () => {
+    const item: Widget = {
+      id: "sw",
+      kind: "stopwatch",
+      title: "Focus",
+      colorPreset: "slate",
+      settings: { running: false, elapsedMs: 8_040_000, startedAt: null }
+    }
+    const onWidgetChange = vi.fn()
+
+    render(
+      <BoardRow item={item} now={new Date(0)} onWidgetChange={onWidgetChange} />
+    )
+
+    expect(screen.getByText("2:14:00")).toBeInTheDocument()
+    // Pressing it carries on from the tally rather than starting over, so it says so, the way a paused timer does.
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }))
+    expect(onWidgetChange).toHaveBeenCalledWith({
+      ...item,
+      settings: { running: false, elapsedMs: 0, startedAt: null }
+    })
+  })
+
   it("renders a timer's remaining time and resumes from the button", () => {
     const item: Widget = {
       id: "t",
@@ -872,9 +904,12 @@ describe("BoardRow", () => {
       settings: { durationMs: 60_000, running: false, remainingMs: 0, endsAt: null }
     }
 
-    render(<BoardRow item={item} now={new Date(50_000)} />)
+    const { container } = render(<BoardRow item={item} now={new Date(50_000)} />)
 
     expect(screen.getByRole("status")).toHaveTextContent("Tea timer finished")
+    // The words stand in for the digits rather than adding a line under "0:00", so a finished card is no taller than a running one.
+    expect(container.querySelector(".board-row__value")).toHaveTextContent("Time’s up")
+    expect(screen.queryByText("0:00")).not.toBeInTheDocument()
   })
 
   it("keeps the live region empty while a timer is still running", () => {
@@ -891,8 +926,10 @@ describe("BoardRow", () => {
     expect(screen.getByRole("status").textContent).toBe("")
   })
 
-  it("settles a running timer once it reaches zero", () => {
-    const item: Widget = {
+  // A finish nobody was there for (a tab opened later, the archive opened onto the card) is old news, and a chime then would sound at someone already looking at it.
+  it("settles a timer that ended long before the card was shown, without a sound", async () => {
+    const endsAt = Date.now() - 2 * 3_600_000
+    const item: TimerWidget = {
       id: "t",
       kind: "timer",
       title: "Tea",
@@ -901,60 +938,18 @@ describe("BoardRow", () => {
         durationMs: 60_000,
         running: true,
         remainingMs: 60_000,
-        endsAt: 1000
-      }
-    }
-    const onWidgetChange = vi.fn()
-
-    // now is well past endsAt, so the timer is done.
-    render(
-      <BoardRow item={item} now={new Date(50_000)} onWidgetChange={onWidgetChange} />
-    )
-
-    expect(onWidgetChange).toHaveBeenCalledWith({
-      ...item,
-      settings: { ...item.settings, running: false, remainingMs: 0, endsAt: null }
-    })
-  })
-
-  // Reaching zero settles every timer, but only a timer that asked for a chime is allowed to make a sound: an unasked-for one would be exactly the autoplay the product rules out.
-  it("stays silent when a finished timer did not opt into the chime", () => {
-    const item: Widget = {
-      id: "t",
-      kind: "timer",
-      title: "Tea",
-      colorPreset: "emerald",
-      settings: {
-        durationMs: 60_000,
-        running: true,
-        remainingMs: 60_000,
-        endsAt: 1000
-      }
-    }
-
-    render(<BoardRow item={item} now={new Date(50_000)} onWidgetChange={vi.fn()} />)
-
-    expect(vi.mocked(playChime)).not.toHaveBeenCalled()
-  })
-
-  it("sounds the chime once for a timer that opted in", () => {
-    const item: Widget = {
-      id: "t",
-      kind: "timer",
-      title: "Tea",
-      colorPreset: "emerald",
-      settings: {
-        durationMs: 60_000,
-        running: true,
-        remainingMs: 60_000,
-        endsAt: 1000,
+        endsAt,
         chime: true
       }
     }
+    const onTimerFinish = vi.fn(async () => item)
 
-    render(<BoardRow item={item} now={new Date(50_000)} onWidgetChange={vi.fn()} />)
+    render(<BoardRow item={item} now={new Date()} onTimerFinish={onTimerFinish} />)
+    // The board's answer.
+    await act(async () => {})
 
-    expect(vi.mocked(playChime)).toHaveBeenCalledTimes(1)
+    expect(onTimerFinish).toHaveBeenCalledWith("t", endsAt)
+    expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
   })
 
   it("does not warm up audio when starting a timer with no chime", () => {
@@ -997,9 +992,345 @@ describe("BoardRow", () => {
     render(<BoardRow item={item} now={new Date(0)} onWidgetChange={vi.fn()} />)
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
-    // The finish arrives with no gesture of its own, so this press is the chime's only chance to be allowed to play.
+    // The finish arrives with no gesture of its own, so the press readies the audio in case the browser holds it back until the page is used.
     expect(vi.mocked(primeChime)).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(playChime)).not.toHaveBeenCalled()
+    expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+  })
+
+  describe("a timer's finish", () => {
+    const START = Date.parse("2026-03-04T10:00:00.000Z")
+    const running = (settings: Partial<TimerWidget["settings"]> = {}): TimerWidget => ({
+      id: "t",
+      kind: "timer",
+      title: "Tea",
+      colorPreset: "emerald",
+      settings: {
+        durationMs: 60_000,
+        running: true,
+        remainingMs: 60_000,
+        endsAt: START + 60_000,
+        ...settings
+      }
+    })
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(START)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      // Back in view, which hands back any title a finish borrowed while the tab was hidden.
+      vi.restoreAllMocks()
+      document.dispatchEvent(new Event("visibilitychange"))
+      document.title = ""
+    })
+
+    // The board settles the run and answers with the timer as it now stands, which is what the card announces from.
+    const settledAs = (timer: TimerWidget) => vi.fn(async (): Promise<TimerWidget | null> => timer)
+
+    // The card's clock is held at the start throughout: it stops while the tab is hidden, which is when a timer most often ends, so the finish can't wait for it.
+    it("lands on its own at the finish, chiming once when it opted in", async () => {
+      const item = running({ chime: true })
+      const onTimerFinish = settledAs(item)
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />)
+
+      await vi.advanceTimersByTimeAsync(59_999)
+      expect(onTimerFinish).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(onTimerFinish).toHaveBeenCalledTimes(1)
+      expect(onTimerFinish).toHaveBeenCalledWith("t", START + 60_000)
+      // Keyed to this run's finish, so the other open boards that reach it too stand down.
+      expect(vi.mocked(playChimeOnce)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(playChimeOnce)).toHaveBeenCalledWith(`t:${START + 60_000}`, 60_000)
+    })
+
+    // Reaching zero settles every timer, but only a timer that asked for a chime is allowed to make a sound: an unasked-for one would be exactly the autoplay the product rules out.
+    it("stays silent at the finish when the timer did not opt into the chime", async () => {
+      const item = running()
+      const onTimerFinish = settledAs(item)
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(onTimerFinish).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+    })
+
+    // The board answers no when the run this card was waiting on has already been settled or replaced, by another tab or device or since this one last rendered, so there is nothing to announce.
+    // A tab that opens on its mirror or wakes from being frozen answers only once it has caught up with storage, and the card's own chime says nothing in the meantime.
+    it("stays silent when the run it was waiting on is no longer the one going", async () => {
+      let answer: (settled: TimerWidget | null) => void = () => {}
+      const onTimerFinish = vi.fn(
+        () =>
+          new Promise<TimerWidget | null>((resolve) => {
+            answer = resolve
+          })
+      )
+
+      render(
+        <BoardRow
+          item={running({ chime: true })}
+          now={new Date(START)}
+          onTimerFinish={onTimerFinish}
+        />
+      )
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(onTimerFinish).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+
+      answer(null)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+    })
+
+    // One timer's chime is switched off in another tab after the card last rendered and the other's switched on, and the board hears of it before the card does.
+    it("chimes as the board holds the timer at its finish, not as the card last showed it", async () => {
+      const tea = running({ chime: true })
+      const eggs = { ...running({ chime: false }), id: "e", title: "Eggs" }
+      const withChime = (timer: TimerWidget, chime: boolean) => ({
+        ...timer,
+        settings: { ...timer.settings, chime }
+      })
+
+      render(
+        <>
+          <BoardRow
+            item={tea}
+            now={new Date(START)}
+            onTimerFinish={settledAs(withChime(tea, false))}
+          />
+          <BoardRow
+            item={eggs}
+            now={new Date(START)}
+            onTimerFinish={settledAs(withChime(eggs, true))}
+          />
+        </>
+      )
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(vi.mocked(playChimeOnce)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(playChimeOnce)).toHaveBeenCalledWith(`e:${START + 60_000}`, 60_000)
+    })
+
+    it("settles quietly when it wakes long after the finish", async () => {
+      const item = running({ chime: true })
+      const onTimerFinish = settledAs(item)
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />)
+
+      // The computer slept through the end: the wall clock has moved on two hours by the time the timeout gets to run.
+      vi.setSystemTime(START + 2 * 3_600_000)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(onTimerFinish).toHaveBeenCalledWith("t", START + 60_000)
+      expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+    })
+
+    it("finishes when the card's clock reads it as done before its timeout has run", async () => {
+      const item = running({ chime: true })
+      const onTimerFinish = settledAs(item)
+
+      const { rerender } = render(
+        <BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />
+      )
+
+      // The wall clock jumped past the end without the timeout seeing it, and the page clock's next tick is the first to notice.
+      vi.setSystemTime(START + 61_000)
+      rerender(
+        <BoardRow item={item} now={new Date(START + 61_000)} onTimerFinish={onTimerFinish} />
+      )
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(onTimerFinish).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(playChimeOnce)).toHaveBeenCalledTimes(1)
+    })
+
+    it("waits out a run longer than a single timeout can hold", () => {
+      const days = 24 * 3_600_000
+      const item = running({ endsAt: START + 30 * days })
+      const onTimerFinish = settledAs(item)
+      const schedule = vi.spyOn(window, "setTimeout")
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />)
+
+      // A delay past 2^31 ms overflows setTimeout and fires at once, so it has to be asked for in pieces.
+      const delays = schedule.mock.calls.map(([, delay]) => delay ?? 0)
+      expect(Math.max(...delays)).toBeLessThanOrEqual(2 ** 31 - 1)
+
+      vi.advanceTimersByTime(25 * days)
+      expect(onTimerFinish).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(5 * days)
+      expect(onTimerFinish).toHaveBeenCalledTimes(1)
+    })
+
+    // Pausing, resetting, and a new length all take the run away from under its timeout, and archiving or deleting takes the card away.
+    it("stops waiting for the finish once the run is paused or the card goes", () => {
+      const item = running({ chime: true })
+      const onTimerFinish = settledAs(item)
+
+      const { rerender, unmount } = render(
+        <BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />
+      )
+
+      rerender(
+        <BoardRow
+          item={{
+            ...item,
+            settings: { ...item.settings, running: false, remainingMs: 30_000, endsAt: null }
+          }}
+          now={new Date(START)}
+          onTimerFinish={onTimerFinish}
+        />
+      )
+      expect(vi.getTimerCount()).toBe(0)
+      vi.advanceTimersByTime(60_000)
+      expect(onTimerFinish).not.toHaveBeenCalled()
+
+      // Going again, then taken off the board before it ends.
+      rerender(
+        <BoardRow
+          item={{ ...item, settings: { ...item.settings, endsAt: START + 120_000 } }}
+          now={new Date(START + 60_000)}
+          onTimerFinish={onTimerFinish}
+        />
+      )
+      expect(vi.getTimerCount()).toBe(1)
+      unmount()
+      expect(vi.getTimerCount()).toBe(0)
+      vi.advanceTimersByTime(60_000)
+
+      expect(onTimerFinish).not.toHaveBeenCalled()
+    })
+
+    it("says so in the tab's title when it finishes out of sight, until the board is looked at again", async () => {
+      document.title = "New Tab"
+      const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const eggs = { ...running({ endsAt: START + 90_000 }), id: "e", title: "Eggs" }
+
+      render(
+        <>
+          <BoardRow item={tea} now={new Date(START)} onTimerFinish={settledAs(tea)} />
+          <BoardRow item={eggs} now={new Date(START)} onTimerFinish={settledAs(eggs)} />
+        </>
+      )
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(document.title).toBe("Time’s up · Tea")
+
+      // A second finish takes the title over, and coming back still restores the one from before either.
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      visibility.mockReturnValue("visible")
+      document.dispatchEvent(new Event("visibilitychange"))
+      expect(document.title).toBe("New Tab")
+    })
+
+    // The title only says what the cards still show: a timer started again or reset from another tab gives it back early, but only the one whose finish it names.
+    it("gives the title back once the timer it names goes again, and names it as the board does", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const eggs = { ...running({ endsAt: START + 120_000 }), id: "e", title: "Eggs" }
+      const finishedAs = (timer: TimerWidget): TimerWidget => ({
+        ...timer,
+        settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
+      })
+      // Tea was renamed in another tab while it ran.
+      const teaFinish = settledAs({ ...tea, title: "Green tea" })
+      const eggsFinish = settledAs(eggs)
+      const board = (teaNow: TimerWidget, eggsNow: TimerWidget) => (
+        <>
+          <BoardRow item={teaNow} now={new Date(START)} onTimerFinish={teaFinish} />
+          <BoardRow item={eggsNow} now={new Date(START)} onTimerFinish={eggsFinish} />
+        </>
+      )
+
+      const { rerender } = render(board(tea, eggs))
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(document.title).toBe("Time’s up · Green tea")
+
+      rerender(board(finishedAs(tea), eggs))
+      await vi.advanceTimersByTimeAsync(60_000)
+      rerender(board(finishedAs(tea), finishedAs(eggs)))
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      // Tea going again leaves the title to the finish it names now, and Eggs reset takes it back.
+      const teaAgain = running({ endsAt: START + 600_000 })
+      rerender(board(teaAgain, finishedAs(eggs)))
+      expect(document.title).toBe("Time’s up · Eggs")
+
+      rerender(board(teaAgain, { ...eggs, settings: { ...eggs.settings, running: false, endsAt: null } }))
+      expect(document.title).toBe("New Tab")
+    })
+
+    // A refused save puts the run back as storage holds it, still going past its end, and the card settles it again from there.
+    it("keeps the title through a finish that is put back and settled again", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+      const onTimerFinish = settledAs(tea)
+      const row = (item: TimerWidget) => (
+        <BoardRow item={item} now={new Date(START)} onTimerFinish={onTimerFinish} />
+      )
+
+      const { rerender } = render(row(tea))
+      await vi.advanceTimersByTimeAsync(60_000)
+      rerender(row({ ...tea, settings: { ...tea.settings, running: false, remainingMs: 0, endsAt: null } }))
+      rerender(row(tea))
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(onTimerFinish).toHaveBeenCalledTimes(2)
+      expect(document.title).toBe("Time’s up · Tea")
+    })
+
+    it("leaves the title alone when it finishes in view", async () => {
+      document.title = "New Tab"
+      const item = running()
+
+      render(<BoardRow item={item} now={new Date(START)} onTimerFinish={settledAs(item)} />)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(document.title).toBe("New Tab")
+    })
+
+    // A tab woken hours later, or one whose run another tab already settled, has nothing new to report.
+    it("keeps old news out of the title", async () => {
+      document.title = "New Tab"
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+      const tea = running()
+
+      render(
+        <>
+          <BoardRow item={tea} now={new Date(START)} onTimerFinish={settledAs(tea)} />
+          <BoardRow
+            item={{ ...running(), id: "e", title: "Eggs" }}
+            now={new Date(START)}
+            onTimerFinish={vi.fn(async () => null)}
+          />
+        </>
+      )
+
+      vi.setSystemTime(START + 2 * 3_600_000)
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(document.title).toBe("New Tab")
+    })
+
+    // The lifted copy under a drag is the same card with no way to report back, and the card left on the board settles the run.
+    it("leaves the finish to the card on the board when it has nowhere to report it", () => {
+      render(<BoardRow item={running({ chime: true })} now={new Date(START)} />)
+
+      expect(vi.getTimerCount()).toBe(0)
+      vi.advanceTimersByTime(60_000)
+      expect(vi.mocked(playChimeOnce)).not.toHaveBeenCalled()
+    })
   })
 
   describe("with fake timers", () => {

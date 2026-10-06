@@ -118,3 +118,76 @@ describe("playChime", () => {
     expect(createOscillator).toHaveBeenCalledTimes(2)
   })
 })
+
+describe("playChimeOnce", () => {
+  // A stand-in for the Web Locks API as the extension's tabs share it: a name is granted to
+  // one holder at a time, and an `ifAvailable` request for a held one gets null.
+  const stubLocks = () => {
+    const held = new Set<string>()
+
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          callback: (lock: Lock | null) => unknown
+        ) => {
+          if (held.has(name)) {
+            return callback(null)
+          }
+
+          held.add(name)
+          await callback({ name, mode: "exclusive" })
+          held.delete(name)
+        }
+      }
+    })
+
+    return { held }
+  }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("plays when the browser has no Web Locks to share", async () => {
+    const { createOscillator } = stubAudioContext()
+    vi.stubGlobal("navigator", {})
+
+    const { playChimeOnce } = await import("./chime")
+    playChimeOnce("tea:1000", 60_000)
+
+    expect(createOscillator).toHaveBeenCalledTimes(2)
+  })
+
+  it("sounds one finish once however many boards reach it, and the next finish again", async () => {
+    vi.useFakeTimers()
+    const { createOscillator } = stubAudioContext()
+    const { held } = stubLocks()
+
+    const { playChimeOnce } = await import("./chime")
+    // Three open boards reach the same finish.
+    playChimeOnce("tea:1000", 60_000)
+    playChimeOnce("tea:1000", 60_000)
+    playChimeOnce("tea:1000", 60_000)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(createOscillator).toHaveBeenCalledTimes(2)
+    expect(held.has("dayboard-chime:tea:1000")).toBe(true)
+
+    // A board that background throttling wakes a beat later still finds it taken.
+    await vi.advanceTimersByTimeAsync(1_000)
+    playChimeOnce("tea:1000", 60_000)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(createOscillator).toHaveBeenCalledTimes(2)
+
+    // Another timer's finish is its own.
+    playChimeOnce("eggs:2000", 60_000)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(createOscillator).toHaveBeenCalledTimes(4)
+
+    // The claim lets go once the hold is over.
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(held.has("dayboard-chime:tea:1000")).toBe(false)
+  })
+})

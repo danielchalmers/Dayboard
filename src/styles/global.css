@@ -851,11 +851,6 @@ details > summary::-webkit-details-marker {
   background: color-mix(in srgb, var(--card-accent-resolved) 88%, var(--text));
 }
 
-.board-row__meta--alert {
-  color: var(--card-accent-resolved);
-  font-weight: 600;
-}
-
 /* Habit week, the card's main content: the current week as a row of dots under its weekday letters, so the row reads as the week it is rather than as seven unlabeled days. */
 .habit-week {
   display: grid;

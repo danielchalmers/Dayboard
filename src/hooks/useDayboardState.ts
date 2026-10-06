@@ -8,7 +8,13 @@ import {
   watchDayboardState,
   writeDayboardState
 } from "~/lib/storage"
-import type { DayboardSettings, DayboardState, Widget } from "~/lib/types"
+import { finishTimer } from "~/lib/timers"
+import type {
+  DayboardSettings,
+  DayboardState,
+  TimerWidget,
+  Widget
+} from "~/lib/types"
 
 // Each change resolves to why storage refused it, or null once it is saved (or there was nothing to save), so whatever the user typed for it can be held on to until it lands.
 type Save<T> = (value: T) => Promise<string | null>
@@ -20,6 +26,7 @@ interface UseDayboardStateResult {
   setWidgets: Save<Widget[]>
   setSettings: (settings: DayboardSettings, isShown?: () => boolean) => Promise<string | null>
   updateWidget: Save<Widget>
+  settleTimer: (id: string, endsAt: number) => Promise<TimerWidget | null>
   replaceState: Save<DayboardState>
   saveError: string | null
   dismissSaveError: () => void
@@ -71,7 +78,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
   // That read is armed with the first render rather than when the effect below starts it, because a card's effects run before this hook's, and a timer that ran out meanwhile settles in that same first commit.
   const [firstRead] = useState(deferred)
 
-  // Until it lands, the read that brings this tab up to date with storage: the first one, or one started as the tab wakes from being frozen (see updateWidget).
+  // Until it lands, the read that brings this tab up to date with storage: the first one, or one started as the tab wakes from being frozen (see updateWidget and settleTimer).
   const catchingUpRef = useRef<Promise<void> | null>(firstRead.promise)
 
   const commit = useCallback((next: DayboardState) => {
@@ -105,7 +112,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
     }
   }, [adopt])
 
-  // Holds a card's changes until `reading` lands (see updateWidget).
+  // Holds a card's change and a timer's finish until `reading` lands (see updateWidget and settleTimer).
   const catchUpWith = useCallback((reading: Promise<void>) => {
     catchingUpRef.current = reading
     void reading.finally(() => {
@@ -135,7 +142,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   // Chrome freezes a tab left in the background (energy saver, Edge's sleeping tabs), and it wakes holding the board it froze with.
   // The changes other tabs made meanwhile are queued for it, but they are delivered only after its own wake-up work has run, and coming back into view is part of that: the clock catches up first, and a timer that ran out while the tab slept would settle from the old board and write it back over everything since.
-  // A read started on waking is answered after those queued changes, so until it lands a card's change waits for it (see updateWidget).
+  // A read started on waking is answered after those queued changes, so until it lands, a timer's finish and any card's change wait for it (see settleTimer and updateWidget).
   useEffect(() => {
     const catchUp = () => catchUpWith(reload())
 
@@ -224,8 +231,8 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   const updateWidget = useCallback(
     async (widget: Widget) => {
-      // A change made before the tab has caught up with storage was worked out from the card as the tab remembered it or froze with it.
-      // Once caught up it goes ahead only if that card hasn't changed since; otherwise the card renders as it is now and does over from there whatever still needs doing, rather than settling a timer run another tab or device has already finished and started again.
+      // A change made before the tab has caught up with storage was worked out from the card as the tab remembered it or froze with it, and saving it then would write that whole board back over storage.
+      // So it waits, and once caught up goes ahead only if that card hasn't changed since; otherwise the card renders as it is now and does over from there whatever still needs doing, rather than laying a change worked out from an old copy over a newer one.
       if (catchingUpRef.current) {
         const cardIn = (board: DayboardState | null) =>
           board?.widgets.find((candidate) => candidate.id === widget.id)
@@ -270,6 +277,42 @@ export const useDayboardState = (): UseDayboardStateResult => {
     [release, saveState]
   )
 
+  // A timer's finish settles the run it was aimed at and nothing else, so it is checked against the latest board rather than the card's copy.
+  // A board can hear of a newer board from storage before it has rendered it, and settling from the copy the timeout was set with would end a run started since in another tab.
+  // Like a card's change, it first waits for the tab to catch up with storage (see updateWidget): the mirror a new tab paints first and the board a frozen tab wakes holding may both show a run another tab or device has since settled or started again, and settling it there would write that whole board back over storage.
+  // It answers with the timer as the finish left it, or null when there was no run to settle, so the card only announces a finish the board took, and announces it as the board holds the timer now.
+  const settleTimer = useCallback(
+    async (id: string, endsAt: number): Promise<TimerWidget | null> => {
+      if (catchingUpRef.current) {
+        await catchingUpRef.current
+      }
+
+      const current = stateRef.current
+      const existing = current?.widgets.find((candidate) => candidate.id === id)
+
+      if (
+        !current ||
+        existing?.kind !== "timer" ||
+        !existing.settings.running ||
+        existing.settings.endsAt !== endsAt
+      ) {
+        return null
+      }
+
+      const settled = { ...existing, settings: finishTimer(existing.settings) }
+
+      void saveState({
+        ...current,
+        widgets: current.widgets.map((candidate) =>
+          candidate === existing ? settled : candidate
+        )
+      })
+
+      return settled
+    },
+    [saveState]
+  )
+
   return {
     state,
     isLoading,
@@ -277,6 +320,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
     setWidgets,
     setSettings,
     updateWidget,
+    settleTimer,
     replaceState: saveState,
     saveError,
     dismissSaveError
