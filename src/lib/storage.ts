@@ -37,14 +37,21 @@ const isWidgetShaped = (value: unknown): value is StoredWidget =>
 const isKnownWidget = (widget: StoredWidget): widget is Widget =>
   Object.hasOwn(widgetRegistry, widget.kind)
 
+// Options that v0.5 had and later versions took away.
+// A setting this build doesn't know is carried for the newer version that wrote it, but these are known to be gone, so a board last saved by v0.5 sheds them on its first save, as it did under v0.8, rather than carrying them forever.
+const RETIRED_SETTINGS = ["dragToMove", "columns", "chimeOnTimerEnd", "dockToBottom"]
+
 // Fill any missing or malformed fields with their defaults so a partial or hand-edited imported board still loads cleanly, and carry the rest through for the version that wrote them.
 const normalizeSettings = (value: unknown): DayboardSettings => {
   const stored = (typeof value === "object" && value !== null && !Array.isArray(value)
     ? value
     : {}) as Partial<DayboardSettings>
+  const current = Object.fromEntries(
+    Object.entries(stored).filter(([key]) => !RETIRED_SETTINGS.includes(key))
+  ) as Partial<DayboardSettings>
 
   return {
-    ...stored,
+    ...current,
     name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name
   }
 }
@@ -128,7 +135,8 @@ const normalizeWidgetSettings = (
         running: settings.running === true && endsAt !== null,
         remainingMs: span(settings.remainingMs, durationMs),
         endsAt,
-        chime: settings.chime === true
+        // Only a timer that has the switch gets it read back: stamping `chime: false` onto every timer saved without one made an upgraded board bigger on its first save, which a board near the sync limit can't afford.
+        ...(settings.chime !== undefined ? { chime: settings.chime === true } : {})
       }
     }
     case "habit":

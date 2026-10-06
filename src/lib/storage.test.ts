@@ -247,6 +247,13 @@ describe("normalizing widgets read from storage or an import", () => {
     ...extra
   })
 
+  // What a save writes: sync stores the board as an object, which is the export file without its indentation.
+  const written = async (state: DayboardState) => {
+    const { serializeDayboardState } = await import("./storage")
+
+    return JSON.stringify(JSON.parse(serializeDayboardState(state)))
+  }
+
   const parse = async (widgets: unknown[]) => {
     const { parseDayboardState } = await import("./storage")
 
@@ -289,8 +296,41 @@ describe("normalizing widgets read from storage or an import", () => {
       { text: "" },
       { quotes: ["One", "Three"], rotation: "daily" },
       { running: false, elapsedMs: 0, startedAt: null },
-      { durationMs: 300_000, running: false, remainingMs: 300_000, endsAt: null, chime: false }
+      { durationMs: 300_000, running: false, remainingMs: 300_000, endsAt: null }
     ])
+  })
+
+  // An upgrade shouldn't make a board bigger: one sitting near the 8 KB sync limit would then refuse every save after it.
+  it("writes a board last saved by v0.5 back smaller, not bigger", async () => {
+    const stored = JSON.stringify({
+      widgets: [
+        widget("timer", { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null }),
+        widget(
+          "timer",
+          { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: "yes" },
+          { id: "timer-2" }
+        )
+      ],
+      settings: {
+        name: "Dana",
+        dragToMove: true,
+        columns: "auto",
+        chimeOnTimerEnd: true,
+        dockToBottom: false
+      }
+    })
+
+    const { parseDayboardState } = await import("./storage")
+    const state = parseDayboardState(stored)
+
+    // A timer that never had the switch still doesn't, and one with an unreadable switch reads as off.
+    expect(state.widgets.map((entry) => entry.settings)).toEqual([
+      { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null },
+      { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: false }
+    ])
+    // The options v0.5 retired go, as they did under v0.8, while the name stays.
+    expect(state.settings).toEqual({ name: "Dana" })
+    expect((await written(state)).length).toBeLessThan(stored.length)
   })
 
   it("falls back on the card's own fields too", async () => {
