@@ -129,6 +129,13 @@ describe("SettingsDialog", () => {
     })
   })
 
+  it("lets the name take the direction of what is typed into it", () => {
+    render(settingsDialog({ settings: { ...DEFAULT_SETTINGS, name: "مريم" } }))
+
+    // Without it, a right-to-left name is typed into a box that lays it out left to right.
+    expect(screen.getByLabelText("Your name")).toHaveAttribute("dir", "auto")
+  })
+
   // The file input itself is hidden, so the Import button is the only way anyone reaches the picker.
   it("opens the file picker from the Import button", () => {
     render(settingsDialog())

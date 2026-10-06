@@ -151,6 +151,51 @@ test("shows a time-aware greeting that can be personalized", async ({
   await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
 })
 
+test("a long name breaks inside the greeting rather than pushing the page sideways", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByLabel("Your name").fill("Wolfeschlegelsteinhausenbergerdorff")
+  await page.getByRole("button", { name: "Done" }).click()
+  await expect(page.locator(".page-header__greeting")).toHaveText(
+    /, Wolfeschlegelsteinhausenbergerdorff$/
+  )
+
+  // One word with nowhere to break once made the page twice the phone's width, with the header's buttons out past its edge.
+  const layout = await page.evaluate(() => ({
+    width: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth
+  }))
+  expect(layout.content).toBeLessThanOrEqual(layout.width)
+
+  const add = await boxOf(page.getByRole("button", { name: "Add widget" }), "the Add widget button")
+  expect(add.x + add.width).toBeLessThanOrEqual(layout.width)
+})
+
+test("the greeting shrinks with a window narrower than a phone", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  const fontSize = () =>
+    page
+      .locator(".page-header__greeting")
+      .evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
+
+  // A phone's width is where the greeting comes down to 2.1rem.
+  expect(await fontSize()).toBeCloseTo(33.6, 1)
+
+  // Narrower still, at 2.1rem an everyday name such as Bartholomew had no room beside the buttons and broke mid-word, so the greeting keeps shrinking in step with the window.
+  await page.setViewportSize({ width: 320, height: 844 })
+  await expect.poll(fontSize).toBeCloseTo((33.6 * 320) / 390, 1)
+})
+
 test("exports the board to a file and imports one back", async ({
   page,
   extensionId
@@ -859,6 +904,136 @@ test("typing in a note does not start a drag or open the widget menu", async ({
   await page.keyboard.type("a b c")
   await expect(field).toHaveValue("a b c")
   await expect(page.locator(".card-menu")).toHaveCount(0)
+})
+
+test("a note that holds more than it shows fades at the edge the rest is behind", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await addWidget(page, "note", "Groceries")
+
+  const field = page.getByLabel("Groceries note")
+  // Which edges are faded, read from whether the mask starts and ends clear rather than from how Chrome spells the gradient.
+  const fadedEdges = () =>
+    field.evaluate((node) => {
+      const mask = getComputedStyle(node).maskImage
+      const colors = mask.match(/transparent|rgba?\([^)]*\)/g) ?? []
+      const clear = (color: string | undefined) => {
+        if (color === undefined) {
+          return false
+        }
+        if (color === "transparent") {
+          return true
+        }
+        const parts = color.slice(color.indexOf("(") + 1, -1).split(/[\s,/]+/).filter(Boolean)
+        return parts.length === 4 && Number(parts[3]) === 0
+      }
+      const top = clear(colors[0])
+      const bottom = clear(colors.at(-1))
+
+      return top && bottom ? "both" : top ? "top" : bottom ? "bottom" : "none"
+    })
+  const scrollTo = (fraction: number) =>
+    field.evaluate((node, at) => {
+      node.scrollTop = (node.scrollHeight - node.clientHeight) * at
+    }, fraction)
+
+  // Text that fits is left exactly as it is.
+  await field.fill("Oat milk")
+  await field.blur()
+  expect(await fadedEdges()).toBe("none")
+
+  // Typing past the end leaves the note scrolled to its last line, so once it is left the rest is above it and only the top edge fades.
+  await field.fill(
+    ["Oat milk", "Eggs", "Spinach", "Lemons", "Coffee beans", "Bread", "Rice", "Basil"].join("\n")
+  )
+  // While it is being typed in, nothing is faded, including the line under the caret at the edge.
+  await expect.poll(fadedEdges).toBe("none")
+  await field.blur()
+  await expect.poll(fadedEdges).toBe("top")
+
+  await scrollTo(0.5)
+  await expect.poll(fadedEdges).toBe("both")
+
+  // Back at the top, the rest is below, and the bottom edge fades instead.
+  await scrollTo(0)
+  await expect.poll(fadedEdges).toBe("bottom")
+
+  // The fade follows the hand rather than the clock, so asking for less motion keeps it tracking the scroll instead of stuck at its end.
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await expect.poll(fadedEdges).toBe("bottom")
+  await scrollTo(1)
+  await expect.poll(fadedEdges).toBe("top")
+
+  // High contrast keeps every line at full strength.
+  await page.emulateMedia({ forcedColors: "active" })
+  await expect.poll(fadedEdges).toBe("none")
+})
+
+test("a quote or task cut off by its card offers the whole of it on hover", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const passage =
+    "It is not the critic who counts; not the man who points out how the strong man " +
+    "stumbles, or where the doer of deeds could have done them better. The credit " +
+    "belongs to the man who is actually in the arena."
+
+  // The add flow written out, since a quote card needs its Quotes field filled too.
+  const addQuote = async (title: string, quote: string) => {
+    await page.getByRole("button", { name: "Add widget" }).click()
+    await page.getByRole("button", { name: "Add quote" }).click()
+    await page.getByLabel("Name").fill(title)
+    await page.getByLabel("Quotes").fill(quote)
+    await page.getByRole("button", { name: "Save quote" }).click()
+    await page.getByRole("dialog").waitFor({ state: "hidden" })
+  }
+
+  await addQuote("Arena", passage)
+  const long = cardByTitle(page, "Arena").locator(".quote-text")
+  await long.hover()
+  await expect(long).toHaveAttribute("title", passage)
+
+  // A quote that fits shows no copy of itself, including a one-line one, whose big opening mark can reach below its line in some fonts.
+  await addQuote("Quiet", "Quiet days still count.")
+  const short = cardByTitle(page, "Quiet").locator(".quote-text")
+  await short.hover()
+  await expect(short).not.toHaveAttribute("title")
+
+  await addWidget(page, "todo", "Errands")
+  const card = cardByTitle(page, "Errands")
+  const task = "Email Priya the revised launch schedule and the budget sheet"
+
+  for (const text of [task, "Water plants"]) {
+    await card.getByLabel("Add a task to Errands").fill(text)
+    await card.getByLabel("Add a task to Errands").press("Enter")
+  }
+
+  const cut = card.locator(".todo-task__text", { hasText: "Email Priya" })
+  await cut.hover()
+  await expect(cut).toHaveAttribute("title", task)
+
+  const whole = card.locator(".todo-task__text", { hasText: "Water plants" })
+  await whole.hover()
+  await expect(whole).not.toHaveAttribute("title")
+
+  // Cut off by a fraction of a pixel, a task still loses its last letters to the ellipsis, which widths rounded to whole pixels can miss.
+  await whole.evaluate((node) => {
+    const text = document.createRange()
+    text.selectNodeContents(node)
+    node.style.maxInlineSize = `${text.getBoundingClientRect().width - 0.25}px`
+  })
+  await cut.hover()
+  await whole.hover()
+  await expect(whole).toHaveAttribute("title", "Water plants")
+
+  // The text takes the pointer now, and a click on it still checks its task off.
+  await cut.click()
+  await expect(card.getByRole("checkbox", { name: task })).toBeChecked()
 })
 
 test("add quote flow shows a quote and keeps the daily pick across reloads", async ({

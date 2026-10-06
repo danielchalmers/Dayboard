@@ -780,6 +780,149 @@ describe("BoardRow", () => {
     expect(screen.getByText("Only one here")).toBeInTheDocument()
   })
 
+  it("lets everything typed onto a card take its own direction", () => {
+    const now = new Date("2026-03-04T09:00:00.000Z")
+    const note: Widget = {
+      id: "n",
+      kind: "note",
+      title: "مذكرات",
+      colorPreset: "indigo",
+      settings: { text: "اشترِ الحليب!" }
+    }
+    const quote: Widget = {
+      id: "q",
+      kind: "quote",
+      title: "حكمة",
+      colorPreset: "emerald",
+      settings: { quotes: ["اطلبوا العلم."], rotation: "daily" }
+    }
+
+    // Right-to-left text only lays out right to left, with its punctuation at the proper end, when the element is told to look at what it holds.
+    render(
+      <>
+        <BoardRow item={note} now={now} />
+        <BoardRow item={quote} now={now} />
+        <BoardRow item={todo([{ id: "a", text: "شراء الخبز!", done: false }])} now={now} />
+      </>
+    )
+
+    for (const title of ["مذكرات", "حكمة", "Today"]) {
+      expect(screen.getByRole("heading", { name: title })).toHaveAttribute("dir", "auto")
+    }
+    expect(screen.getByLabelText("مذكرات note")).toHaveAttribute("dir", "auto")
+    expect(screen.getByText("اطلبوا العلم.")).toHaveAttribute("dir", "auto")
+    expect(screen.getByText("شراء الخبز!")).toHaveAttribute("dir", "auto")
+    expect(screen.getByLabelText("Add a task to Today")).toHaveAttribute("dir", "auto")
+  })
+
+  describe("text the card cuts off", () => {
+    // jsdom lays nothing out, so a test tells an element how much of its text the card has room for: the scroll and client sizes, which the browser rounds to whole pixels, and the unrounded widths of the element's box and of the text inside it.
+    const textWidths = new WeakMap<Node, number>()
+    const jsdomRangeRect = Object.getOwnPropertyDescriptor(Range.prototype, "getBoundingClientRect")
+
+    beforeEach(() => {
+      // jsdom's Range has no geometry, so the text's width is whatever the test gave the element the range was drawn around.
+      Object.defineProperty(Range.prototype, "getBoundingClientRect", {
+        configurable: true,
+        value(this: Range) {
+          return { width: textWidths.get(this.startContainer) ?? 0 } as DOMRect
+        }
+      })
+    })
+
+    afterEach(() => {
+      if (jsdomRangeRect) {
+        Object.defineProperty(Range.prototype, "getBoundingClientRect", jsdomRangeRect)
+      } else {
+        delete (Range.prototype as Partial<Range>).getBoundingClientRect
+      }
+    })
+
+    const sizeText = (
+      element: HTMLElement,
+      {
+        width,
+        textWidth,
+        ...rounded
+      }: Partial<
+        Record<
+          "scrollWidth" | "clientWidth" | "scrollHeight" | "clientHeight" | "width" | "textWidth",
+          number
+        >
+      >
+    ) => {
+      for (const [key, value] of Object.entries(rounded)) {
+        Object.defineProperty(element, key, { configurable: true, value })
+      }
+      if (width !== undefined) {
+        Object.defineProperty(element, "getBoundingClientRect", {
+          configurable: true,
+          value: () => ({ width }) as DOMRect
+        })
+      }
+      if (textWidth !== undefined) {
+        textWidths.set(element, textWidth)
+      }
+    }
+
+    it("offers a quote the card cuts off in full on hover, and a quote that fits nothing", () => {
+      const quote =
+        "It is not the critic who counts; not the man who points out how the strong man stumbles."
+      const item: Widget = {
+        id: "q",
+        kind: "quote",
+        title: "Arena",
+        colorPreset: "rose",
+        settings: { quotes: [quote], rotation: "daily" }
+      }
+
+      render(<BoardRow item={item} now={new Date("2026-03-04T09:00:00.000Z")} />)
+
+      const shown = screen.getByText(quote)
+      // Four lines shown of six.
+      sizeText(shown, { scrollHeight: 190, clientHeight: 134, width: 295, textWidth: 293.4 })
+      fireEvent.pointerEnter(shown)
+      expect(shown).toHaveAttribute("title", quote)
+
+      // Asked again at every visit, so a quote that fits once the window is wider stops offering a copy of itself.
+      sizeText(shown, { scrollHeight: 134 })
+      fireEvent.pointerLeave(shown)
+      fireEvent.pointerEnter(shown)
+      expect(shown).not.toHaveAttribute("title")
+    })
+
+    it("offers a task the card cuts off in full on hover, and a task that fits nothing", () => {
+      const long = "Email Priya the revised launch schedule and the budget sheet"
+      const item = todo([
+        { id: "a", text: long, done: false },
+        { id: "b", text: "Water plants", done: false }
+      ])
+
+      render(<BoardRow item={item} now={todoAt} />)
+
+      const cut = screen.getByText(long)
+      sizeText(cut, { scrollWidth: 586, clientWidth: 295, width: 294.66, textWidth: 586.4 })
+      fireEvent.pointerEnter(cut)
+      expect(cut).toHaveAttribute("title", long)
+
+      const whole = screen.getByText("Water plants")
+      sizeText(whole, { scrollWidth: 96, clientWidth: 96, width: 96.2, textWidth: 96.2 })
+      fireEvent.pointerEnter(whole)
+      expect(whole).not.toHaveAttribute("title")
+    })
+
+    it("offers a task cut off by less than a pixel, though its rounded widths read the same", () => {
+      const task = "Return the dentist for a Thursday check-up"
+      render(<BoardRow item={todo([{ id: "a", text: task, done: false }])} now={todoAt} />)
+
+      // The card draws an ellipsis over the last letters of text 0.6px wider than its box, while scrollWidth and clientWidth both round to 295.
+      const cut = screen.getByText(task)
+      sizeText(cut, { scrollWidth: 295, clientWidth: 295, width: 294.66, textWidth: 295.28 })
+      fireEvent.pointerEnter(cut)
+      expect(cut).toHaveAttribute("title", task)
+    })
+  })
+
   it("renders a stopwatch and starts it from the button", () => {
     const item: Widget = {
       id: "sw",

@@ -198,11 +198,15 @@ a {
    Set in the plain text color: quiet confidence, no effects. */
 .page-header__greeting {
   color: var(--text);
-  font-size: clamp(2.1rem, 4vw, 2.8rem);
+  /* Narrower than a phone (390px, where 2.1rem is 8.62vw) the greeting shrinks in step with the window.
+     Beside two buttons that keep their size, an everyday name such as Bartholomew would otherwise have to break mid-word to fit. */
+  font-size: min(clamp(2.1rem, 4vw, 2.8rem), 8.62vw);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0;
+  /* A long name with nowhere to break would otherwise push the page sideways and the header's buttons off a narrow screen. */
+  overflow-wrap: anywhere;
 }
 
 .page-header__date {
@@ -579,7 +583,7 @@ details > summary::-webkit-details-marker {
   gap: 24px;
   grid-template-rows: auto 1fr;
   /* Every card is one fixed size so the board reads as a single calm surface.
-     Content adapts to the card (quotes step down through sizing tiers, notes scroll) instead of stretching it. */
+     Content fits itself to the card (titles and quotes ellipsize, notes scroll) instead of stretching it. */
   block-size: 240px;
   padding: 26px 30px 24px;
   position: relative;
@@ -651,6 +655,8 @@ details > summary::-webkit-details-marker {
   margin: 0;
   color: var(--text);
   overflow-wrap: anywhere;
+  /* A title that wraps brings a word down to keep its last one company, rather than leaving it alone on the second line. */
+  text-wrap: pretty;
   /* Cards no longer grow with their content, so a runaway title ellipsizes after two lines instead of squeezing the body. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -705,6 +711,44 @@ details > summary::-webkit-details-marker {
   margin: 0;
   padding: 0;
   resize: none;
+  /* A slim thumb in the card's own accent, where Windows would otherwise set a white track with arrows inside a tinted card. */
+  scrollbar-color: color-mix(in srgb, var(--card-accent-resolved) 40%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+/* A note that holds more than it shows fades out at whichever edge the rest is behind: the bottom at first, both partway down, the top at the end.
+   The fade is driven by the note's own scroll position, and a note with nothing to scroll has no scroll timeline, so text that fits is never faded.
+   It sits behind @supports because without scroll timelines the animation would run once by the clock and leave every note faded at the top.
+   It steps aside while the note is being typed in, since the line under the caret is often the one at the edge, and comes back where the note was left.
+   High contrast asks for every line at full strength, and there the stock scrollbar is drawn anyway to say there is more, so it never fades. */
+@supports (animation-timeline: scroll()) {
+  .note-field {
+    animation: edge-fade linear both;
+    animation-timeline: scroll(self);
+  }
+
+  .note-field:focus {
+    animation: none;
+  }
+
+  @media (forced-colors: active) {
+    .note-field {
+      animation: none;
+    }
+  }
+}
+
+@keyframes edge-fade {
+  from {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+  }
+  10%,
+  90% {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.6em, #000 calc(100% - 1.6em), transparent);
+  }
+  to {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.6em);
+  }
 }
 
 .note-field:hover,
@@ -735,12 +779,18 @@ details > summary::-webkit-details-marker {
   overflow-wrap: anywhere;
   position: relative;
   padding-block-start: 22px;
+  /* The same for a quote: a lone last word moves down with company, and the lines above it stay as they were. */
+  text-wrap: pretty;
 }
 
-/* The decorative mark sets the card apart from a note at a glance. */
+/* The decorative mark sets the card apart from a note at a glance.
+   It is set in a serif, whose curly mark matches the badge's; the interface font draws it as two slanted wedges.
+   Layout containment keeps the glyph's reach below its own short line out of the quote's scroll size, which would otherwise make a one-line quote read as clipped. */
 .quote-text::before {
   color: var(--card-accent-resolved);
+  contain: layout;
   content: "\201C";
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 3.2rem;
   font-weight: 650;
   line-height: 0.6;
@@ -1177,7 +1227,8 @@ details > summary::-webkit-details-marker {
 .board-row__detail,
 .board-row__value,
 .board-row__meta,
-.quote-text {
+.quote-text,
+.todo-task__text {
   pointer-events: auto;
 }
 
@@ -1603,11 +1654,13 @@ body:has(.board-row--overlay) .board-notice {
   margin: 0;
 }
 
+/* The subtitle can quote a card's title, which may be one long word with nowhere to break, so it breaks anywhere rather than run past the dialog's edge. */
 .modal-dialog__subtitle {
   color: var(--muted);
   font-size: 0.98rem;
   margin: 10px 0 0;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .dialog-form {
@@ -1874,6 +1927,7 @@ body:has(.board-row--overlay) .board-notice {
   margin: 10px 0 0;
   max-width: 340px;
   line-height: 1.5;
+  text-wrap: pretty;
 }
 
 /* An empty board doubles as the restore drop target while an archived card is being dragged, so it lights up like a drop zone instead of sitting inert. */
@@ -1907,5 +1961,11 @@ body:has(.board-row--overlay) .board-notice {
   }
   .board-row:hover {
     transform: none !important;
+  }
+  /* A note's edge fade follows the hand scrolling it rather than the clock, so it isn't motion to take away.
+     Left to the rule above, its timing would pin every long note to the end-of-scroll frame: faded at the top, with no sign of the rest below. */
+  .note-field {
+    animation-delay: 0s !important;
+    animation-duration: auto !important;
   }
 }

@@ -282,6 +282,7 @@ export const ItemDialog = ({
             <label className="form-label-group">
               <span>Name</span>
               <input
+                dir="auto"
                 onChange={(event) => updateTitle(event.currentTarget.value)}
                 ref={nameRef}
                 required
@@ -476,6 +477,7 @@ export const ItemDialog = ({
                   <span>Quotes (one per line)</span>
                   <textarea
                     className="quote-list-input"
+                    dir="auto"
                     onChange={(event) => updateQuotes(event.currentTarget.value)}
                     placeholder="One quote per line..."
                     rows={6}

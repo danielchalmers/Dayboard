@@ -43,6 +43,7 @@ const NameSection = ({
       <label className="form-label-group">
         <span>Your name</span>
         <input
+          dir="auto"
           onBlur={field.onBlur}
           onChange={(event) => field.onChange(event.currentTarget.value)}
           placeholder="Optional"
