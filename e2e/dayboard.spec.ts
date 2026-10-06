@@ -2494,6 +2494,67 @@ test("dragging an archived widget onto an empty board restores it", async ({
   ).toHaveCount(0)
 })
 
+test("the empty board takes one of several archived cards without losing the page", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+
+  // Everything archived, and enough of it to fill the archive's first row and wrap.
+  await page.evaluate(() => {
+    const note = (id: string, title: string) => ({
+      id,
+      kind: "note",
+      title,
+      colorPreset: "sky",
+      archived: true,
+      settings: { text: "" }
+    })
+
+    return chrome.storage.sync.set({
+      "dayboard-state": {
+        widgets: [
+          note("a", "Alpha"),
+          note("b", "Bravo"),
+          note("c", "Charlie"),
+          note("d", "Delta")
+        ],
+        settings: { name: "" }
+      }
+    })
+  })
+  await page.reload()
+  await page.getByRole("button", { name: "Show archived" }).click()
+
+  const box = await boxOf(cardByTitle(page, "Alpha"), "the first archived card")
+  await page.mouse.move(box.x + box.width / 2, box.y + 12)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + 36, { steps: 6 })
+
+  const emptyState = page.locator(".empty-state")
+  const emptyBox = await boxOf(emptyState, "the empty board drop target")
+  await page.mouse.move(
+    emptyBox.x + emptyBox.width / 2,
+    emptyBox.y + emptyBox.height / 2,
+    { steps: 20 }
+  )
+
+  // A preview here put the card on the board, the archive closed up under the pointer, and the two traded places until React blanked the page.
+  // The empty board answers the card itself instead.
+  await expect(
+    emptyState.getByRole("heading", { name: "Release to restore" })
+  ).toBeVisible()
+
+  await page.mouse.up()
+
+  await expect(
+    page.locator(".board-list").first().getByRole("heading", { name: "Alpha" })
+  ).toBeVisible()
+  await expect(cardByTitle(page, "Bravo")).toBeVisible()
+  await expect(page.locator(".board-row")).toHaveCount(4)
+})
+
 test("edit and delete controls still work after reordering", async ({
   page,
   extensionId
