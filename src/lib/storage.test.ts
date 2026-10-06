@@ -333,6 +333,56 @@ describe("normalizing widgets read from storage or an import", () => {
     expect((await written(state)).length).toBeLessThan(stored.length)
   })
 
+  describe("the year card's repeat when the board is saved", () => {
+    const calendarYear = {
+      targetAt: new Date(2027, 0, 1).toISOString(),
+      startAt: new Date(2026, 0, 1).toISOString()
+    }
+    const board = (...widgets: unknown[]) => JSON.stringify({ widgets, settings: { name: "Dana" } })
+    const yearCard = (settings: object) =>
+      widget("countdown", settings, { id: "year-progress", title: "📅 This year" })
+
+    // The first-run year card is on almost every board, so this is the upgrade nearly everyone makes.
+    it("leaves out the repeat a read filled in, so a board last saved by v0.8 goes back as it was", async () => {
+      const stored = board(
+        yearCard(calendarYear),
+        widget("timer", { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: false }),
+        widget("note", { text: "Milk" })
+      )
+
+      const { parseDayboardState } = await import("./storage")
+      const state = parseDayboardState(stored)
+
+      expect(state.widgets[0]!.settings).toMatchObject({ repeat: "yearly" })
+      expect(await written(state)).toBe(stored)
+    })
+
+    // Someone on v0.8 whose card had stopped at Complete could fix it by picking Yearly; a device still on v0.8 relies on that being stored.
+    it("keeps a Yearly someone picked, on the year card or a card of their own", async () => {
+      const stored = board(
+        yearCard({ ...calendarYear, repeat: "yearly" }),
+        widget("countdown", { ...calendarYear, repeat: "yearly" }, { id: "fiscal", title: "Fiscal year" })
+      )
+
+      const { parseDayboardState } = await import("./storage")
+
+      expect(await written(parseDayboardState(stored))).toBe(stored)
+    })
+
+    // An edit makes the card's settings anew, and what the dialog saves, Yearly included, is the person's own.
+    it("writes the repeat once the card has been edited", async () => {
+      const { parseDayboardState } = await import("./storage")
+      const state = parseDayboardState(board(yearCard(calendarYear)))
+      const card = state.widgets[0] as CountdownWidget
+      const renamed = { ...state, widgets: [{ ...card, title: "2026", settings: { ...card.settings } }] }
+
+      expect(JSON.parse(await written(renamed)).widgets[0].settings).toEqual({
+        ...calendarYear,
+        repeat: "yearly"
+      })
+    })
+  })
+
   it("falls back on the card's own fields too", async () => {
     const [entry] = await parse([
       widget("note", { text: "Hi" }, { title: { x: 1 }, colorPreset: "plaid", archived: "yes" })

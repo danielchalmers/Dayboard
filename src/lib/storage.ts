@@ -170,16 +170,40 @@ const spansCalendarYear = (startAt: string, targetAt: string): boolean => {
   )
 }
 
+// The settings that renewFirstRunYear filled in, as against ones read from storage or made by an edit since.
+const renewedYears = new WeakSet<object>()
+
 // The first-run "This year" card used to be saved as that one year's span with no repeat, so from New Year's Day it sat at Complete for good.
 // It starts out repeating yearly now; a board saved with the old card, its span still the calendar year it was made in, reads as that too.
-const renewFirstRunYear = (widget: Widget): Widget =>
-  widget.id === "year-progress" &&
-  widget.kind === "countdown" &&
-  widget.settings.repeat === undefined &&
-  widget.settings.startAt &&
-  spansCalendarYear(widget.settings.startAt, widget.settings.targetAt)
-    ? { ...widget, settings: { ...widget.settings, repeat: "yearly" } }
-    : widget
+const renewFirstRunYear = (widget: Widget): Widget => {
+  if (
+    widget.id !== "year-progress" ||
+    widget.kind !== "countdown" ||
+    widget.settings.repeat !== undefined ||
+    !widget.settings.startAt ||
+    !spansCalendarYear(widget.settings.startAt, widget.settings.targetAt)
+  ) {
+    return widget
+  }
+
+  const settings = { ...widget.settings, repeat: "yearly" as const }
+  renewedYears.add(settings)
+
+  return { ...widget, settings }
+}
+
+// The other half: a repeat filled in on reading is left out of what is written, since every read fills it in again.
+// Writing it would add 18 bytes to nearly every board the first time this release saved it, and a board at the sync limit would then refuse every save until something was trimmed.
+// Only the settings the read made count, so a Yearly someone picked, on this card or any other, is written as it is.
+const withoutRenewedYear = (widget: Widget): Widget => {
+  if (widget.kind !== "countdown" || !renewedYears.has(widget.settings)) {
+    return widget
+  }
+
+  const { repeat: _renewed, ...settings } = widget.settings
+
+  return { ...widget, settings }
+}
 
 const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
   ({
@@ -237,12 +261,8 @@ const normalizeState = (value: unknown): DayboardState => {
 // The board as storage and an exported file hold it: one list of cards, with any this build can't show put back where they were.
 // The places are where they stood when last read, so once the board around them has changed they are near where they were rather than exact, which is all a card this build never shows needs.
 const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
-  if (!unknownWidgets) {
-    return state
-  }
-
-  const widgets: (Widget | StoredWidget)[] = [...state.widgets]
-  unknownWidgets.forEach(({ index, widget }) => widgets.splice(index, 0, widget))
+  const widgets: (Widget | StoredWidget)[] = state.widgets.map(withoutRenewedYear)
+  unknownWidgets?.forEach(({ index, widget }) => widgets.splice(index, 0, widget))
 
   return { ...state, widgets }
 }
