@@ -37,14 +37,21 @@ const isWidgetShaped = (value: unknown): value is StoredWidget =>
 const isKnownWidget = (widget: StoredWidget): widget is Widget =>
   Object.hasOwn(widgetRegistry, widget.kind)
 
+// Options that v0.5 had and later versions took away.
+// A setting this build doesn't know is carried for the newer version that wrote it, but these are known to be gone, so a board last saved by v0.5 sheds them on its first save, as it did under v0.8, rather than carrying them forever.
+const RETIRED_SETTINGS = ["dragToMove", "columns", "chimeOnTimerEnd", "dockToBottom"]
+
 // Fill any missing or malformed fields with their defaults so a partial or hand-edited imported board still loads cleanly, and carry the rest through for the version that wrote them.
 const normalizeSettings = (value: unknown): DayboardSettings => {
   const stored = (typeof value === "object" && value !== null && !Array.isArray(value)
     ? value
     : {}) as Partial<DayboardSettings>
+  const current = Object.fromEntries(
+    Object.entries(stored).filter(([key]) => !RETIRED_SETTINGS.includes(key))
+  ) as Partial<DayboardSettings>
 
   return {
-    ...stored,
+    ...current,
     name: typeof stored.name === "string" ? stored.name : DEFAULT_SETTINGS.name
   }
 }
@@ -128,7 +135,8 @@ const normalizeWidgetSettings = (
         running: settings.running === true && endsAt !== null,
         remainingMs: span(settings.remainingMs, durationMs),
         endsAt,
-        chime: settings.chime === true
+        // Only a timer that has the switch gets it read back: stamping `chime: false` onto every timer saved without one made an upgraded board bigger on its first save, which a board near the sync limit can't afford.
+        ...(settings.chime !== undefined ? { chime: settings.chime === true } : {})
       }
     }
     case "habit":
@@ -138,6 +146,33 @@ const normalizeWidgetSettings = (
   }
 }
 
+const HOUR_MS = 3_600_000
+
+// Whether a span is one calendar year as some time zone counts it: it starts at a New Year's midnight and runs a year.
+// It is judged against UTC rather than this device's zone, because a synced board is read in every zone its devices are in, a laptop travels, and a virtual machine runs in UTC.
+// Every zone's New Year falls between 14 hours before UTC's (UTC+14) and 12 hours after it (UTC-12), and the year runs 365 or 366 days, with an hour's leeway for a zone that changed its offset in between (Almaty did in 2024).
+const spansCalendarYear = (startAt: string, targetAt: string): boolean => {
+  const start = new Date(startAt).getTime()
+  const target = new Date(targetAt).getTime()
+
+  if (Number.isNaN(start) || Number.isNaN(target)) {
+    return false
+  }
+
+  const year = new Date(start + 14 * HOUR_MS).getUTCFullYear()
+  const newYear = Date.UTC(year, 0, 1)
+  const length = Date.UTC(year + 1, 0, 1) - newYear
+
+  return (
+    start - newYear >= -14 * HOUR_MS &&
+    start - newYear <= 12 * HOUR_MS &&
+    Math.abs(target - start - length) <= HOUR_MS
+  )
+}
+
+// The settings that renewFirstRunYear filled in, as against ones read from storage or made by an edit since.
+const renewedYears = new WeakSet<object>()
+
 // The first-run "This year" card used to be saved as that one year's span with no repeat, so from New Year's Day it sat at Complete for good.
 // It starts out repeating yearly now; a board saved with the old card, its span still the calendar year it was made in, reads as that too.
 const renewFirstRunYear = (widget: Widget): Widget => {
@@ -145,20 +180,29 @@ const renewFirstRunYear = (widget: Widget): Widget => {
     widget.id !== "year-progress" ||
     widget.kind !== "countdown" ||
     widget.settings.repeat !== undefined ||
-    !widget.settings.startAt
+    !widget.settings.startAt ||
+    !spansCalendarYear(widget.settings.startAt, widget.settings.targetAt)
   ) {
     return widget
   }
 
-  const start = new Date(widget.settings.startAt)
-  const isCalendarYear =
-    start.getTime() === new Date(start.getFullYear(), 0, 1).getTime() &&
-    new Date(widget.settings.targetAt).getTime() ===
-      new Date(start.getFullYear() + 1, 0, 1).getTime()
+  const settings = { ...widget.settings, repeat: "yearly" as const }
+  renewedYears.add(settings)
 
-  return isCalendarYear
-    ? { ...widget, settings: { ...widget.settings, repeat: "yearly" } }
-    : widget
+  return { ...widget, settings }
+}
+
+// The other half: a repeat filled in on reading is left out of what is written, since every read fills it in again.
+// Writing it would add 18 bytes to nearly every board the first time this release saved it, and a board at the sync limit would then refuse every save until something was trimmed.
+// Only the settings the read made count, so a Yearly someone picked, on this card or any other, is written as it is.
+const withoutRenewedYear = (widget: Widget): Widget => {
+  if (widget.kind !== "countdown" || !renewedYears.has(widget.settings)) {
+    return widget
+  }
+
+  const { repeat: _renewed, ...settings } = widget.settings
+
+  return { ...widget, settings }
 }
 
 const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
@@ -217,12 +261,8 @@ const normalizeState = (value: unknown): DayboardState => {
 // The board as storage and an exported file hold it: one list of cards, with any this build can't show put back where they were.
 // The places are where they stood when last read, so once the board around them has changed they are near where they were rather than exact, which is all a card this build never shows needs.
 const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
-  if (!unknownWidgets) {
-    return state
-  }
-
-  const widgets: (Widget | StoredWidget)[] = [...state.widgets]
-  unknownWidgets.forEach(({ index, widget }) => widgets.splice(index, 0, widget))
+  const widgets: (Widget | StoredWidget)[] = state.widgets.map(withoutRenewedYear)
+  unknownWidgets?.forEach(({ index, widget }) => widgets.splice(index, 0, widget))
 
   return { ...state, widgets }
 }

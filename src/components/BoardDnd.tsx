@@ -203,8 +203,10 @@ export const BoardDnd = ({
       return
     }
 
+    // The empty board answers a hovering card itself ("Release to restore") rather than with a preview.
+    // A preview would put the card on the board and so take away the empty state it is hovering; with three or more archived cards the archive then closes up under the pointer, the preview is dropped, the empty state comes back, and the two chase each other until React gives up and blanks the page.
     if (over?.id === BOARD_DROP_ID) {
-      setRestorePreview(restoreWidget(widgets, dragged.id))
+      setRestorePreview(null)
       return
     }
 

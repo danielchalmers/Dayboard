@@ -280,6 +280,33 @@ describe("resolveCountdown", () => {
     ).toBe(new Date(2027, 11, 25).toISOString())
   })
 
+  // In Chile the clocks go straight from midnight to 01:00 on 6 September 2026, so that day starts an hour late, and a date on it with it.
+  it("lets a repeating date go at the next midnight when a DST change skipped its own", () => {
+    const zone = process.env.TZ
+
+    try {
+      process.env.TZ = "America/Santiago"
+      // The yearly date sits on the day the clocks change, so it falls at 01:00, the first moment that day has.
+      const anniversary = new Date(2025, 8, 6).toISOString()
+      expect(new Date(2026, 8, 6).getHours()).toBe(1)
+
+      expect(
+        nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 6, 23, 0, 0))
+      ).toBe(new Date(2026, 8, 6).toISOString())
+      // The next day is a full day from its own midnight, not from the 01:00 its predecessor began at.
+      expect(
+        nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 7, 0, 30, 0))
+      ).toBe(new Date(2027, 8, 6).toISOString())
+    } finally {
+      // Assigning undefined would set the string "undefined", which Node reads as UTC.
+      if (zone === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = zone
+      }
+    }
+  })
+
   it("never holds an hourly or daily repeat at midnight, which comes round every day", () => {
     const midnight = new Date(2026, 5, 19, 0, 0, 0).toISOString()
 

@@ -247,6 +247,13 @@ describe("normalizing widgets read from storage or an import", () => {
     ...extra
   })
 
+  // What a save writes: sync stores the board as an object, which is the export file without its indentation.
+  const written = async (state: DayboardState) => {
+    const { serializeDayboardState } = await import("./storage")
+
+    return JSON.stringify(JSON.parse(serializeDayboardState(state)))
+  }
+
   const parse = async (widgets: unknown[]) => {
     const { parseDayboardState } = await import("./storage")
 
@@ -289,8 +296,91 @@ describe("normalizing widgets read from storage or an import", () => {
       { text: "" },
       { quotes: ["One", "Three"], rotation: "daily" },
       { running: false, elapsedMs: 0, startedAt: null },
-      { durationMs: 300_000, running: false, remainingMs: 300_000, endsAt: null, chime: false }
+      { durationMs: 300_000, running: false, remainingMs: 300_000, endsAt: null }
     ])
+  })
+
+  // An upgrade shouldn't make a board bigger: one sitting near the 8 KB sync limit would then refuse every save after it.
+  it("writes a board last saved by v0.5 back smaller, not bigger", async () => {
+    const stored = JSON.stringify({
+      widgets: [
+        widget("timer", { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null }),
+        widget(
+          "timer",
+          { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: "yes" },
+          { id: "timer-2" }
+        )
+      ],
+      settings: {
+        name: "Dana",
+        dragToMove: true,
+        columns: "auto",
+        chimeOnTimerEnd: true,
+        dockToBottom: false
+      }
+    })
+
+    const { parseDayboardState } = await import("./storage")
+    const state = parseDayboardState(stored)
+
+    // A timer that never had the switch still doesn't, and one with an unreadable switch reads as off.
+    expect(state.widgets.map((entry) => entry.settings)).toEqual([
+      { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null },
+      { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: false }
+    ])
+    // The options v0.5 retired go, as they did under v0.8, while the name stays.
+    expect(state.settings).toEqual({ name: "Dana" })
+    expect((await written(state)).length).toBeLessThan(stored.length)
+  })
+
+  describe("the year card's repeat when the board is saved", () => {
+    const calendarYear = {
+      targetAt: new Date(2027, 0, 1).toISOString(),
+      startAt: new Date(2026, 0, 1).toISOString()
+    }
+    const board = (...widgets: unknown[]) => JSON.stringify({ widgets, settings: { name: "Dana" } })
+    const yearCard = (settings: object) =>
+      widget("countdown", settings, { id: "year-progress", title: "📅 This year" })
+
+    // The first-run year card is on almost every board, so this is the upgrade nearly everyone makes.
+    it("leaves out the repeat a read filled in, so a board last saved by v0.8 goes back as it was", async () => {
+      const stored = board(
+        yearCard(calendarYear),
+        widget("timer", { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: false }),
+        widget("note", { text: "Milk" })
+      )
+
+      const { parseDayboardState } = await import("./storage")
+      const state = parseDayboardState(stored)
+
+      expect(state.widgets[0]!.settings).toMatchObject({ repeat: "yearly" })
+      expect(await written(state)).toBe(stored)
+    })
+
+    // Someone on v0.8 whose card had stopped at Complete could fix it by picking Yearly; a device still on v0.8 relies on that being stored.
+    it("keeps a Yearly someone picked, on the year card or a card of their own", async () => {
+      const stored = board(
+        yearCard({ ...calendarYear, repeat: "yearly" }),
+        widget("countdown", { ...calendarYear, repeat: "yearly" }, { id: "fiscal", title: "Fiscal year" })
+      )
+
+      const { parseDayboardState } = await import("./storage")
+
+      expect(await written(parseDayboardState(stored))).toBe(stored)
+    })
+
+    // An edit makes the card's settings anew, and what the dialog saves, Yearly included, is the person's own.
+    it("writes the repeat once the card has been edited", async () => {
+      const { parseDayboardState } = await import("./storage")
+      const state = parseDayboardState(board(yearCard(calendarYear)))
+      const card = state.widgets[0] as CountdownWidget
+      const renamed = { ...state, widgets: [{ ...card, title: "2026", settings: { ...card.settings } }] }
+
+      expect(JSON.parse(await written(renamed)).widgets[0].settings).toEqual({
+        ...calendarYear,
+        repeat: "yearly"
+      })
+    })
   })
 
   it("falls back on the card's own fields too", async () => {
@@ -335,6 +425,60 @@ describe("normalizing widgets read from storage or an import", () => {
       expect(renewed!.settings).toEqual({ ...calendarYear, repeat: "yearly" })
       // A span someone set up on a card of their own is theirs to keep as it is.
       expect(ownCard!.settings).toEqual(calendarYear)
+    })
+
+    // A synced board is read in every zone its devices are in, so the card made at New York's midnight has to be recognised in Kolkata and on Kiritimati too.
+    it("is recognised in any time zone, not only the one it was made in", async () => {
+      const zone = process.env.TZ
+      const madeIn = (timeZone: string) => {
+        process.env.TZ = timeZone
+        return {
+          targetAt: new Date(2027, 0, 1).toISOString(),
+          startAt: new Date(2026, 0, 1).toISOString()
+        }
+      }
+
+      try {
+        const cards = [
+          madeIn("America/New_York"),
+          madeIn("Pacific/Kiritimati"),
+          madeIn("Pacific/Pago_Pago"),
+          // 2028 is a leap year, so its span is a day longer.
+          { targetAt: "2029-01-01T00:00:00.000Z", startAt: "2028-01-01T00:00:00.000Z" }
+        ]
+
+        for (const readIn of ["UTC", "Asia/Kolkata", "Pacific/Kiritimati", "America/Los_Angeles"]) {
+          process.env.TZ = readIn
+
+          for (const span of cards) {
+            expect((await parse([yearCard(span)]))[0]!.settings).toEqual({
+              ...span,
+              repeat: "yearly"
+            })
+          }
+        }
+      } finally {
+        // Assigning undefined would set the string "undefined", which Node reads as UTC.
+        if (zone === undefined) {
+          delete process.env.TZ
+        } else {
+          process.env.TZ = zone
+        }
+      }
+    })
+
+    // Almaty moved from +06 to +05 on 1 March 2024, so its 2024 ran an hour longer than a calendar year.
+    it("allows an hour's leeway for a zone that changed its offset during the year", async () => {
+      const almaty = { startAt: "2023-12-31T18:00:00.000Z", targetAt: "2024-12-31T19:00:00.000Z" }
+
+      expect((await parse([yearCard(almaty)]))[0]!.settings).toEqual({ ...almaty, repeat: "yearly" })
+    })
+
+    // 13:00 UTC on New Year's Day is later than any zone's midnight, so a card running from there was set up that way on purpose (8 AM in New York).
+    it("leaves a span that starts after every zone's New Year alone", async () => {
+      const morning = { startAt: "2026-01-01T13:00:00.000Z", targetAt: "2027-01-01T13:00:00.000Z" }
+
+      expect((await parse([yearCard(morning)]))[0]!.settings).toEqual(morning)
     })
 
     it("stays as it is once its span or repeat has been changed", async () => {

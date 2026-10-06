@@ -324,6 +324,8 @@ export const resolveCountdown = (
       const previous = advanceByRepeat(target, repeat, steps - 1)
       const dayAfter = new Date(previous)
       dayAfter.setDate(dayAfter.getDate() + 1)
+      // Where a DST change skips midnight the occurrence itself lands at 1:00, so the day after has to be pinned back to its own midnight or the hour after it would read "1 day ago".
+      dayAfter.setHours(0, 0, 0, 0)
 
       if (isDate(previous, repeat) && now.getTime() < dayAfter.getTime()) {
         steps -= 1
