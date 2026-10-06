@@ -337,6 +337,60 @@ describe("normalizing widgets read from storage or an import", () => {
       expect(ownCard!.settings).toEqual(calendarYear)
     })
 
+    // A synced board is read in every zone its devices are in, so the card made at New York's midnight has to be recognised in Kolkata and on Kiritimati too.
+    it("is recognised in any time zone, not only the one it was made in", async () => {
+      const zone = process.env.TZ
+      const madeIn = (timeZone: string) => {
+        process.env.TZ = timeZone
+        return {
+          targetAt: new Date(2027, 0, 1).toISOString(),
+          startAt: new Date(2026, 0, 1).toISOString()
+        }
+      }
+
+      try {
+        const cards = [
+          madeIn("America/New_York"),
+          madeIn("Pacific/Kiritimati"),
+          madeIn("Pacific/Pago_Pago"),
+          // 2028 is a leap year, so its span is a day longer.
+          { targetAt: "2029-01-01T00:00:00.000Z", startAt: "2028-01-01T00:00:00.000Z" }
+        ]
+
+        for (const readIn of ["UTC", "Asia/Kolkata", "Pacific/Kiritimati", "America/Los_Angeles"]) {
+          process.env.TZ = readIn
+
+          for (const span of cards) {
+            expect((await parse([yearCard(span)]))[0]!.settings).toEqual({
+              ...span,
+              repeat: "yearly"
+            })
+          }
+        }
+      } finally {
+        // Assigning undefined would set the string "undefined", which Node reads as UTC.
+        if (zone === undefined) {
+          delete process.env.TZ
+        } else {
+          process.env.TZ = zone
+        }
+      }
+    })
+
+    // Almaty moved from +06 to +05 on 1 March 2024, so its 2024 ran an hour longer than a calendar year.
+    it("allows an hour's leeway for a zone that changed its offset during the year", async () => {
+      const almaty = { startAt: "2023-12-31T18:00:00.000Z", targetAt: "2024-12-31T19:00:00.000Z" }
+
+      expect((await parse([yearCard(almaty)]))[0]!.settings).toEqual({ ...almaty, repeat: "yearly" })
+    })
+
+    // 13:00 UTC on New Year's Day is later than any zone's midnight, so a card running from there was set up that way on purpose (8 AM in New York).
+    it("leaves a span that starts after every zone's New Year alone", async () => {
+      const morning = { startAt: "2026-01-01T13:00:00.000Z", targetAt: "2027-01-01T13:00:00.000Z" }
+
+      expect((await parse([yearCard(morning)]))[0]!.settings).toEqual(morning)
+    })
+
     it("stays as it is once its span or repeat has been changed", async () => {
       const shortened = { ...calendarYear, targetAt: new Date(2026, 11, 31).toISOString() }
       const once = { ...calendarYear, repeat: "none" }

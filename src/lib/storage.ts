@@ -138,28 +138,40 @@ const normalizeWidgetSettings = (
   }
 }
 
-// The first-run "This year" card used to be saved as that one year's span with no repeat, so from New Year's Day it sat at Complete for good.
-// It starts out repeating yearly now; a board saved with the old card, its span still the calendar year it was made in, reads as that too.
-const renewFirstRunYear = (widget: Widget): Widget => {
-  if (
-    widget.id !== "year-progress" ||
-    widget.kind !== "countdown" ||
-    widget.settings.repeat !== undefined ||
-    !widget.settings.startAt
-  ) {
-    return widget
+const HOUR_MS = 3_600_000
+
+// Whether a span is one calendar year as some time zone counts it: it starts at a New Year's midnight and runs a year.
+// It is judged against UTC rather than this device's zone, because a synced board is read in every zone its devices are in, a laptop travels, and a virtual machine runs in UTC.
+// Every zone's New Year falls between 14 hours before UTC's (UTC+14) and 12 hours after it (UTC-12), and the year runs 365 or 366 days, with an hour's leeway for a zone that changed its offset in between (Almaty did in 2024).
+const spansCalendarYear = (startAt: string, targetAt: string): boolean => {
+  const start = new Date(startAt).getTime()
+  const target = new Date(targetAt).getTime()
+
+  if (Number.isNaN(start) || Number.isNaN(target)) {
+    return false
   }
 
-  const start = new Date(widget.settings.startAt)
-  const isCalendarYear =
-    start.getTime() === new Date(start.getFullYear(), 0, 1).getTime() &&
-    new Date(widget.settings.targetAt).getTime() ===
-      new Date(start.getFullYear() + 1, 0, 1).getTime()
+  const year = new Date(start + 14 * HOUR_MS).getUTCFullYear()
+  const newYear = Date.UTC(year, 0, 1)
+  const length = Date.UTC(year + 1, 0, 1) - newYear
 
-  return isCalendarYear
+  return (
+    start - newYear >= -14 * HOUR_MS &&
+    start - newYear <= 12 * HOUR_MS &&
+    Math.abs(target - start - length) <= HOUR_MS
+  )
+}
+
+// The first-run "This year" card used to be saved as that one year's span with no repeat, so from New Year's Day it sat at Complete for good.
+// It starts out repeating yearly now; a board saved with the old card, its span still the calendar year it was made in, reads as that too.
+const renewFirstRunYear = (widget: Widget): Widget =>
+  widget.id === "year-progress" &&
+  widget.kind === "countdown" &&
+  widget.settings.repeat === undefined &&
+  widget.settings.startAt &&
+  spansCalendarYear(widget.settings.startAt, widget.settings.targetAt)
     ? { ...widget, settings: { ...widget.settings, repeat: "yearly" } }
     : widget
-}
 
 const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
   ({
