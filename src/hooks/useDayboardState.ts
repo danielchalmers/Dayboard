@@ -18,7 +18,7 @@ interface UseDayboardStateResult {
   isLoading: boolean
   error: string | null
   setWidgets: Save<Widget[]>
-  setSettings: Save<DayboardSettings>
+  setSettings: (settings: DayboardSettings, isShown?: () => boolean) => Promise<string | null>
   updateWidget: Save<Widget>
   replaceState: Save<DayboardState>
   saveError: string | null
@@ -42,6 +42,16 @@ export const describeSaveError = (cause: unknown): string => {
   return "Couldn’t save that change. Try again in a moment."
 }
 
+// A promise and the function that settles it, for a wait set up before the work it waits on can start.
+const deferred = () => {
+  let settle = () => {}
+  const promise = new Promise<void>((resolve) => {
+    settle = resolve
+  })
+
+  return { promise, settle }
+}
+
 export const useDayboardState = (): UseDayboardStateResult => {
   // Hydrate the first render synchronously from the localStorage mirror so the board paints immediately; the async chrome.storage read reconciles after.
   const [state, setState] = useState<DayboardState | null>(readCachedDayboardState)
@@ -56,6 +66,13 @@ export const useDayboardState = (): UseDayboardStateResult => {
   // Notes still showing words storage refused, by id.
   // Every other card shows what the board rolled back to, but a note keeps refused words on screen (see NoteField), so the notice stays up until each of them has saved or let its words go rather than going at the first unrelated save that lands.
   const heldRef = useRef(new Set<string>())
+
+  // The board painted from the localStorage mirror is only as new as the last board tab here left it, so storage may have moved on since (on another device, while no board tab was open here), and only the first read can say.
+  // That read is armed with the first render rather than when the effect below starts it, because a card's effects run before this hook's, and a timer that ran out meanwhile settles in that same first commit.
+  const [firstRead] = useState(deferred)
+
+  // Until it lands, the read that brings this tab up to date with storage: the first one, or one started as the tab wakes from being frozen (see updateWidget).
+  const catchingUpRef = useRef<Promise<void> | null>(firstRead.promise)
 
   const commit = useCallback((next: DayboardState) => {
     stateRef.current = next
@@ -88,9 +105,21 @@ export const useDayboardState = (): UseDayboardStateResult => {
     }
   }, [adopt])
 
+  // Holds a card's changes until `reading` lands (see updateWidget).
+  const catchUpWith = useCallback((reading: Promise<void>) => {
+    catchingUpRef.current = reading
+    void reading.finally(() => {
+      if (catchingUpRef.current === reading) {
+        catchingUpRef.current = null
+      }
+    })
+  }, [])
+
+  // The first read, armed above, starts here.
   useEffect(() => {
-    void reload()
-  }, [reload])
+    catchUpWith(firstRead.promise)
+    void reload().then(firstRead.settle)
+  }, [catchUpWith, firstRead, reload])
 
   useEffect(() => {
     const stopWatching = watchDayboardState((nextState) => {
@@ -104,8 +133,20 @@ export const useDayboardState = (): UseDayboardStateResult => {
     }
   }, [adopt])
 
+  // Chrome freezes a tab left in the background (energy saver, Edge's sleeping tabs), and it wakes holding the board it froze with.
+  // The changes other tabs made meanwhile are queued for it, but they are delivered only after its own wake-up work has run, and coming back into view is part of that: the clock catches up first, and a timer that ran out while the tab slept would settle from the old board and write it back over everything since.
+  // A read started on waking is answered after those queued changes, so until it lands a card's change waits for it (see updateWidget).
+  useEffect(() => {
+    const catchUp = () => catchUpWith(reload())
+
+    document.addEventListener("resume", catchUp)
+
+    return () => document.removeEventListener("resume", catchUp)
+  }, [catchUpWith, reload])
+
+  // `toldBeside` is asked once a refusal comes back, and says whether whatever made the change is still on screen saying why beside it, which leaves the board's notice out of it.
   const saveState = useCallback(
-    async (nextState: DayboardState) => {
+    async (nextState: DayboardState, toldBeside?: () => boolean) => {
       const previous = stateRef.current
       commit(nextState)
 
@@ -127,7 +168,9 @@ export const useDayboardState = (): UseDayboardStateResult => {
         }
 
         const reason = describeSaveError(cause)
-        setSaveError(reason)
+        if (!toldBeside?.()) {
+          setSaveError(reason)
+        }
         return reason
       }
 
@@ -163,20 +206,39 @@ export const useDayboardState = (): UseDayboardStateResult => {
     [saveState]
   )
 
+  // Only the greeting name is typed into settings.
+  // While Options shows it, a refused name stays in its field with the reason under it (see SettingsDialog), so the board's notice stays out of it; refused as Options closes, the words go with the dialog, and the board's notice is what is left to say so.
   const setSettings = useCallback(
-    async (settings: DayboardSettings) => {
+    async (settings: DayboardSettings, isShown?: () => boolean) => {
       const current = stateRef.current
-      if (!current) {
+
+      // A name typed back to what is stored has nothing to write.
+      if (!current || isSameData(current.settings, settings)) {
         return null
       }
 
-      return saveState({ ...current, settings })
+      return saveState({ ...current, settings }, isShown)
     },
     [saveState]
   )
 
   const updateWidget = useCallback(
     async (widget: Widget) => {
+      // A change made before the tab has caught up with storage was worked out from the card as the tab remembered it or froze with it.
+      // Once caught up it goes ahead only if that card hasn't changed since; otherwise the card renders as it is now and does over from there whatever still needs doing, rather than settling a timer run another tab or device has already finished and started again.
+      if (catchingUpRef.current) {
+        const cardIn = (board: DayboardState | null) =>
+          board?.widgets.find((candidate) => candidate.id === widget.id)
+        const seen = cardIn(stateRef.current)
+
+        await catchingUpRef.current
+
+        if (!isSameData(cardIn(stateRef.current), seen)) {
+          release(widget.id)
+          return null
+        }
+      }
+
       const current = stateRef.current
       const existing = current?.widgets.find((candidate) => candidate.id === widget.id)
 

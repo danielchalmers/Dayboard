@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, renderHook, waitFor } from "@testing-library/react"
+import { act, render as renderComponent, renderHook, waitFor } from "@testing-library/react"
+import { createElement, useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { CACHE_KEY } from "~/lib/storage"
@@ -305,7 +306,238 @@ describe("useDayboardState change handling", () => {
   })
 })
 
-// A note keeps words storage refused on screen (see NoteField), where every other card shows what the board rolled back to.
+// A running timer and a note, for the tabs below that come to a board older than storage's.
+const tea = (endsAt: number): TimerWidget => ({
+  id: "tea",
+  kind: "timer",
+  title: "Tea",
+  colorPreset: "rose",
+  settings: { durationMs: 6000, running: true, remainingMs: 6000, endsAt, chime: false }
+})
+const groceries = (text: string): NoteWidget => ({
+  id: "groceries",
+  kind: "note",
+  title: "Groceries",
+  colorPreset: "sky",
+  settings: { text }
+})
+
+// What the timer card hands up as its run ends.
+const finished = (timer: TimerWidget): TimerWidget => ({
+  ...timer,
+  settings: { ...timer.settings, running: false, remainingMs: 0, endsAt: null }
+})
+
+// Chrome delivers the storage changes a frozen tab missed only after its own wake-up work, and the clock catching up as it comes back into view is part of that.
+describe("useDayboardState in a tab waking from being frozen", () => {
+  // The board as the tab froze with it, the timer's run since over.
+  const frozenWith: DayboardState = {
+    widgets: [tea(1_000), groceries("Milk")],
+    settings: { name: "" }
+  }
+
+  // Storage answers the first read with the board the tab froze with, and the read it starts on waking only when the test says, the way that answer queues behind the changes delivered on waking.
+  const render = async () => {
+    let answerWake: (state: DayboardState) => void = () => {}
+    let reads = 0
+    stubChrome({
+      get: (key) => {
+        reads += 1
+
+        return reads === 1
+          ? Promise.resolve({ [key]: structuredClone(frozenWith) })
+          : new Promise((resolve) => {
+              answerWake = (state) => resolve({ [key]: structuredClone(state) })
+            })
+      }
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const hook = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(hook.result.current.state).not.toBeNull())
+
+    const deliver = (state: DayboardState) => {
+      const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
+      act(() => {
+        listener({ "dayboard-state": { newValue: structuredClone(state) } }, "sync")
+      })
+    }
+
+    return { ...hook, answerWake: (state: DayboardState) => answerWake(state), deliver }
+  }
+
+  it("drops a change worked out from a card another tab has changed since", async () => {
+    const { result, unmount, answerWake, deliver } = await render()
+
+    act(() => {
+      document.dispatchEvent(new Event("resume"))
+    })
+
+    // Back in view, the timer settles the run the tab froze with, before the tab has heard that another one finished it, started it again, and edited the note.
+    let settling: Promise<string | null> = Promise.resolve(null)
+    act(() => {
+      settling = result.current.updateWidget(finished(tea(1_000)))
+    })
+
+    const meanwhile: DayboardState = {
+      widgets: [tea(99_000), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    deliver(meanwhile)
+
+    let refused: string | null = "unset"
+    await act(async () => {
+      answerWake(meanwhile)
+      refused = await settling
+    })
+
+    expect(refused).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(result.current.state).toEqual(meanwhile)
+
+    unmount()
+  })
+
+  it("holds a change until the tab has caught up, then lays it on the board as it is now", async () => {
+    const { result, unmount, answerWake, deliver } = await render()
+
+    act(() => {
+      document.dispatchEvent(new Event("resume"))
+    })
+
+    // Nobody else touched the timer, so its run really did end while the tab slept.
+    let settling: Promise<string | null> = Promise.resolve(null)
+    act(() => {
+      settling = result.current.updateWidget(finished(tea(1_000)))
+    })
+
+    const meanwhile: DayboardState = {
+      widgets: [tea(1_000), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    deliver(meanwhile)
+
+    // The board has heard the note changed, but not yet that there is nothing more to hear.
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+
+    await act(async () => {
+      answerWake(meanwhile)
+      await settling
+    })
+
+    const expected = {
+      widgets: [finished(tea(1_000)), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
+    expect(result.current.state).toEqual(expected)
+
+    unmount()
+  })
+})
+
+// The localStorage mirror only moves while a board tab is open, so a new tab paints whatever the last one left there, however long ago that was.
+describe("useDayboardState in a new tab painted from the mirror", () => {
+  // The board as the last tab here left it, its timer run since over.
+  const remembered: DayboardState = {
+    widgets: [tea(1_000), groceries("Milk")],
+    settings: { name: "" }
+  }
+
+  // A board whose timer card settles a run that has ended from its own effect as it mounts, the way the real card does, which is before the hook's effects have run and so before its first read has even started.
+  const render = async () => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(remembered))
+
+    let answerFirstRead: (state: DayboardState) => void = () => {}
+    stubChrome({
+      get: (key) =>
+        new Promise((resolve) => {
+          answerFirstRead = (state) => resolve({ [key]: structuredClone(state) })
+        })
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const board: { current: ReturnType<typeof useDayboardState> | null } = { current: null }
+    const settled: Promise<string | null>[] = []
+
+    const Settles = ({ timer, onChange }: { timer: TimerWidget; onChange: (widget: TimerWidget) => Promise<string | null> }) => {
+      useEffect(() => {
+        settled.push(onChange(finished(timer)))
+      }, [onChange, timer])
+
+      return null
+    }
+
+    const Board = () => {
+      board.current = useDayboardState()
+      const timer = board.current.state?.widgets.find(
+        (widget): widget is TimerWidget => widget.kind === "timer" && widget.settings.running
+      )
+
+      return timer ? createElement(Settles, { timer, onChange: board.current.updateWidget }) : null
+    }
+
+    const view = renderComponent(createElement(Board))
+
+    // The board painted from the mirror, and its timer settled as it did.
+    expect(board.current!.state).toEqual(remembered)
+    expect(settled).toHaveLength(1)
+
+    return { ...view, board, settled, answerFirstRead: (state: DayboardState) => answerFirstRead(state) }
+  }
+
+  it("drops a change worked out from a card storage has moved on from", async () => {
+    const { board, settled, answerFirstRead, unmount } = await render()
+
+    // Meanwhile, on another device, the timer was reset and the note added to.
+    const stored: DayboardState = {
+      widgets: [
+        { ...tea(1_000), settings: { ...tea(1_000).settings, running: false, endsAt: null } },
+        groceries("Milk, eggs, bread")
+      ],
+      settings: { name: "" }
+    }
+
+    await act(async () => {
+      answerFirstRead(stored)
+      await Promise.all(settled)
+    })
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(board.current!.state).toEqual(stored)
+
+    unmount()
+  })
+
+  it("settles a run that ended while no tab was open once the first read finds it untouched", async () => {
+    const { board, settled, answerFirstRead, unmount } = await render()
+
+    // Only the note changed elsewhere, so the run really is over.
+    const stored: DayboardState = {
+      widgets: [tea(1_000), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+
+    await act(async () => {
+      answerFirstRead(stored)
+      await Promise.all(settled)
+    })
+
+    const expected = {
+      widgets: [finished(tea(1_000)), groceries("Milk, eggs, bread")],
+      settings: { name: "" }
+    }
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
+    expect(board.current!.state).toEqual(expected)
+
+    unmount()
+  })
+})
+
+// A note keeps words storage refused on screen (see useAutoSave), where every other card shows what the board rolled back to.
 describe("useDayboardState with a note holding refused words", () => {
   const note: NoteWidget = {
     id: "jot",
@@ -467,6 +699,95 @@ describe("useDayboardState with a note holding refused words", () => {
     expect(noteIn(stored())).toEqual({ ...note, archived: true, settings: { text: long } })
     expect(noteIn(result.current.state!)?.archived).toBe(true)
     expect(result.current.saveError).toBeNull()
+
+    unmount()
+  })
+})
+
+// The greeting name keeps refused words in its field the way a note does, but Options covers the board and its notice, so it says why there instead (see SettingsDialog).
+describe("useDayboardState saving the greeting name", () => {
+  const habit: HabitWidget = {
+    id: "walk",
+    kind: "habit",
+    title: "Walk",
+    colorPreset: "amber",
+    settings: { history: [] }
+  }
+
+  // Refuses every write that would change the name while `refusing` says so, the way a burst of writes plays out.
+  const render = async () => {
+    const control = { refusing: true }
+    let stored: DayboardState = { widgets: [habit], settings: { name: "Sam" } }
+
+    stubChrome({
+      get: async (key) => ({ [key]: structuredClone(stored) }),
+      set: async (items) => {
+        const next = Object.values(items)[0]!
+
+        if (control.refusing && next.settings.name !== stored.settings.name) {
+          throw TOO_OFTEN
+        }
+
+        stored = structuredClone(next)
+      }
+    })
+
+    const { useDayboardState } = await import("./useDayboardState")
+    const hook = renderHook(() => useDayboardState())
+
+    await waitFor(() => expect(hook.result.current.state).not.toBeNull())
+
+    return { ...hook, control }
+  }
+
+  it("leaves the board's notice out of a name refused while Options shows it", async () => {
+    const { result, unmount } = await render()
+
+    let refused: string | null = null
+    await act(async () => {
+      refused = await result.current.setSettings({ name: "Samantha" }, () => true)
+    })
+
+    // Options hears why, to say so beside the name it keeps; the board goes back to what storage holds.
+    expect(refused).toBe(TOO_OFTEN_NOTICE)
+    expect(result.current.saveError).toBeNull()
+    expect(result.current.state!.settings).toEqual({ name: "Sam" })
+
+    unmount()
+  })
+
+  it("says on the board why a name refused as Options closed went with it, until the next save lands", async () => {
+    const { result, unmount, control } = await render()
+
+    // Sent while Options was open, and answered once it had closed.
+    let shown = true
+    await act(async () => {
+      const saving = result.current.setSettings({ name: "Samantha" }, () => shown)
+      shown = false
+      await saving
+    })
+    expect(result.current.saveError).toBe(TOO_OFTEN_NOTICE)
+
+    // Nothing on screen holds the name any more, so the notice goes the way any other refusal's does.
+    control.refusing = false
+    await act(async () => {
+      await result.current.updateWidget({ ...habit, settings: { history: ["2026-10-05"] } })
+    })
+    expect(result.current.saveError).toBeNull()
+
+    unmount()
+  })
+
+  it("writes nothing for a name typed back to what is stored", async () => {
+    const { result, unmount } = await render()
+
+    let refused: string | null = "unset"
+    await act(async () => {
+      refused = await result.current.setSettings({ name: "Sam" }, () => true)
+    })
+
+    expect(refused).toBeNull()
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
 
     unmount()
   })

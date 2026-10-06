@@ -12,6 +12,14 @@ import {
   readWidgetSettings
 } from "./helpers"
 
+// The greeting name as chrome.storage.sync holds it, undefined until the board has been written at all.
+const readStoredName = (page: Page) =>
+  page.evaluate(async () => {
+    const stored = await chrome.storage.sync.get("dayboard-state")
+
+    return (stored["dayboard-state"] as DayboardState | undefined)?.settings.name
+  })
+
 // A rejected write is the one thing the shared browser's guard fails a test over, so the test that goes looking for one says so up front.
 test.describe("a board too large to sync", () => {
   test.use({ expectsSaveError: true })
@@ -206,6 +214,28 @@ test.describe("a board saved too often", () => {
           : set(items)) as typeof sync.set
     })
 
+  // Refuses every write the same way until the switch it hands back lets them through again.
+  const refuseWrites = async (page: Page) => {
+    await page.evaluate(() => {
+      const sync = chrome.storage.sync
+      const set = sync.set.bind(sync)
+      const quota = window as typeof window & { refusing: boolean }
+      quota.refusing = true
+
+      sync.set = ((items: Record<string, unknown>) =>
+        quota.refusing
+          ? Promise.reject(
+              new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota.")
+            )
+          : set(items)) as typeof sync.set
+    })
+
+    return () =>
+      page.evaluate(() => {
+        ;(window as typeof window & { refusing: boolean }).refusing = false
+      })
+  }
+
   test("archives a note still holding refused words, and saves them with it", async ({
     page,
     extensionId
@@ -260,6 +290,91 @@ test.describe("a board saved too often", () => {
     await expect(page.locator(".board-list").first().locator("h2")).toHaveText([
       ...DEFAULT_BOARD_TITLES
     ])
+  })
+
+  test("keeps a refused name in Options, says why there, and saves it on leaving the field", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await page.getByRole("button", { name: "Options" }).click()
+    await refuseNextWrite(page)
+
+    const field = page.getByLabel("Your name")
+    await field.fill("Dana")
+    await field.press("Tab")
+
+    // Options covers the board's notice, so the reason is given beside the name, which stays as typed, and the board says nothing of it.
+    const dialog = page.getByRole("dialog", { name: "Options" })
+    await expect(dialog.getByRole("alert")).toContainText("too many changes in a row")
+    await expect(field).toHaveValue("Dana")
+    await expect(page.locator(".board-notice[role=alert]")).toHaveCount(0)
+    expect(await readStoredName(page)).toBeUndefined()
+
+    // Leaving the field again offers the name once more, and this time it lands.
+    await field.focus()
+    await field.press("Tab")
+    await expect(dialog.getByRole("alert")).toHaveCount(0)
+    await expect.poll(() => readStoredName(page)).toBe("Dana")
+
+    await page.getByRole("button", { name: "Done" }).click()
+    await expect(page.locator(".page-header__greeting")).toHaveText(/, Dana$/)
+    await expect(page.getByRole("alert")).toHaveCount(0)
+  })
+
+  test("says on the board that a name refused as Options closed went with it, until the next save lands", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await page.getByRole("button", { name: "Options" }).click()
+    const allowWrites = await refuseWrites(page)
+
+    await page.getByLabel("Your name").fill("Dana")
+    await page.getByRole("button", { name: "Done" }).click()
+
+    // Nothing is left on screen holding the name, so the board is what says it wasn't saved.
+    const notice = page.locator(".board-notice[role=alert]")
+    await expect(notice).toContainText("too many changes in a row")
+    await expect(page.locator(".page-header__greeting")).not.toHaveText(/Dana/)
+
+    // It goes with the next save that lands, the way any refusal's notice does.
+    await allowWrites()
+    await page.getByRole("button", { name: "Mark today" }).click()
+    await expect(notice).toHaveCount(0)
+  })
+
+  test("lets a refused name go when an import brings a name of its own", async ({
+    page,
+    extensionId
+  }) => {
+    await openNewTab(page, extensionId)
+    await page.getByRole("button", { name: "Options" }).click()
+    const allowWrites = await refuseWrites(page)
+
+    const field = page.getByLabel("Your name")
+    await field.fill("Dana")
+    await field.press("Tab")
+    await expect(
+      page.getByRole("dialog", { name: "Options" }).getByRole("alert")
+    ).toContainText("too many changes in a row")
+
+    // Sync takes writes again by the time a board from another browser has been picked.
+    await allowWrites()
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.getByRole("button", { name: "Import" }).click()
+    ])
+    await chooser.setFiles({
+      name: "dayboard.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({ widgets: [], settings: { name: "Robin" } }))
+    })
+
+    // The imported name stands, and so does the way back to the board it replaced.
+    await expect(page.locator(".page-header__greeting")).toHaveText(/, Robin$/)
+    await expect(page.getByRole("status").getByRole("button", { name: "Undo" })).toBeVisible()
+    expect(await readStoredName(page)).toBe("Robin")
   })
 })
 
@@ -480,6 +595,117 @@ test("a note typed just before its tab closes keeps every keystroke", async ({
   await reopened.goto(`chrome-extension://${extensionId}/newtab.html`)
 
   await expect(reopened.getByLabel("Scratch note")).toHaveValue("Last thought")
+})
+
+// A new tab paints from the board the last one here left in localStorage, which falls behind whenever storage moves on with no board tab open (another device, say).
+test("a new tab leaves a newer board alone when the one it remembered had a timer run out", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const tea = (settings: Record<string, unknown>) => ({
+    id: "tea",
+    kind: "timer",
+    title: "Tea",
+    colorPreset: "rose",
+    settings: { durationMs: 60_000, remainingMs: 60_000, chime: false, ...settings }
+  })
+  const groceries = (text: string) => ({
+    id: "groceries",
+    kind: "note",
+    title: "Groceries",
+    colorPreset: "sky",
+    settings: { text }
+  })
+  const stored = {
+    widgets: [tea({ running: false, endsAt: null }), groceries("Milk, eggs, bread")],
+    settings: { name: "" }
+  }
+
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), stored)
+  await expect(page.getByLabel("Groceries note")).toHaveValue("Milk, eggs, bread")
+
+  // What this browser remembers is from before the timer was reset elsewhere, its run long since over.
+  await page.evaluate(
+    (board) => localStorage.setItem("dayboard-state-cache", JSON.stringify(board)),
+    {
+      widgets: [tea({ running: true, endsAt: Date.now() - 60_000 }), groceries("Milk")],
+      settings: { name: "" }
+    }
+  )
+  await page.reload()
+
+  await expect(page.getByLabel("Groceries note")).toHaveValue("Milk, eggs, bread")
+  await expect(cardByTitle(page, "Tea").getByText(/Time.s up/)).toHaveCount(0)
+  expect(await readWidgetSettings(page, "Groceries")).toEqual(stored.widgets[1]!.settings)
+  expect(await readWidgetSettings(page, "Tea")).toEqual(stored.widgets[0]!.settings)
+})
+
+test("the greeting name saves once typing stops, and keeps its last keystrokes as Options closes", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.evaluate(() => {
+    const sync = chrome.storage.sync
+    const set = sync.set.bind(sync)
+    const counted = window as typeof window & { writes: number }
+    counted.writes = 0
+
+    sync.set = ((items: Record<string, unknown>) => {
+      counted.writes += 1
+      return set(items)
+    }) as typeof sync.set
+  })
+  const writes = () =>
+    page.evaluate(() => (window as typeof window & { writes: number }).writes)
+
+  await page.getByRole("button", { name: "Options" }).click()
+  const field = page.getByLabel("Your name")
+  await field.pressSequentially("Dana Whitfield")
+
+  // One write for the name, where every letter used to be a write of its own and a fast typist could run into the sync write-rate limit.
+  await expect.poll(() => readStoredName(page)).toBe("Dana Whitfield")
+  expect(await writes()).toBe(1)
+
+  // Typed and closed inside the pause, with no blur on the way out.
+  await field.pressSequentially(" Jr")
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
+
+  await expect.poll(() => readStoredName(page)).toBe("Dana Whitfield Jr")
+  expect(await writes()).toBe(2)
+  await expect(page.locator(".page-header__greeting")).toHaveText(/, Dana Whitfield Jr$/)
+})
+
+test("Options left open takes a name changed in another tab", async ({
+  context,
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Options" }).click()
+  // Options puts focus on the name as it opens, which says nothing is being typed there yet.
+  const field = page.getByLabel("Your name")
+  await expect(field).toBeFocused()
+
+  // A plain goto rather than openNewTab, which clears storage.
+  const other = await context.newPage()
+  await other.goto(`chrome-extension://${extensionId}/newtab.html`)
+  await other.getByRole("button", { name: "Options" }).click()
+  await other.getByLabel("Your name").fill("Robin")
+  await other.getByRole("button", { name: "Done" }).click()
+
+  await expect(field).toHaveValue("Robin")
+  await expect(page.locator(".page-header__greeting")).toHaveText(/, Robin$/)
+
+  // So a small edit here builds on the other tab's name rather than writing the old one back.
+  await field.press("End")
+  await field.pressSequentially(" K")
+  await expect.poll(() => readStoredName(page)).toBe("Robin K")
+
+  await other.close()
 })
 
 test("a card carrying data this version can't read leaves the rest of the board standing", async ({

@@ -154,6 +154,10 @@ export function NewTabPage() {
   const [undoableArchive, setUndoableArchive] = useState<UndoableArchive | null>(null)
   const archiveToggleRef = useRef<HTMLButtonElement>(null)
 
+  // An import closes Options, and the name field hands up whatever it still holds as it goes, which can be a name storage refused before the import.
+  // Written over the imported board, that would replace the name the import brought and take its Undo away, so it is let go until Options opens again.
+  const nameReplacedRef = useRef(false)
+
   // Archiving, restoring, or deleting a card unmounts whatever had focus (the menu item, the dialog's button, the card itself), which drops the keyboard on the page body and sends the next Tab to the far end of the board.
   // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
   // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
@@ -332,6 +336,7 @@ export function NewTabPage() {
   const openSettings = () => {
     closeOpenMenus()
     setImportError(null)
+    nameReplacedRef.current = false
     setIsSettingsOpen(true)
   }
 
@@ -355,6 +360,7 @@ export function NewTabPage() {
       const previous = state
 
       if ((await replaceState(imported)) === null) {
+        nameReplacedRef.current = true
         // An archive still on offer was taken off the board the import replaced, so the import's own Undo takes the notice.
         setUndoableArchive(null)
         setImportUndo({ previous, imported })
@@ -658,7 +664,11 @@ export function NewTabPage() {
         isOpen={isSettingsOpen}
         settings={state.settings}
         importError={importError}
-        onChange={(settings) => void setSettings(settings)}
+        onChange={(settings, isShown) =>
+          nameReplacedRef.current
+            ? Promise.resolve(null)
+            : setSettings(settings, isShown)
+        }
         onClose={closeSettings}
         onExport={exportBoard}
         onImport={(file) => void importBoard(file)}
