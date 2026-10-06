@@ -55,7 +55,7 @@ test("new tab page renders the default widgets and editing controls", async ({
     /icon32\.png$/
   )
   await expect(
-    page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
   ).toBeVisible()
   await expect(page.getByText("🕒 Local time")).toBeVisible()
   await expect(page.getByText("🌅 Morning")).toBeVisible()
@@ -65,6 +65,30 @@ test("new tab page renders the default widgets and editing controls", async ({
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Add countdown" })).toBeVisible()
+  // The kinds that keep time sit together, so a countdown and a timer are weighed side by side.
+  expect(
+    await page
+      .locator(".add-menu__panel > button")
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("aria-label"))
+      )
+  ).toEqual([
+    "Add clock",
+    "Add countdown",
+    "Add timer",
+    "Add stopwatch",
+    "Add note",
+    "Add todo",
+    "Add habit",
+    "Add quote"
+  ])
+  // A countdown runs to a date and a timer through a length of time, and their lines say which is which.
+  await expect(
+    page.getByRole("button", { name: "Add countdown" })
+  ).toHaveAccessibleDescription("Time left until a date")
+  await expect(
+    page.getByRole("button", { name: "Add timer" })
+  ).toHaveAccessibleDescription("A length of time, counted down")
 
   await openWidgetMenu(page, "🌅 Morning")
   await expect(
@@ -107,6 +131,80 @@ test("centers the board in the viewport with no docking option", async ({
   expect(Math.abs(above - below)).toBeLessThan(60)
 })
 
+test("keeps two columns between the phone layout and full-width ones", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  const cards = page.locator(".board-list .board-row")
+
+  // A window snapped to half a laptop screen: too narrow for two 380px columns, too wide to be a phone.
+  // The board shares the width between two columns rather than stretching one card across it.
+  for (const width of [721, 800, 860]) {
+    await page.setViewportSize({ width, height: 900 })
+    const first = await boxOf(cards.nth(0), `the first card at ${width}px`)
+    const second = await boxOf(cards.nth(1), `the second card at ${width}px`)
+    const third = await boxOf(cards.nth(2), `the third card at ${width}px`)
+
+    expect(second.y).toBeCloseTo(first.y, 0)
+    expect(second.x).toBeGreaterThan(first.x + first.width)
+    // Never a third column: the next card starts the second row.
+    expect(third.x).toBeCloseTo(first.x, 0)
+    expect(third.y).toBeGreaterThan(first.y + first.height)
+  }
+
+  // The phone layout still stacks.
+  await page.setViewportSize({ width: 600, height: 900 })
+  const first = await boxOf(cards.nth(0), "the first card on a phone")
+  const second = await boxOf(cards.nth(1), "the second card on a phone")
+  expect(second.y).toBeGreaterThan(first.y + first.height)
+})
+
+test("fits the first-run board on a short laptop screen", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  const cards = page.locator(".board-list .board-row")
+  await expect(cards).toHaveCount(DEFAULT_BOARD_TITLES.length)
+
+  // A 1080p screen at 125% once the taskbar and the browser's own chrome are counted: the whole board fits with no scrollbar.
+  await page.setViewportSize({ width: 1536, height: 714 })
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollHeight <=
+        document.documentElement.clientHeight
+    )
+  ).toBe(true)
+
+  // A 1366x768 laptop: the page may scroll by its bottom padding, but every card is on screen, the habit's button included.
+  await page.setViewportSize({ width: 1366, height: 657 })
+  const lastCard = await boxOf(cards.last(), "the last card on a short screen")
+  expect(lastCard.y + lastCard.height).toBeLessThanOrEqual(657)
+  await expect(
+    cardByTitle(page, "🚶 Daily walk").getByRole("button", { name: "Mark today" })
+  ).toBeInViewport()
+
+  // The roomy board fits from 759px of height, so it keeps its full spacing there and only a pixel less tightens it.
+  const headerGap = async (height: number) => {
+    await page.setViewportSize({ width: 1440, height })
+    const header = await boxOf(page.locator(".page-header"), `the header at 1440x${height}`)
+    const first = await boxOf(cards.first(), `the first card at 1440x${height}`)
+    return first.y - (header.y + header.height)
+  }
+  const roomyGap = await headerGap(900)
+  expect(await headerGap(759)).toBeCloseTo(roomyGap, 0)
+  expect(await headerGap(758)).toBeLessThan(roomyGap)
+
+  // A phone's one column scrolls whatever the height, so a short phone keeps the spacing a tall one has.
+  await page.setViewportSize({ width: 375, height: 1000 })
+  const tallPhone = await boxOf(page.locator(".page-header"), "the header on a tall phone")
+  await page.setViewportSize({ width: 375, height: 667 })
+  const shortPhone = await boxOf(page.locator(".page-header"), "the header on a short phone")
+  expect(shortPhone.y).toBeCloseTo(tallPhone.y, 0)
+})
+
 test("keeps the board from shifting when a scrollbar appears", async ({
   page,
   extensionId
@@ -139,7 +237,7 @@ test("shows a time-aware greeting that can be personalized", async ({
   await openNewTab(page, extensionId)
 
   const greeting = page.locator(".page-header__greeting")
-  await expect(greeting).toHaveText(/Good (morning|afternoon|evening|night)/)
+  await expect(greeting).toHaveText(/Good (morning|afternoon|evening)/)
 
   // Setting a name in Options personalizes and persists the greeting.
   await page.getByRole("button", { name: "Options" }).click()
@@ -194,6 +292,27 @@ test("the greeting shrinks with a window narrower than a phone", async ({
   // Narrower still, at 2.1rem an everyday name such as Bartholomew had no room beside the buttons and broke mid-word, so the greeting keeps shrinking in step with the window.
   await page.setViewportSize({ width: 320, height: 844 })
   await expect.poll(fontSize).toBeCloseTo((33.6 * 320) / 390, 1)
+})
+
+test("says good evening through the small hours until the morning", async ({
+  page,
+  extensionId
+}) => {
+  // A tab opened late at night is usually opened to start something, so the greeting never reads as being sent to bed.
+  await page.clock.install({ time: new Date("2026-03-04T23:40:00Z") })
+  await openNewTab(page, extensionId)
+
+  const greeting = page.locator(".page-header__greeting")
+  await expect(greeting).toHaveText("Good evening")
+
+  // Left open past midnight, the tab is still in the evening a minute before 5.
+  await page.clock.fastForward("05:19:00")
+  await expect(page.locator(".page-header__date")).toContainText("March 5")
+  await expect(greeting).toHaveText("Good evening")
+
+  // It turns to the morning at 5 on its own.
+  await page.clock.fastForward("01:00")
+  await expect(greeting).toHaveText("Good morning")
 })
 
 test("exports the board to a file and imports one back", async ({
@@ -735,7 +854,7 @@ test("dropdowns close when clicking outside them", async ({
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
   await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
 
@@ -744,7 +863,7 @@ test("dropdowns close when clicking outside them", async ({
     page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
   ).toBeVisible()
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
   await expect(
     page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
@@ -883,7 +1002,7 @@ test("add note flow saves typed text and persists across reloads", async ({
   await field.fill("Buy milk")
   // Blurring flushes the debounced auto-save.
   await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ })
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
     .click()
 
   await page.reload()

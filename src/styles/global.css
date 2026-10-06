@@ -184,6 +184,31 @@ a {
   }
 }
 
+/* Two rows of cards with the full breathing room need 759px of height, and most laptops leave a new tab less than that once the taskbar and the browser's own chrome are counted: the second row slipped past the fold, pushed there by nothing but padding.
+   A short screen gets a tighter vertical rhythm instead, so the first-run board fits and centers again; the header keeps a little more room below it than the cards keep between them.
+   The board was never going to clear the omnibox suggestions on a screen that size anyway, and the phone layout is one tall column that scrolls regardless, so it keeps its own spacing.
+   The header is reached through the page so this outranks its own rule further down. */
+@media (max-height: 758px) and (min-width: 721px) {
+  .page {
+    padding-block: 28px 32px;
+  }
+
+  .page > .page-header {
+    margin-block-end: 36px;
+  }
+
+  /* A board that fits leaves no scroll to bring its bottom row out from under the notice pinned near the bottom of the window.
+     While a notice is up, a strip under the board lets the page scroll far enough to clear one at its tallest (two lines) by about a card gap.
+     The strip's negative margin gives back the room it takes, so it only adds scroll: a board with room to spare stays where it is rather than jumping up as a notice appears and back as it goes.
+     An archive's notice hidden behind a refused save's doesn't count. */
+  body:has(.board-notice:not([hidden] *)) .page::after {
+    block-size: 128px;
+    content: "";
+    display: block;
+    margin-block-end: -128px;
+  }
+}
+
 /* ── Page Header ───────────────────────────────────────────────────────── */
 
 .page-header {
@@ -480,9 +505,20 @@ details > summary::-webkit-details-marker {
 /* `auto-fill`, not `auto-fit`: auto-fit collapses the tracks nothing landed in, so a lone card (one archived widget, or a board pared down to a single widget) stretched itself across every column it could reach.
    Keeping the empty tracks holds every card at one column's width, whatever the count. */
 .board-list {
+  /* A property so the two-column floor below can leave room for it. */
+  --board-gap: 28px;
   display: grid;
-  gap: 28px;
+  gap: var(--board-gap);
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+}
+
+/* Past the phone layout the board always takes at least two columns, even where two 380px ones don't fit.
+   Left to the rule above, a window snapped to half a laptop screen or a portrait tablet fell back to one column and stretched every card to 640-790px, wide and all but empty at its fixed height.
+   A column there is half the board less half the gap (and a pixel spare for rounding), so two always fit and three never do; once two full columns fit, 380px wins and nothing changes. */
+@media (min-width: 721px) {
+  .board-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, calc(50% - var(--board-gap) / 2 - 1px)), 1fr));
+  }
 }
 
 /* ── Archive ───────────────────────────────────────────────────────────── */

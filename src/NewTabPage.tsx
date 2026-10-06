@@ -80,15 +80,16 @@ const MenuIcon = ({ name }: { name: keyof typeof MENU_ICON_PATHS }) => (
 
 // A line apiece so the menu says what each kind is, rather than leaving "Add quote" and "Add note" to be told apart by guesswork.
 // Plain descriptions of what the card shows: this is a menu, not a place to sell the widget.
+// The four kinds that keep time sit together, so a countdown and a timer are weighed side by side rather than four rows apart: one runs to a date, the other through a length of time.
 const ADD_MENU_KINDS: { kind: WidgetKind; label: string; hint: string }[] = [
   { kind: "clock", label: "Clock", hint: "Current time in a time zone" },
   { kind: "countdown", label: "Countdown", hint: "Time left until a date" },
-  { kind: "note", label: "Note", hint: "Editable text on the card" },
-  { kind: "quote", label: "Quote", hint: "A line from your list" },
+  { kind: "timer", label: "Timer", hint: "A length of time, counted down" },
   { kind: "stopwatch", label: "Stopwatch", hint: "Time counted up from zero" },
-  { kind: "timer", label: "Timer", hint: "Time counted down to zero" },
+  { kind: "note", label: "Note", hint: "Editable text on the card" },
+  { kind: "todo", label: "Todo", hint: "Four tasks you check off" },
   { kind: "habit", label: "Habit", hint: "Daily marks over a week" },
-  { kind: "todo", label: "Todo", hint: "Four tasks you check off" }
+  { kind: "quote", label: "Quote", hint: "A line from your list" }
 ]
 
 // The new tab page doubles as the extension's options page.

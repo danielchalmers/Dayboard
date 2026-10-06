@@ -1,5 +1,7 @@
-// The four moments of the day the greeting keys off.
-export type Daypart = "morning" | "afternoon" | "evening" | "night"
+// The three moments of the day the greeting keys off.
+// There is no "night": "Good night" is what you say when parting or heading to bed, so a tab opened at 23:40 to start something would read as being sent to sleep.
+// Evening simply runs on until the morning does.
+export type Daypart = "morning" | "afternoon" | "evening"
 
 export const getDaypart = (now: Date): Daypart => {
   const hour = now.getHours()
@@ -12,11 +14,7 @@ export const getDaypart = (now: Date): Daypart => {
     return "afternoon"
   }
 
-  if (hour >= 17 && hour < 22) {
-    return "evening"
-  }
-
-  return "night"
+  return "evening"
 }
 
 export const getTimeOfDayGreeting = (now: Date): string => {
@@ -27,8 +25,6 @@ export const getTimeOfDayGreeting = (now: Date): string => {
       return "Good afternoon"
     case "evening":
       return "Good evening"
-    case "night":
-      return "Good night"
   }
 }
 
