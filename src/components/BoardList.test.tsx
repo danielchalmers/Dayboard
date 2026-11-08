@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, createEvent, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { BoardList } from "./BoardList"
 import { toDayKey } from "~/lib/habit"
@@ -440,6 +440,14 @@ describe("BoardList", () => {
   // A pointer user has no place on the board to keep, so only an item chosen from the keyboard closes the menu the way that hands focus back to the card.
   it("hands focus back to the card only for an item chosen from the keyboard", () => {
     const { container } = renderBoard()
+    // jsdom matches :focus-visible on any focused element, while a browser leaves it off the focus a mouse click places, so stand in for the browser here.
+    const matches = Element.prototype.matches
+    const focusVisible = vi
+      .spyOn(Element.prototype, "matches")
+      .mockImplementation(function (this: Element, selector: string) {
+        return selector === ":focus-visible" ? false : matches.call(this, selector)
+      })
+    onTestFinished(() => focusVisible.mockRestore())
 
     const chooseEdit = (detail: number) => {
       openMenu(container, { clientX: 10, clientY: 10 })
