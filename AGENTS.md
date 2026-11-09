@@ -23,6 +23,7 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - User-facing copy should be concise, warm, and not overly explanatory.
 - Dialog titles should name the action and kind, such as `Edit countdown`, not the item name.
 - Widgets can be archived (by drag onto a drop zone, or via the context menu), with a brief Undo right after, and tucked behind a quiet "Show archived" toggle where they are restored the same ways. Keep the active board the clear focus.
+- The board can be hidden from an eye button in the header, for a screen someone else can see. Hidden, the page is the greeting without the name, the date, and the button that shows the board again; the cards are unmounted rather than dimmed, so nothing ticks and a running timer sleeps until the board is shown (it settles then, the way a timer found late does). It is remembered per device in `localStorage`, read before the first paint so a new tab never flashes the cards, and shared by the board tabs open on that device; it does not sync, because hiding is about where this screen is. It is a cover, not a lock: do not add a password, an auto-hide, or per-widget privacy flags.
 - Global options live in an overlay reached from a gear button and from the browser's Options link, and stay deliberately small: a greeting name, JSON export/import of the board, and quiet links to the GitHub project and its issues page for feedback. Do not add layout or behavior toggles there. A timer's optional finish chime is opt-in per timer, set in that timer's own dialog rather than globally.
 - Any sound (e.g. the timer chime) must be opt-in and gentle; never autoplay audio.
 - Keep permissions minimal. Dayboard should only need `storage`.
@@ -31,7 +32,7 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 
 - WXT entrypoints live in `src/entrypoints` (`newtab` for the new tab page; a minimal `background` service worker that exists so MV3 registers one).
 - The root `NewTabPage` component lives in `src/NewTabPage.tsx`; `src/entrypoints/newtab/main.tsx` mounts it.
-- Shared logic lives in `src/lib`: time and countdowns (`time`), the page's shared clock (`clock`), stopwatch/timer (`timers`), quotes (`quotes`), habits (`habit`), todo lists (`todo`), the greeting (`greeting`), the optional Web Audio chime (`chime`), colors (`colors`), the widget registry (`widgets`), `types`, and `chrome.storage.sync` access (`storage`).
+- Shared logic lives in `src/lib`: time and countdowns (`time`), the page's shared clock (`clock`), stopwatch/timer (`timers`), quotes (`quotes`), habits (`habit`), todo lists (`todo`), the greeting (`greeting`), the optional Web Audio chime (`chime`), colors (`colors`), the widget registry (`widgets`), `types`, `chrome.storage.sync` access (`storage`), and the per-device hidden state (`hidden`).
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
 - Do not add Tailwind or a UI component library.

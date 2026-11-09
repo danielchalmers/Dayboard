@@ -133,6 +133,13 @@ test("captures Dayboard product screenshots", async ({
     page.getByRole("menuitem", { name: "Edit New York" })
   ).toHaveCount(0)
 
+  // The hidden board is shown again straight away: it is remembered in the profile the other tests share.
+  await page.getByRole("button", { name: "Hide board" }).click()
+  await expect(page.getByRole("button", { name: "Show board" })).toBeVisible()
+  await attachScreenshot(testInfo, page, "dayboard-hidden-desktop")
+  await page.getByRole("button", { name: "Show board" }).click()
+  await expect(page.getByRole("heading", { name: "Austin" })).toBeVisible()
+
   await page.setViewportSize({ width: 390, height: 844 })
   // Scroll through the page once before the stitched full-page capture: straight after a viewport resize Chromium can leave off-screen tiles unpainted, which showed up as a blank band across the middle cards.
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))

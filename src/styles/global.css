@@ -223,9 +223,9 @@ a {
    Set in the plain text color: quiet confidence, no effects. */
 .page-header__greeting {
   color: var(--text);
-  /* Narrower than a phone (390px, where 2.1rem is 8.62vw) the greeting shrinks in step with the window.
-     Beside two buttons that keep their size, an everyday name such as Bartholomew would otherwise have to break mid-word to fit. */
-  font-size: min(clamp(2.1rem, 4vw, 2.8rem), 8.62vw);
+  /* Narrower than the smallest window a browser will make (about 500px, where 2.1rem is just over 6.5vw) the greeting shrinks in step with the window.
+     Beside three buttons that keep their size, "Good morning" would otherwise wrap at a phone's width, and an everyday name such as Bartholomew would have to break mid-word to fit. */
+  font-size: min(clamp(2.1rem, 4vw, 2.8rem), 6.5vw);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.1;

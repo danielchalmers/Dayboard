@@ -213,7 +213,8 @@ const MAX_TIMEOUT_MS = 2 ** 31 - 1
 // A second timer finishing out of sight takes the title over rather than saving the first one's as the title to go back to.
 let borrowedTitle: { resting: string; by: string } | null = null
 
-const giveTitleBack = () => {
+// The page takes it back itself when the board is hidden: a card's name in the tab strip is the one thing a covered board could still give away.
+export const giveTitleBack = () => {
   if (!borrowedTitle) {
     return
   }
