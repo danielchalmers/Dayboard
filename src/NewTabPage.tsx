@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent
@@ -9,11 +10,13 @@ import {
 import { ArchiveNotice } from "~/components/ArchiveNotice"
 import { ARCHIVE_ICON_PATH, BoardDnd } from "~/components/BoardDnd"
 import { BoardList, isKeyboardAction } from "~/components/BoardList"
+import { giveTitleBack } from "~/components/BoardRow"
 import { DeleteDialog } from "~/components/DeleteDialog"
 import { ItemDialog } from "~/components/ItemDialog"
 import { SettingsDialog } from "~/components/SettingsDialog"
 import { ErrorView } from "~/components/StatusViews"
 import { WidgetIcon } from "~/components/WidgetIcon"
+import { useBoardHidden } from "~/hooks/useBoardHidden"
 import { useDayboardState } from "~/hooks/useDayboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting, getHeaderDate } from "~/lib/greeting"
@@ -117,6 +120,33 @@ const PageGreeting = ({ name }: { name: string }) => {
   )
 }
 
+// An eye while the board is on show and the same eye struck through while it is hidden: the button wears the board's state, the way a balance you can hide does.
+// The stroke takes a sliver out of the eye beside it, so the two read as one mark rather than a line laid over a drawing.
+const HideIcon = ({ hidden }: { hidden: boolean }) => {
+  const maskId = useId()
+
+  return (
+    <svg aria-hidden="true" fill="none" height="24" viewBox="0 0 24 24" width="24">
+      <mask id={maskId}>
+        <rect fill="#fff" height="24" width="24" />
+        <path d="M5.5 2.9 21.1 18.5" stroke="#000" strokeLinecap="round" strokeWidth="1.8" />
+      </mask>
+      <g mask={hidden ? `url(#${maskId})` : undefined}>
+        <path
+          d="M2.8 12c2-3.9 5.2-6 9.2-6s7.2 2.1 9.2 6c-2 3.9-5.2 6-9.2 6s-7.2-2.1-9.2-6Z"
+          stroke="currentColor"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
+        <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.8" />
+      </g>
+      {hidden ? (
+        <path d="M4.2 4.2 19.8 19.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      ) : null}
+    </svg>
+  )
+}
+
 // Close the add menu the way a native popup closes, putting focus back on its + button.
 // Whatever happens next starts from there rather than from an item that has just been hidden: the next Tab, or a dialog that hands focus back to whatever opened it.
 const closeAddMenuToToggle = (menu: HTMLDetailsElement) => {
@@ -154,6 +184,7 @@ export function NewTabPage() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importUndo, setImportUndo] = useState<ImportUndo | null>(null)
   const [undoableArchive, setUndoableArchive] = useState<UndoableArchive | null>(null)
+  const [hidden, setHidden] = useBoardHidden()
   const archiveToggleRef = useRef<HTMLButtonElement>(null)
 
   // An import closes Options, and the name field hands up whatever it still holds as it goes, which can be a name storage refused before the import.
@@ -174,11 +205,19 @@ export function NewTabPage() {
       )
     : undefined
 
+  // Nor does it outlast the board being hidden: the notice names the card, and an Undo for a board that can't be seen has nothing to point at.
   useEffect(() => {
-    if (undoableArchive && !undoableItem) {
+    if (undoableArchive && (!undoableItem || hidden)) {
       setUndoableArchive(null)
     }
-  }, [undoableArchive, undoableItem])
+  }, [undoableArchive, undoableItem, hidden])
+
+  // A hidden board gives nothing away from the tab strip either, whichever tab it was hidden from.
+  useEffect(() => {
+    if (hidden) {
+      giveTitleBack()
+    }
+  }, [hidden])
 
   useEffect(() => {
     const landing = focusLanding.current
@@ -335,6 +374,11 @@ export function NewTabPage() {
     })
   }
 
+  const toggleHidden = () => {
+    closeOpenMenus()
+    setHidden(!hidden)
+  }
+
   const openSettings = () => {
     closeOpenMenus()
     setImportError(null)
@@ -396,253 +440,272 @@ export function NewTabPage() {
     <>
       <main className="page">
         <header className="page-header">
-          <PageGreeting name={state.settings.name} />
+          {/* Hidden, the greeting goes back to the time of day alone: the name is as much yours as the cards are. */}
+          <PageGreeting name={hidden ? "" : state.settings.name} />
           <div className="page-header__actions">
+            {/* Hiding is for a screen someone else can see, so it takes the cards off the page rather than dimming them, and everything that edits the board goes with them.
+                The button comes first in both states, which keeps it the same element through the change, and a keyboard press keeps its focus. */}
             <button
-              aria-label="Options"
+              aria-label={hidden ? "Show board" : "Hide board"}
               className="icon-button"
-              onClick={openSettings}
-              title="Options"
+              onClick={toggleHidden}
+              title={hidden ? "Show board" : "Hide board"}
               type="button">
-              <svg
-                aria-hidden="true"
-                fill="none"
-                height="24"
-                viewBox="0 0 24 24"
-                width="24">
-                <circle cx="12" cy="12" r="3.1" stroke="currentColor" strokeWidth="1.8" />
-                <path
-                  d="M19.4 12c0-.5-.05-1-.13-1.46l1.9-1.46-1.9-3.29-2.24.9a7.4 7.4 0 0 0-2.53-1.47L12.93 2h-3.8l-.57 2.72a7.4 7.4 0 0 0-2.53 1.47l-2.24-.9-1.9 3.29 1.9 1.46c-.08.47-.13.96-.13 1.46s.05 1 .13 1.46l-1.9 1.46 1.9 3.29 2.24-.9c.74.63 1.6 1.13 2.53 1.47L9.13 22h3.8l.57-2.72a7.4 7.4 0 0 0 2.53-1.47l2.24.9 1.9-3.29-1.9-1.46c.08-.47.13-.96.13-1.46Z"
-                  stroke="currentColor"
-                  strokeLinejoin="round"
-                  strokeWidth="1.6"
-                />
-              </svg>
+              <HideIcon hidden={hidden} />
             </button>
-            <details
-              className="add-menu"
-              onKeyDown={(event) => {
-                // Native <details> ignores Escape; close it and refocus the toggle so the disclosure behaves like a real popup.
-                if (event.key === "Escape" && event.currentTarget.open) {
-                  closeAddMenuToToggle(event.currentTarget)
-                }
-              }}>
-              <summary
-                aria-label="Add widget"
-                className="icon-button"
-                role="button"
-                title="Add widget">
-                <svg
-                  aria-hidden="true"
-                  fill="none"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  width="24">
-                  <path
-                    d="M12 5v14M5 12h14"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeWidth="1.8"
-                  />
-                </svg>
-              </summary>
-              <div className="add-menu__panel">
-                {ADD_MENU_KINDS.map(({ kind, label, hint }) => (
-                  <button
-                    // The subtitle would otherwise land in the accessible name and bury the action, so name the button and offer the line as its description.
-                    aria-describedby={`add-${kind}-hint`}
-                    aria-label={`Add ${label.toLowerCase()}`}
-                    className="menu-button menu-button--described"
-                    key={kind}
-                    onClick={(event) => {
-                      // A kind chosen from the keyboard closes the menu onto its + button, which the dialog it opens then hands focus back to.
-                      const menu = event.currentTarget.closest("details")
-                      if (menu && isKeyboardAction(event)) {
-                        closeAddMenuToToggle(menu)
-                      }
-                      addItem(kind)
-                    }}
-                    type="button">
-                    <span
+            {hidden ? null : (
+              <>
+                <button
+                  aria-label="Options"
+                  className="icon-button"
+                  onClick={openSettings}
+                  title="Options"
+                  type="button">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    width="24">
+                    <circle cx="12" cy="12" r="3.1" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M19.4 12c0-.5-.05-1-.13-1.46l1.9-1.46-1.9-3.29-2.24.9a7.4 7.4 0 0 0-2.53-1.47L12.93 2h-3.8l-.57 2.72a7.4 7.4 0 0 0-2.53 1.47l-2.24-.9-1.9 3.29 1.9 1.46c-.08.47-.13.96-.13 1.46s.05 1 .13 1.46l-1.9 1.46 1.9 3.29 2.24-.9c.74.63 1.6 1.13 2.53 1.47L9.13 22h3.8l.57-2.72a7.4 7.4 0 0 0 2.53-1.47l2.24.9 1.9-3.29-1.9-1.46c.08-.47.13-.96.13-1.46Z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                </button>
+                <details
+                  className="add-menu"
+                  onKeyDown={(event) => {
+                    // Native <details> ignores Escape; close it and refocus the toggle so the disclosure behaves like a real popup.
+                    if (event.key === "Escape" && event.currentTarget.open) {
+                      closeAddMenuToToggle(event.currentTarget)
+                    }
+                  }}>
+                  <summary
+                    aria-label="Add widget"
+                    className="icon-button"
+                    role="button"
+                    title="Add widget">
+                    <svg
                       aria-hidden="true"
-                      className="menu-chip">
-                      <WidgetIcon kind={kind} size={18} />
-                    </span>
-                    <span className="menu-button__text">
-                      <span className="menu-button__label">
-                        Add {label.toLowerCase()}
-                      </span>
-                      <span className="menu-button__hint" id={`add-${kind}-hint`}>
-                        {hint}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </details>
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24">
+                      <path
+                        d="M12 5v14M5 12h14"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  </summary>
+                  <div className="add-menu__panel">
+                    {ADD_MENU_KINDS.map(({ kind, label, hint }) => (
+                      <button
+                        // The subtitle would otherwise land in the accessible name and bury the action, so name the button and offer the line as its description.
+                        aria-describedby={`add-${kind}-hint`}
+                        aria-label={`Add ${label.toLowerCase()}`}
+                        className="menu-button menu-button--described"
+                        key={kind}
+                        onClick={(event) => {
+                          // A kind chosen from the keyboard closes the menu onto its + button, which the dialog it opens then hands focus back to.
+                          const menu = event.currentTarget.closest("details")
+                          if (menu && isKeyboardAction(event)) {
+                            closeAddMenuToToggle(menu)
+                          }
+                          addItem(kind)
+                        }}
+                        type="button">
+                        <span
+                          aria-hidden="true"
+                          className="menu-chip">
+                          <WidgetIcon kind={kind} size={18} />
+                        </span>
+                        <span className="menu-button__text">
+                          <span className="menu-button__label">
+                            Add {label.toLowerCase()}
+                          </span>
+                          <span className="menu-button__hint" id={`add-${kind}-hint`}>
+                            {hint}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              </>
+            )}
           </div>
         </header>
-        {/* One drag context spans the board and the archived list, so an archived card can be dragged straight into the exact board slot it should take, while an active card heads for the archive drop zone.
-            The lists render from BoardDnd's view of the widgets, which mid-drag previews the restore with the dragged card already sitting in its board slot. */}
-        <BoardDnd
-          widgets={state.widgets}
-          onArchive={archive}
-          onReorder={reorderList}
-          onRestore={restore}>
-          {(displayWidgets) => {
-            const activeWidgets = displayWidgets.filter(
-              (widget) => !widget.archived
-            )
-            const archivedWidgets = displayWidgets.filter(
-              (widget) => widget.archived
-            )
+        {hidden ? null : (
+          <>
+            {/* One drag context spans the board and the archived list, so an archived card can be dragged straight into the exact board slot it should take, while an active card heads for the archive drop zone.
+                The lists render from BoardDnd's view of the widgets, which mid-drag previews the restore with the dragged card already sitting in its board slot. */}
+            <BoardDnd
+              widgets={state.widgets}
+              onArchive={archive}
+              onReorder={reorderList}
+              onRestore={restore}>
+              {(displayWidgets) => {
+                const activeWidgets = displayWidgets.filter(
+                  (widget) => !widget.archived
+                )
+                const archivedWidgets = displayWidgets.filter(
+                  (widget) => widget.archived
+                )
 
-            return (
-              <>
-                <BoardList
-                  hasArchived={archivedWidgets.length > 0}
-                  items={activeWidgets}
-                  restoreTarget
-                  onTimerFinish={settleTimer}
-                  onWidgetChange={updateWidget}
-                  renderItemActions={(item, index) => (
-                    <>
-                      {/* The board reads left-to-right, top-to-bottom, so the menu moves in reading order; "up/down" would lie in a multi-column grid. */}
-                      <button
-                        aria-label={`Move ${item.title} back`}
-                        className="menu-button"
-                        disabled={index === 0}
-                        onClick={() => reorderItem(item.id, -1)}
-                        role="menuitem"
-                        type="button">
-                        <MenuIcon name="moveBack" />
-                        Move back
-                      </button>
-                      <button
-                        aria-label={`Move ${item.title} next`}
-                        className="menu-button"
-                        disabled={index === activeWidgets.length - 1}
-                        onClick={() => reorderItem(item.id, 1)}
-                        role="menuitem"
-                        type="button">
-                        <MenuIcon name="moveNext" />
-                        Move next
-                      </button>
-                      <div aria-hidden="true" className="menu-separator" />
-                      <button
-                        aria-label={`Edit ${item.title}`}
-                        className="menu-button"
-                        onClick={() => {
-                          closeOpenMenus()
-                          setEditorState({ mode: "edit", item })
-                        }}
-                        role="menuitem"
-                        type="button">
-                        <MenuIcon name="edit" />
-                        Edit
-                      </button>
-                      <button
-                        aria-label={`Archive ${item.title}`}
-                        className="menu-button"
-                        onClick={(event) => archiveItem(item, event)}
-                        role="menuitem"
-                        type="button">
-                        <MenuIcon name="archive" />
-                        Archive
-                      </button>
-                      <div aria-hidden="true" className="menu-separator" />
-                      <button
-                        aria-label={`Delete ${item.title}`}
-                        className="menu-button menu-button--danger"
-                        onClick={() => {
-                          closeOpenMenus()
-                          setItemPendingDelete(item)
-                        }}
-                        role="menuitem"
-                        type="button">
-                        <MenuIcon name="del" />
-                        Delete
-                      </button>
-                    </>
-                  )}
-                />
-                {archivedWidgets.length > 0 ? (
-                  <section className="archive-section">
-                    <button
-                      aria-expanded={showArchived}
-                      className="archive-toggle"
-                      onClick={() => setShowArchived((shown) => !shown)}
-                      ref={archiveToggleRef}
-                      type="button">
-                      {showArchived ? "Hide archived" : "Show archived"}
-                      {/* The chevron says this is a disclosure; flipping it is the open/closed state made visible. */}
-                      <svg
-                        aria-hidden="true"
-                        className="archive-toggle__chevron"
-                        fill="none"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        width="14">
-                        <path
-                          d="m6 9 6 6 6-6"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </button>
-                    {showArchived ? (
-                      <BoardList
-                        items={archivedWidgets}
-                        onTimerFinish={settleTimer}
-                        onWidgetChange={updateWidget}
-                        renderItemActions={(item) => (
-                          <>
-                            <button
-                              aria-label={`Restore ${item.title}`}
-                              className="menu-button"
-                              onClick={(event) => restoreItem(item, event)}
-                              role="menuitem"
-                              type="button">
-                              <MenuIcon name="restore" />
-                              Restore
-                            </button>
-                            <button
-                              aria-label={`Edit ${item.title}`}
-                              className="menu-button"
-                              onClick={() => {
-                                closeOpenMenus()
-                                setEditorState({ mode: "edit", item })
-                              }}
-                              role="menuitem"
-                              type="button">
-                              <MenuIcon name="edit" />
-                              Edit
-                            </button>
-                            <div aria-hidden="true" className="menu-separator" />
-                            <button
-                              aria-label={`Delete ${item.title}`}
-                              className="menu-button menu-button--danger"
-                              onClick={() => {
-                                closeOpenMenus()
-                                setItemPendingDelete(item)
-                              }}
-                              role="menuitem"
-                              type="button">
-                              <MenuIcon name="del" />
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      />
+                return (
+                  <>
+                    <BoardList
+                      hasArchived={archivedWidgets.length > 0}
+                      items={activeWidgets}
+                      restoreTarget
+                      onTimerFinish={settleTimer}
+                      onWidgetChange={updateWidget}
+                      renderItemActions={(item, index) => (
+                        <>
+                          {/* The board reads left-to-right, top-to-bottom, so the menu moves in reading order; "up/down" would lie in a multi-column grid. */}
+                          <button
+                            aria-label={`Move ${item.title} back`}
+                            className="menu-button"
+                            disabled={index === 0}
+                            onClick={() => reorderItem(item.id, -1)}
+                            role="menuitem"
+                            type="button">
+                            <MenuIcon name="moveBack" />
+                            Move back
+                          </button>
+                          <button
+                            aria-label={`Move ${item.title} next`}
+                            className="menu-button"
+                            disabled={index === activeWidgets.length - 1}
+                            onClick={() => reorderItem(item.id, 1)}
+                            role="menuitem"
+                            type="button">
+                            <MenuIcon name="moveNext" />
+                            Move next
+                          </button>
+                          <div aria-hidden="true" className="menu-separator" />
+                          <button
+                            aria-label={`Edit ${item.title}`}
+                            className="menu-button"
+                            onClick={() => {
+                              closeOpenMenus()
+                              setEditorState({ mode: "edit", item })
+                            }}
+                            role="menuitem"
+                            type="button">
+                            <MenuIcon name="edit" />
+                            Edit
+                          </button>
+                          <button
+                            aria-label={`Archive ${item.title}`}
+                            className="menu-button"
+                            onClick={(event) => archiveItem(item, event)}
+                            role="menuitem"
+                            type="button">
+                            <MenuIcon name="archive" />
+                            Archive
+                          </button>
+                          <div aria-hidden="true" className="menu-separator" />
+                          <button
+                            aria-label={`Delete ${item.title}`}
+                            className="menu-button menu-button--danger"
+                            onClick={() => {
+                              closeOpenMenus()
+                              setItemPendingDelete(item)
+                            }}
+                            role="menuitem"
+                            type="button">
+                            <MenuIcon name="del" />
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    />
+                    {archivedWidgets.length > 0 ? (
+                      <section className="archive-section">
+                        <button
+                          aria-expanded={showArchived}
+                          className="archive-toggle"
+                          onClick={() => setShowArchived((shown) => !shown)}
+                          ref={archiveToggleRef}
+                          type="button">
+                          {showArchived ? "Hide archived" : "Show archived"}
+                          {/* The chevron says this is a disclosure; flipping it is the open/closed state made visible. */}
+                          <svg
+                            aria-hidden="true"
+                            className="archive-toggle__chevron"
+                            fill="none"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            width="14">
+                            <path
+                              d="m6 9 6 6 6-6"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                            />
+                          </svg>
+                        </button>
+                        {showArchived ? (
+                          <BoardList
+                            items={archivedWidgets}
+                            onTimerFinish={settleTimer}
+                            onWidgetChange={updateWidget}
+                            renderItemActions={(item) => (
+                              <>
+                                <button
+                                  aria-label={`Restore ${item.title}`}
+                                  className="menu-button"
+                                  onClick={(event) => restoreItem(item, event)}
+                                  role="menuitem"
+                                  type="button">
+                                  <MenuIcon name="restore" />
+                                  Restore
+                                </button>
+                                <button
+                                  aria-label={`Edit ${item.title}`}
+                                  className="menu-button"
+                                  onClick={() => {
+                                    closeOpenMenus()
+                                    setEditorState({ mode: "edit", item })
+                                  }}
+                                  role="menuitem"
+                                  type="button">
+                                  <MenuIcon name="edit" />
+                                  Edit
+                                </button>
+                                <div aria-hidden="true" className="menu-separator" />
+                                <button
+                                  aria-label={`Delete ${item.title}`}
+                                  className="menu-button menu-button--danger"
+                                  onClick={() => {
+                                    closeOpenMenus()
+                                    setItemPendingDelete(item)
+                                  }}
+                                  role="menuitem"
+                                  type="button">
+                                  <MenuIcon name="del" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          />
+                        ) : null}
+                      </section>
                     ) : null}
-                  </section>
-                ) : null}
-              </>
-            )
-          }}
-        </BoardDnd>
+                  </>
+                )
+              }}
+            </BoardDnd>
+          </>
+        )}
       </main>
       <ItemDialog
         error={editorState?.error}
@@ -694,7 +757,7 @@ export function NewTabPage() {
       {/* The live region stays mounted so an undo is announced as it is offered; one inserted along with its text is easily missed.
           Archiving and importing each change the board the other's Undo would act on, so only the latest of the two is ever on offer. */}
       <div role="status">
-        {undoableArchive && undoableItem ? (
+        {undoableArchive && undoableItem && !hidden ? (
           // A refused save takes the spot, but the archive's few seconds keep running underneath it, so the Undo is not offered long after the fact once that notice goes.
           <div hidden={Boolean(saveError)}>
             <ArchiveNotice

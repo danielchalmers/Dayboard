@@ -274,24 +274,49 @@ test("a long name breaks inside the greeting rather than pushing the page sidewa
   expect(add.x + add.width).toBeLessThanOrEqual(layout.width)
 })
 
-test("the greeting shrinks with a window narrower than a phone", async ({
+test("the greeting shrinks with a window too narrow to hold it beside the buttons", async ({
   page,
   extensionId
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 520, height: 844 })
   await openNewTab(page, extensionId)
 
+  const greeting = page.locator(".page-header__greeting")
   const fontSize = () =>
-    page
-      .locator(".page-header__greeting")
-      .evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
+    greeting.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
 
-  // A phone's width is where the greeting comes down to 2.1rem.
+  // The narrowest window a browser makes still gets the greeting at 2.1rem.
   expect(await fontSize()).toBeCloseTo(33.6, 1)
 
-  // Narrower still, at 2.1rem an everyday name such as Bartholomew had no room beside the buttons and broke mid-word, so the greeting keeps shrinking in step with the window.
+  // Narrower than that, at 2.1rem "Good morning" had no room beside three buttons and wrapped, and an everyday name such as Bartholomew broke mid-word, so the greeting shrinks in step with the window.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(fontSize).toBeCloseTo(390 * 0.065, 1)
+
+  // A greeting that sat on one line at a phone's width beside two buttons still has the room to beside three.
+  // It is measured rather than read off the page, so the test does not depend on the hour it runs at.
+  const { width, room } = await greeting.evaluate((node) => {
+    const probe = document.createElement("span")
+    probe.style.cssText = "position: absolute; visibility: hidden; white-space: nowrap"
+    probe.textContent = "Good morning"
+    node.append(probe)
+    const width = probe.getBoundingClientRect().width
+    probe.remove()
+
+    const header = node.closest(".page-header")!
+    const actions = header.querySelector(".page-header__actions")!
+
+    return {
+      width,
+      room:
+        header.getBoundingClientRect().width -
+        actions.getBoundingClientRect().width -
+        parseFloat(getComputedStyle(header).columnGap)
+    }
+  })
+  expect(width).toBeLessThanOrEqual(room)
+
   await page.setViewportSize({ width: 320, height: 844 })
-  await expect.poll(fontSize).toBeCloseTo((33.6 * 320) / 390, 1)
+  await expect.poll(fontSize).toBeCloseTo(320 * 0.065, 1)
 })
 
 test("says good evening through the small hours until the morning", async ({
