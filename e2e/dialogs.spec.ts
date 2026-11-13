@@ -555,6 +555,80 @@ test("the dialogs fit a phone-width window without scrolling sideways", async ({
   expect(Math.abs(done.x + done.width - (name.x + name.width))).toBeLessThan(1)
 })
 
+test("the dialogs fit a window zoomed down to 320px", async ({
+  page,
+  extensionId
+}) => {
+  // The narrowest a page is expected to reflow to: a small window at a high zoom.
+  await page.setViewportSize({ width: 320, height: 900 })
+  await openNewTab(page, extensionId)
+
+  const dialog = page.locator(".modal-dialog")
+  const settled = () =>
+    dialog.evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished))
+    )
+  const overflow = () =>
+    dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
+
+  for (const kind of ["countdown", "timer", "clock", "quote"]) {
+    await page.getByRole("button", { name: "Add widget" }).click()
+    await page.getByRole("button", { name: `Add ${kind}` }).click()
+    await expect(dialog).toBeVisible()
+    await settled()
+
+    if (kind === "countdown") {
+      // A date field will not go narrower than about 250px on its own, and the form's column used to grow to hold it, which took the buttons past the dialog's edge.
+      // With a start set, the form is at its widest: the field then carries its Clear button too.
+      await page.getByLabel("Starting from").fill("2026-10-28T22:30")
+      await expect(
+        page.getByRole("button", { name: "Clear starting from" })
+      ).toBeVisible()
+      expect(await overflow(), kind).toBe(0)
+
+      // Cancel stays beside Save rather than wrapping above it.
+      const cancel = await boxOf(
+        page.getByRole("button", { name: "Cancel" }),
+        "the Cancel button"
+      )
+      const save = await boxOf(
+        page.getByRole("button", { name: "Save countdown" }),
+        "the Save button"
+      )
+      const dialogBox = await boxOf(dialog, "the countdown dialog")
+      expect(cancel.y).toBe(save.y)
+      expect(save.x + save.width).toBeLessThan(dialogBox.x + dialogBox.width)
+    }
+
+    if (kind === "timer") {
+      // The length fields are down to about 40px each here, where the stepper arrows left no room for a second digit.
+      for (const [part, value] of [
+        ["hours", "12"],
+        ["minutes", "45"],
+        ["seconds", "30"]
+      ] as const) {
+        const field = page.getByLabel(part)
+        await field.fill(value)
+        expect(
+          await field.evaluate(
+            (element) => element.scrollWidth - element.clientWidth
+          ),
+          part
+        ).toBe(0)
+      }
+    }
+
+    expect(await overflow(), kind).toBe(0)
+    await page.keyboard.press("Escape")
+    await expect(dialog).toHaveCount(0)
+  }
+
+  await page.getByRole("button", { name: "Options" }).click()
+  await expect(dialog).toBeVisible()
+  await settled()
+  expect(await overflow(), "options").toBe(0)
+})
+
 test("a date field is the same height as the fields around it", async ({
   page,
   extensionId

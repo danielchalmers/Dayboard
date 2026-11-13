@@ -1402,16 +1402,19 @@ button.board-row__badge:active {
 
 /* ── Forms ─────────────────────────────────────────────────────────────── */
 
+/* The column is allowed to be narrower than its widest field wants to be.
+   A date-and-time field has a width it will not go below on its own (about 250px), and a plain `1fr` column grew to hold it, taking every other row and the buttons with it past the edge of a dialog narrower than that. */
 .form-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   margin-block-start: 8px;
 }
 
 label.form-label-group {
   display: grid;
   gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 label.form-label-group span,
@@ -1920,6 +1923,33 @@ body:has(.board-row--overlay) .board-notice {
     --modal-pad-end: 28px;
     padding: 28px var(--modal-pad-inline) var(--modal-pad-end);
     max-block-size: calc(100vh - 32px);
+  }
+}
+
+/* A window this narrow is usually a zoomed one, and the countdown's date fields and its two buttons are each a few pixels wider than the dialog has left.
+   Every edge gives a little back, so a date keeps clear of its Clear button and Cancel stays beside Save instead of wrapping above it. */
+@media (max-width: 360px) {
+  .modal-backdrop {
+    padding: 12px;
+  }
+  .modal-dialog {
+    --modal-pad-inline: 20px;
+    padding-inline: var(--modal-pad-inline);
+  }
+  /* `:where` keeps this as light as the rule it adjusts, so a field with inline padding of its own (the time zone's arrow, a timer's centered digits) keeps it. */
+  :where(.modal-dialog) input,
+  :where(.modal-dialog) select {
+    padding-inline: 10px;
+  }
+  .modal-dialog .input-adorned__clear {
+    inset-inline-end: 34px;
+  }
+  /* A timer's three length fields have room here for two digits or for the stepper arrows, not both, and the digits were cut in half. The arrow keys still step them. */
+  .duration-field__part input::-webkit-inner-spin-button {
+    display: none;
+  }
+  .modal-dialog__actions > button {
+    padding-inline: 16px;
   }
 }
 
