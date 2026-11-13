@@ -14,12 +14,39 @@ export const DEFAULT_BOARD_TITLES = [
 ] as const
 
 // A fresh new tab on the first-run board.
-// The worker's browser is shared between tests, so storage is cleared on arrival and the page reloaded onto the empty store.
+// The worker's browser is shared between tests, so both places a board is kept are emptied first: chrome.storage.sync, and the localStorage mirror a new tab paints from before it has read storage.
+// They are emptied from the extension's manifest rather than from the board, because an open board hears storage change and writes the mirror straight back.
+// With no mirror the page stays blank until its first read lands, as on a real first run, and the board is waited for here, so a test starts on a board that has caught up with storage.
+// Painted from a mirror, the board was there to act on while the read was still out, and on a busy machine the read came back a second or two later and put the board back to how storage had it when it was asked: a card just added went and came back empty, and whatever had been typed on it was gone.
 export const openNewTab = async (page: Page, extensionId: string) => {
+  await page.goto(`chrome-extension://${extensionId}/manifest.json`)
+  await page.evaluate(async () => {
+    localStorage.clear()
+    await chrome.storage.sync.clear()
+  })
   await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(() => chrome.storage.sync.clear())
-  await page.reload()
+  await page.locator(".board-row").first().waitFor()
 }
+
+// Lifts a card from the keyboard and waits until the keys that move, drop or cancel it will be heard.
+// dnd-kit's keyboard sensor starts listening for those in a timeout it sets as the card lifts, and on a busy machine a key sent straight after the lift got there first and was lost.
+// A timeout set once the lifted card is showing runs behind the sensor's own.
+export const liftWithKeyboard = async (page: Page, card: Locator) => {
+  await card.focus()
+  await page.keyboard.press("Space")
+  await page.locator(".board-row--overlay").waitFor()
+  await page.evaluate(
+    () => new Promise<void>((resolve) => window.setTimeout(resolve))
+  )
+}
+
+// Waits out the moment after a pointer drop in which a click goes nowhere.
+// dnd-kit stops every click for 50ms once a pointer drag ends, so the release can't click whatever the card was dropped on, and Playwright reaches for a button sooner than a hand could.
+// A timeout of the same length set after the drop runs out behind dnd-kit's.
+export const settleAfterDrop = (page: Page) =>
+  page.evaluate(
+    () => new Promise<void>((resolve) => window.setTimeout(resolve, 50))
+  )
 
 // The whole add flow for the common case: open the menu, pick the kind, name it, save.
 // Anything that needs to assert mid-flow or fill an extra field still writes the steps out.

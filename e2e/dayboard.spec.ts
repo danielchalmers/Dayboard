@@ -8,9 +8,11 @@ import {
   boxOf,
   cardByTitle,
   DEFAULT_BOARD_TITLES,
+  liftWithKeyboard,
   openNewTab,
   openWidgetMenu,
-  readWidgetSettings
+  readWidgetSettings,
+  settleAfterDrop
 } from "./helpers"
 
 const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) => {
@@ -30,6 +32,7 @@ const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) 
   await page.mouse.down()
   await page.mouse.move(grabX + deltaX, grabY + deltaY, { steps: 20 })
   await page.mouse.up()
+  await settleAfterDrop(page)
 }
 
 // The whole delete flow for a card, opened from the keyboard rather than with `openWidgetMenu`.
@@ -2109,9 +2112,7 @@ test("a keyboard drag onto the archive zone hands focus to the next card", async
   await openNewTab(page, extensionId)
 
   const card = cardByTitle(page, "🕒 Local time")
-  await card.focus()
-  await page.keyboard.press("Space")
-  await expect(page.locator(".board-row--overlay")).toBeVisible()
+  await liftWithKeyboard(page, card)
 
   // Step the card down the board until the zone below it is the target.
   const over = page.locator(".archive-dropzone--over")
@@ -2265,6 +2266,7 @@ test("dragging a widget onto the archive zone archives it", async ({
     )
   ).toBe(true)
   await page.mouse.up()
+  await settleAfterDrop(page)
 
   await expect(
     page.locator(".board-list").first().getByText("🕒 Local time")

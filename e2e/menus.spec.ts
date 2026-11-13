@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures"
-import { boxOf, cardByTitle, openNewTab, openWidgetMenu } from "./helpers"
+import {
+  boxOf,
+  cardByTitle,
+  liftWithKeyboard,
+  openNewTab,
+  openWidgetMenu
+} from "./helpers"
 
 test("the widget menu closes on scroll and returns focus to its card", async ({
   page,
@@ -210,8 +216,7 @@ test("starting a keyboard drag puts away an open widget menu", async ({
   // Guard against a stray scroll or the focus change itself having dismissed the menu before the drag even starts.
   await expect(menu).toHaveCount(1)
 
-  await page.keyboard.press("Space")
-  await expect(page.locator(".board-row--overlay")).toBeVisible()
+  await liftWithKeyboard(page, neighbour)
   await expect(menu).toHaveCount(0)
 
   await page.keyboard.press("Escape")
