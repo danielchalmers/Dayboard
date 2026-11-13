@@ -264,3 +264,54 @@ test("closes the add menu once a kind is chosen", async ({
   ).not.toBeVisible()
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
 })
+
+test("marks keyboard focus with one ring, never the browser's own", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  // The board arrives a moment after the page does, and a Tab pressed into the page before then has nowhere to land.
+  await expect(page.locator(".board-row").first()).toBeVisible()
+
+  // Walk the whole page once: the header buttons, every card, its badge and the controls on it.
+  // A rule that names buttons misses whatever is not one (the + is a <summary>, a card an <article>), and what it misses falls back to the browser's outline with nothing in the feature tests to notice.
+  const stops: { what: string; outline: string }[] = []
+
+  for (let press = 0; press < 60; press += 1) {
+    await page.keyboard.press("Tab")
+
+    const stop = await page.evaluate(() => {
+      const element = document.activeElement
+
+      if (!element || element === document.body) {
+        return null
+      }
+
+      const style = getComputedStyle(element)
+
+      return {
+        what: `${element.tagName.toLowerCase()}.${element.classList[0] ?? ""}`,
+        // A text field shows focus with its caret (and, in a dialog, its accent border), not a ring.
+        isTextField: element.matches("textarea, input[type='text']"),
+        outline: `${style.outlineStyle} ${style.outlineWidth}`
+      }
+    })
+
+    if (!stop) {
+      break
+    }
+
+    if (!stop.isTextField) {
+      stops.push({ what: stop.what, outline: stop.outline })
+    }
+  }
+
+  const kinds = new Set(stops.map((stop) => stop.what))
+
+  expect(kinds).toContain("button.icon-button")
+  expect(kinds).toContain("summary.icon-button")
+  expect(kinds).toContain("article.board-row")
+  expect(kinds).toContain("button.board-row__badge")
+  expect(kinds).toContain("button.habit-day")
+  expect(stops.filter((stop) => stop.outline !== "solid 2px")).toEqual([])
+})

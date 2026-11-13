@@ -32,7 +32,7 @@
   --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
   --shadow-dialog: 0 24px 60px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.04);
 
-  /* Focus ring */
+  /* Focus ring: the soft halo a text field wears around its accent border. Every other control takes the solid outline under Reset & Base. */
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
   /* Border Radius: a rounder, friendlier shape language. */
@@ -149,7 +149,16 @@ button:disabled {
   opacity: 0.4;
 }
 
+/* Keyboard focus is one crisp line in the system accent, set just clear of the control, on everything from the header buttons to a card to a habit's day.
+   It used to be three things: a 30% halo on buttons (about 1.5:1 against the page, a wash rather than a mark), the browser's own black outline on the + button and on cards, which no rule here reached, and nothing at all on a link.
+   An outline rather than a shadow, too, so Windows High Contrast keeps it. */
 button:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 input:focus-visible,
 select:focus-visible {
   box-shadow: var(--focus-ring);
@@ -459,6 +468,11 @@ details > summary::-webkit-details-marker {
 .menu-button:hover:not(:disabled),
 .menu-button:focus-visible {
   background: var(--surface-strong);
+}
+
+/* Items sit 2px apart in their panel, so the ring is drawn inside the row rather than around it, where it would run into the neighbours. */
+.menu-button:focus-visible {
+  outline-offset: -2px;
 }
 
 .menu-button--danger,
@@ -1158,12 +1172,12 @@ button.board-row__badge:active {
   text-decoration: line-through;
 }
 
-/* Present but quiet, so four rows don't read as four buttons. */
+/* Present but quiet, so four rows don't read as four buttons, yet still dark enough to find: at 45% of the tint it measured about 2:1 and all but vanished on the paler cards. */
 .todo-task__remove {
   align-items: center;
   block-size: 24px;
   border-radius: 8px;
-  color: color-mix(in srgb, var(--card-tint-resolved) 45%, transparent);
+  color: color-mix(in srgb, var(--card-tint-resolved) 70%, transparent);
   display: inline-flex;
   inline-size: 24px;
   justify-content: center;
@@ -1209,8 +1223,9 @@ button.board-row__badge:active {
   outline: 0;
 }
 
+/* The prompt takes the card's own tint at the remove buttons' strength: the page's quiet gray read at about 2.5:1 on a colored card. */
 .todo-add__field::placeholder {
-  color: var(--quiet);
+  color: color-mix(in srgb, var(--card-tint-resolved) 70%, transparent);
 }
 
 /* Timer length editor */
@@ -1304,6 +1319,12 @@ button.board-row__badge:active {
 .board-row--menu-open {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 35%, var(--card-border-resolved));
   box-shadow: var(--shadow-card-hover);
+}
+
+/* A focused card wears the same ring as every control on it, rather than the browser's own. */
+.board-row--draggable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* The in-list card while it is being dragged.
@@ -1796,11 +1817,6 @@ body:has(.board-row--overlay) .board-notice {
   color: var(--text);
 }
 
-.settings-footer-link:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: 0;
-}
-
 @media (max-width: 720px) {
   .modal-backdrop {
     padding: 16px;
@@ -1924,7 +1940,8 @@ body:has(.board-row--overlay) .board-notice {
 }
 
 .switch__input:focus-visible + .switch__track {
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ── Status Views & Empty States ───────────────────────────────────────── */
