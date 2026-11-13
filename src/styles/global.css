@@ -23,6 +23,8 @@
   /* Pressed states stay in the accent's own family, shaded toward black rather than blended with the page ink, which used to turn a colored accent gray under the pointer. */
   --accent-hover: color-mix(in srgb, var(--accent) 88%, #000);
   --accent-active: color-mix(in srgb, var(--accent) 78%, #000);
+  /* A neutral control held down: one step past its hover fill, so a press is felt before the action lands. */
+  --pressed: color-mix(in srgb, var(--text) 8%, var(--surface-strong));
   --danger: #e03131;
 
   /* Shadows */
@@ -304,6 +306,12 @@ a {
   border-color: color-mix(in srgb, var(--text) 20%, transparent);
 }
 
+/* Every button answers a press, not only a hover.
+   Only the accent button and the round header buttons used to; Cancel, a menu item, or a timer's Start looked the same held down as hovered, which on a touch screen (no hover at all) meant no response until the action had already happened. */
+.secondary-button:active:not(:disabled) {
+  background: var(--pressed);
+}
+
 .danger-button {
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--danger) 15%, var(--line-strong));
@@ -313,6 +321,10 @@ a {
 .danger-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface-strong));
   border-color: var(--danger);
+}
+
+.danger-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 22%, var(--surface-strong));
 }
 
 .icon-button {
@@ -333,7 +345,7 @@ a {
 }
 
 .icon-button:active:not(:disabled) {
-  background: color-mix(in srgb, var(--text) 8%, var(--surface-strong));
+  background: var(--pressed);
 }
 
 /* ── Menus (Add widget & Dropdowns) ────────────────────────────────────── */
@@ -470,6 +482,10 @@ details > summary::-webkit-details-marker {
   background: var(--surface-strong);
 }
 
+.menu-button:active:not(:disabled) {
+  background: var(--pressed);
+}
+
 /* Items sit 2px apart in their panel, so the ring is drawn inside the row rather than around it, where it would run into the neighbours. */
 .menu-button:focus-visible {
   outline-offset: -2px;
@@ -483,6 +499,10 @@ details > summary::-webkit-details-marker {
 .menu-button--danger:hover:not(:disabled),
 .menu-button--danger:focus-visible {
   background: color-mix(in srgb, var(--danger) 9%, transparent);
+}
+
+.menu-button--danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
 }
 
 /* A hairline between menu groups (e.g. before a destructive action). */
@@ -604,6 +624,10 @@ details > summary::-webkit-details-marker {
   background: var(--surface-strong);
   border-color: var(--line);
   color: var(--text);
+}
+
+.archive-toggle:active {
+  background: var(--pressed);
 }
 
 /* Archived cards sit quietly until you hover them. */
@@ -969,6 +993,11 @@ button.board-row__badge:active {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 45%, var(--card-border-resolved));
 }
 
+/* Pressed, the button takes a wash of the card's accent, the same color its border leans toward on hover. */
+.timer-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 18%, var(--card-bg-resolved));
+}
+
 /* The card's own accent drives its primary action, so a rose timer starts with a rose button. */
 .timer-button--primary {
   background: var(--card-accent-resolved);
@@ -978,6 +1007,10 @@ button.board-row__badge:active {
 
 .timer-button--primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--card-accent-resolved) 88%, var(--text));
+}
+
+.timer-button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 76%, var(--text));
 }
 
 /* Habit week, the card's main content: the current week as a row of dots under its weekday letters, so the row reads as the week it is rather than as seven unlabeled days. */
@@ -1187,6 +1220,10 @@ button.board-row__badge:active {
 .todo-task__remove:hover {
   background: color-mix(in srgb, var(--card-accent-resolved) 12%, transparent);
   color: var(--text);
+}
+
+.todo-task__remove:active {
+  background: color-mix(in srgb, var(--card-accent-resolved) 22%, transparent);
 }
 
 .todo-add {
@@ -1518,6 +1555,10 @@ input[type="datetime-local"] {
   color: var(--text);
 }
 
+.input-adorned__clear:active {
+  background: var(--pressed);
+}
+
 .form-note {
   color: var(--muted);
   font-size: 0.88rem;
@@ -1597,6 +1638,11 @@ body:has(.board-row--overlay) .board-notice {
   color: var(--text);
 }
 
+.board-notice__action:active,
+.board-notice__dismiss:active {
+  background: var(--pressed);
+}
+
 /* The way back is the one thing the notice is there to offer, so it carries the accent rather than the muted ink of Dismiss.
    A system accent at full strength sits just under readable contrast on the notice in either scheme (about 4.2:1), so it leans a quarter of the way toward the page ink, which darkens it on light and lifts it on dark. */
 .board-notice__action,
@@ -1651,6 +1697,8 @@ body:has(.board-row--overlay) .board-notice {
   padding: 6px 0;
 }
 
+/* The chosen swatch wears a ring in its own color, set off by a gap in the dialog's surface, and it keeps the ring under the pointer.
+   The hover rule used to outrank it, so the swatch you had just clicked (still hovered, by definition) swapped its ring for the hover's soft shadow and shrank a step: the one moment the picker should confirm a choice was the moment it looked unselected. */
 .color-swatch {
   flex: 0 1 32px;
   min-inline-size: 0;
@@ -1672,8 +1720,9 @@ body:has(.board-row--overlay) .board-notice {
     transform: scale(1.12);
     box-shadow: 0 4px 10px color-mix(in srgb, var(--swatch-color-light) 40%, transparent);
   }
-  .color-swatch--selected {
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--swatch-color-light);
+  .color-swatch--selected,
+  .color-swatch--selected:hover {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-light);
     transform: scale(1.18);
   }
 }
@@ -1686,15 +1735,16 @@ body:has(.board-row--overlay) .board-notice {
     transform: scale(1.12);
     box-shadow: 0 4px 10px color-mix(in srgb, var(--swatch-color-dark) 40%, transparent);
   }
-  .color-swatch--selected {
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--swatch-color-dark);
+  .color-swatch--selected,
+  .color-swatch--selected:hover {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-dark);
     transform: scale(1.18);
   }
 }
 
 .color-swatch:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--accent);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--accent);
 }
 
 /* Twelve swatches in one row need about 470px. On a narrower dialog they used to shrink to fit, down to 17px dots at phone width, which is a small thing to aim a thumb at.
