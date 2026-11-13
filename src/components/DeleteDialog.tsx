@@ -60,7 +60,7 @@ export const DeleteDialog = ({
             className="danger-button"
             onClick={() => onConfirm(item)}
             type="button">
-            Delete widget
+            Delete {item.kind}
           </button>
         </div>
       </section>

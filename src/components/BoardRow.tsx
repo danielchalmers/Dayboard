@@ -122,7 +122,7 @@ const NoteField = ({
       dir="auto"
       onBlur={field.onBlur}
       onChange={(event) => field.onChange(event.currentTarget.value)}
-      placeholder="Jot something down..."
+      placeholder="Jot something down…"
       ref={field.fieldRef}
       spellCheck={false}
       value={field.value}
@@ -598,7 +598,7 @@ const TodoBody = ({
             dir="auto"
             maxLength={MAX_TASK_LENGTH}
             onChange={(event) => setDraft(event.currentTarget.value)}
-            placeholder="Add a task..."
+            placeholder="Add a task…"
             ref={fieldRef}
             type="text"
             value={draft}

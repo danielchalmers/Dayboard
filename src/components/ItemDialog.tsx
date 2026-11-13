@@ -288,7 +288,7 @@ export const ItemDialog = ({
                 required
                 type="text"
                 value={draft.title}
-                placeholder="Give it a name..."
+                placeholder="Give it a name…"
               />
             </label>
 
@@ -479,7 +479,7 @@ export const ItemDialog = ({
                     className="quote-list-input"
                     dir="auto"
                     onChange={(event) => updateQuotes(event.currentTarget.value)}
-                    placeholder="One quote per line..."
+                    placeholder="One quote per line…"
                     rows={6}
                     value={quotesToText(draft.settings.quotes)}
                   />

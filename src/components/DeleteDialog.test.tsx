@@ -73,7 +73,7 @@ describe("DeleteDialog", () => {
     const onConfirm = vi.fn()
     render(deleteDialog({ onConfirm }))
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete widget" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete note" }))
 
     expect(onConfirm).toHaveBeenCalledWith(noteItem)
   })

@@ -88,8 +88,8 @@ const EmptyState = ({
           <span aria-hidden="true" className="empty-state__glyph">✦</span>
           <h2>A fresh start</h2>
           <p>
-            Add a clock, a countdown, a note — whatever your day needs. The +
-            button up top has them all.
+            Add a clock, a countdown, a note — whatever your day needs. The
+            +&nbsp;button up top has them all.
           </p>
         </>
       )}
