@@ -46,7 +46,7 @@ test("never reaches the network", async ({ page, context, extensionId }) => {
   const offline = ["chrome-extension://", "data:", "blob:", "about:"]
   const external: string[] = []
 
-  // Listening on the context rather than the page covers the service worker too, where a telemetry ping is at least as likely to live, and survives the reload inside `openNewTab`.
+  // Listening on the context rather than the page covers the service worker too, where a telemetry ping is at least as likely to live, and survives the navigation inside `openNewTab`.
   const collect = (request: Request) => {
     const url = request.url()
 
@@ -276,8 +276,6 @@ test("marks keyboard focus with one ring, never the browser's own", async ({
   extensionId
 }) => {
   await openNewTab(page, extensionId)
-  // The board arrives a moment after the page does, and a Tab pressed into the page before then has nowhere to land.
-  await expect(page.locator(".board-row").first()).toBeVisible()
 
   // Walk the whole page once: the header buttons, every card, its badge and the controls on it.
   // A rule that names buttons misses whatever is not one (the + is a <summary>, a card an <article>), and what it misses falls back to the browser's outline with nothing in the feature tests to notice.
