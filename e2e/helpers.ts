@@ -28,6 +28,18 @@ export const openNewTab = async (page: Page, extensionId: string) => {
   await page.locator(".board-row").first().waitFor()
 }
 
+// Lifts a card from the keyboard and waits until the keys that move, drop or cancel it will be heard.
+// dnd-kit's keyboard sensor starts listening for those in a timeout it sets as the card lifts, and on a busy machine a key sent straight after the lift got there first and was lost.
+// A timeout set once the lifted card is showing runs behind the sensor's own.
+export const liftWithKeyboard = async (page: Page, card: Locator) => {
+  await card.focus()
+  await page.keyboard.press("Space")
+  await page.locator(".board-row--overlay").waitFor()
+  await page.evaluate(
+    () => new Promise<void>((resolve) => window.setTimeout(resolve))
+  )
+}
+
 // The whole add flow for the common case: open the menu, pick the kind, name it, save.
 // Anything that needs to assert mid-flow or fill an extra field still writes the steps out.
 export const addWidget = async (page: Page, kind: string, title: string) => {

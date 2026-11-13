@@ -8,6 +8,7 @@ import {
   boxOf,
   cardByTitle,
   DEFAULT_BOARD_TITLES,
+  liftWithKeyboard,
   openNewTab,
   openWidgetMenu,
   readWidgetSettings
@@ -2109,9 +2110,7 @@ test("a keyboard drag onto the archive zone hands focus to the next card", async
   await openNewTab(page, extensionId)
 
   const card = cardByTitle(page, "🕒 Local time")
-  await card.focus()
-  await page.keyboard.press("Space")
-  await expect(page.locator(".board-row--overlay")).toBeVisible()
+  await liftWithKeyboard(page, card)
 
   // Step the card down the board until the zone below it is the target.
   const over = page.locator(".archive-dropzone--over")
