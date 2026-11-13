@@ -1228,7 +1228,9 @@ button.board-row__badge:active {
   color: color-mix(in srgb, var(--card-tint-resolved) 70%, transparent);
 }
 
-/* Timer length editor */
+/* Timer length editor.
+   The three boxes are 84px where there is room and give way evenly where there is not: at fixed widths the row was 410px across, wider than the dialog on anything under about 460px, and it took the whole form with it, so the name field, the swatches and Save all ran off the dialog's edge behind a sideways scroll.
+   The inline padding comes down for the same reason: the digits are centered, so the 16px a text field keeps either side only narrowed the room for them. */
 .duration-field {
   display: flex;
   gap: 12px;
@@ -1238,10 +1240,13 @@ button.board-row__badge:active {
   align-items: center;
   display: flex;
   gap: 8px;
+  min-inline-size: 0;
 }
 
 .duration-field__part input {
-  inline-size: 84px;
+  flex: 0 1 84px;
+  min-inline-size: 0;
+  padding-inline: 8px;
   text-align: center;
 }
 
@@ -1408,6 +1413,12 @@ select:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
   outline: 0;
+}
+
+/* A date field's editable parts carry padding of their own, which made it 48px tall in a column of 46px fields.
+   Taking it out of the field's padding leaves the shared minimum height to set all of them. */
+input[type="datetime-local"] {
+  padding-block: 8px;
 }
 
 /* ── Time zone combobox ────────────────────────────────────────────────── */
@@ -1686,6 +1697,17 @@ body:has(.board-row--overlay) .board-notice {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--accent);
 }
 
+/* Twelve swatches in one row need about 470px. On a narrower dialog they used to shrink to fit, down to 17px dots at phone width, which is a small thing to aim a thumb at.
+   Two rows of six keep every swatch at its full size instead. */
+@media (max-width: 560px) {
+  .color-preset-picker {
+    display: grid;
+    gap: 14px 8px;
+    grid-template-columns: repeat(6, minmax(0, 32px));
+    justify-content: space-between;
+  }
+}
+
 /* ── Modal Dialogs ─────────────────────────────────────────────────────── */
 
 .modal-backdrop {
@@ -1807,6 +1829,11 @@ body:has(.board-row--overlay) .board-notice {
 .modal-dialog__actions--split {
   align-items: center;
   justify-content: space-between;
+}
+
+/* Where the links and the button don't fit on one line the button wraps to a line of its own, and it keeps to the trailing edge there, where every other dialog's primary action sits, rather than starting a new row at the left. */
+.modal-dialog__actions--split > .primary-button {
+  margin-inline-start: auto;
 }
 
 /* Quiet links sit together on the footer's left; the negative inline start pulls the first link's text back flush with the dialog edge, past its hover padding. */
