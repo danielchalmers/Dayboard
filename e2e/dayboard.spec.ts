@@ -60,7 +60,9 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(page.getByText("🕒 Local time")).toBeVisible()
   await expect(page.getByText("🌅 Morning")).toBeVisible()
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
-  await expect(page.getByLabel("Actions for 🕒 Local time")).toHaveCount(0)
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toHaveCount(0)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()

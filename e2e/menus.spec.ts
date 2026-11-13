@@ -217,3 +217,143 @@ test("starting a keyboard drag puts away an open widget menu", async ({
   await page.keyboard.press("Escape")
   await expect(page.locator(".board-row--overlay")).toHaveCount(0)
 })
+
+// Edit, Archive and Delete are otherwise behind a right-click that nothing on the card mentions.
+test("the kind badge opens the widget menu under itself and closes it again", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const card = cardByTitle(page, "🕒 Local time")
+  const badge = card.getByRole("button", { name: "Actions for 🕒 Local time" })
+  const menu = page.locator(".card-menu")
+
+  await badge.click()
+  await expect(menu).toBeVisible()
+  await expect(
+    page.getByRole("menuitem", { name: "Edit 🕒 Local time" })
+  ).toBeVisible()
+  await expect(badge).toHaveAttribute("aria-expanded", "true")
+  // Pressing the badge is a click on a button, not a grab of the card.
+  await expect(page.locator(".archive-dropzone")).toHaveCount(0)
+
+  await menu
+    .locator(".card-menu__panel")
+    .evaluate((panel) =>
+      Promise.all(panel.getAnimations().map((animation) => animation.finished))
+    )
+  const badgeBox = await boxOf(badge, "the badge")
+  const menuBox = await boxOf(
+    menu.locator(".card-menu__panel"),
+    "the widget menu"
+  )
+
+  // The menu hangs from the badge's corner, over its own card, rather than from wherever the pointer was.
+  expect(
+    Math.abs(menuBox.x + menuBox.width - (badgeBox.x + badgeBox.width))
+  ).toBeLessThan(2)
+  expect(menuBox.y).toBeGreaterThan(badgeBox.y + badgeBox.height)
+  expect(menuBox.y).toBeLessThan(badgeBox.y + badgeBox.height + 16)
+
+  // A second press puts it away, the way a menu button does, rather than closing and reopening it.
+  await badge.click()
+  await expect(menu).toHaveCount(0)
+  await expect(badge).toHaveAttribute("aria-expanded", "false")
+})
+
+test("the kind badge opens the menu from the keyboard and Escape hands focus back to it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const badge = cardByTitle(page, "🕒 Local time").getByRole("button", {
+    name: "Actions for 🕒 Local time"
+  })
+
+  await badge.focus()
+  await page.keyboard.press("Enter")
+  await expect(
+    page.getByRole("menuitem", { name: "Move 🕒 Local time next" })
+  ).toBeFocused()
+
+  await page.keyboard.press("Escape")
+  await expect(page.locator(".card-menu")).toHaveCount(0)
+  await expect(badge).toBeFocused()
+  // Enter on the badge is a press of a button: it must not lift the card.
+  await expect(page.locator(".archive-dropzone")).toHaveCount(0)
+})
+
+test("right-clicking a second card swaps to that card's menu", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // Bottom corners: card background on both, clear of the text and controls.
+  const first = await boxOf(cardByTitle(page, "🕒 Local time"), "the first card")
+  const second = await boxOf(cardByTitle(page, "🌅 Morning"), "the second card")
+
+  await page.mouse.click(first.x + 14, first.y + first.height - 14, {
+    button: "right"
+  })
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toBeVisible()
+
+  // The correction anyone makes after right-clicking the wrong card.
+  await page.mouse.click(second.x + 14, second.y + second.height - 14, {
+    button: "right"
+  })
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🌅 Morning" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toHaveCount(0)
+
+  // The same correction, landing before the open menu has reported that it closed.
+  // A real right-click can arrive in that window, since the press that dismisses one menu is the press that asks for the next, but a scripted pointer never does, so the order is set by hand: dismiss the menu, then right-click the first card before the "closed" event is delivered.
+  // The menu used to be reused from one card to the next. It only shows itself when it mounts, so it stayed hidden, and then took the late event as its own dismissal: nothing opened at all.
+  await page.evaluate(
+    ({ x, y }) => {
+      document.querySelector<HTMLElement>(":popover-open")?.hidePopover()
+      document.elementFromPoint(x, y)?.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          button: 2,
+          cancelable: true,
+          clientX: x,
+          clientY: y
+        })
+      )
+    },
+    { x: first.x + 14, y: first.y + first.height - 14 }
+  )
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🌅 Morning" })
+  ).toHaveCount(0)
+})
+
+test("a double-click on a card's background leaves its menu a right-click away", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const box = await boxOf(cardByTitle(page, "🕒 Local time"), "the card")
+  const x = box.x + box.width - 14
+  const y = box.y + box.height - 14
+
+  // Double-clicking is the first thing many people try on a card.
+  // On blank background Chrome selects a lone line break there, never highlighted, and the next right-click must not mistake it for text to copy.
+  await page.mouse.dblclick(x, y)
+  await page.mouse.click(x, y, { button: "right" })
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toBeVisible()
+})

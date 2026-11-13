@@ -104,14 +104,25 @@ const FORM_FIELD_SELECTOR =
 const isFromInteractiveControl = (event: { target: EventTarget | null }) =>
   Boolean((event.target as HTMLElement | null)?.closest(FORM_FIELD_SELECTOR))
 
+// The kind badge is the card's own menu button, so it is the one control on a card whose right-click and menu keys belong to the card's menu rather than to itself.
+const MENU_BUTTON_SELECTOR = "button.board-row__badge"
+
+const menuButtonOf = (event: { target: EventTarget | null }) =>
+  (event.target as HTMLElement | null)?.closest<HTMLElement>(
+    MENU_BUTTON_SELECTOR
+  ) ?? null
+
 // Right-clicking a stretch of selected text is a reach for Copy, not for the card's own menu, so the card steps aside and lets the browser's menu through.
 // Only a selection touching this card counts; a leftover highlight elsewhere on the page should not disarm the menu here.
 //
 // The test is whether the range overlaps the card, not where its common ancestor sits: triple-clicking a quote selects the whole block and Chrome runs the range on to the start of the next one, which lifts the common ancestor clear out of the card and made that check miss the most ordinary way of selecting a line.
+//
+// A selection of nothing but whitespace has nothing to copy.
+// It is what a double- or triple-click on blank card background leaves behind (a line break, never highlighted), and counting it disarmed the menu on the whole card until the user happened to click somewhere else.
 export const hasSelectionWithin = (card: HTMLElement): boolean => {
   const selection = card.ownerDocument.defaultView?.getSelection()
 
-  if (!selection || selection.isCollapsed) {
+  if (!selection || selection.isCollapsed || !selection.toString().trim()) {
     return false
   }
 
@@ -133,14 +144,22 @@ export const isKeyboardAction = (event?: { detail: number }) =>
   event?.detail === 0 ||
   Boolean(document.activeElement?.matches(":focus-visible"))
 
+// Where a menu hangs from: its top-left corner under the cursor, or its top-right corner under the menu button, which sits in the card's corner and would otherwise send the menu out over the next card.
+type MenuAlign = "start" | "end"
+
 interface OpenMenu {
   id: string
   x: number
   y: number
+  align: MenuAlign
+  // Counts openings, so every one mounts a menu of its own (see the key where the menu renders).
+  opening: number
 }
 
 const MENU_VIEWPORT_MARGIN = 8
 const MENU_KEYBOARD_OFFSET = 16
+// Clear of the badge's focus ring, close enough to read as the badge's own menu.
+const MENU_BUTTON_GAP = 6
 
 const usePrefersReducedMotion = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
@@ -161,6 +180,7 @@ const usePrefersReducedMotion = () => {
 interface WidgetContextMenuProps {
   x: number
   y: number
+  align: MenuAlign
   label: string
   onClose: () => void
   children: ReactNode
@@ -174,6 +194,7 @@ const getMenuItems = (panel: HTMLElement) =>
 const WidgetContextMenu = ({
   x,
   y,
+  align,
   label,
   onClose,
   children
@@ -228,12 +249,13 @@ const WidgetContextMenu = ({
 
     const maxLeft = window.innerWidth - panel.offsetWidth - MENU_VIEWPORT_MARGIN
     const maxTop = window.innerHeight - panel.offsetHeight - MENU_VIEWPORT_MARGIN
+    const left = align === "end" ? x - panel.offsetWidth : x
 
     setPosition({
-      left: Math.max(MENU_VIEWPORT_MARGIN, Math.min(x, maxLeft)),
+      left: Math.max(MENU_VIEWPORT_MARGIN, Math.min(left, maxLeft)),
       top: Math.max(MENU_VIEWPORT_MARGIN, Math.min(y, maxTop))
     })
-  }, [x, y])
+  }, [x, y, align])
 
   // A viewport-fixed menu drifts away from its card on scroll or resize, so close it.
   // Hide it through the Popover API (not a bare React unmount) so the browser runs its native focus-restoration and returns focus to the opener; the resulting toggle event then clears the React state.
@@ -358,7 +380,7 @@ interface SortableBoardRowProps {
   animateEnter: boolean
   prefersReducedMotion: boolean
   onCloseMenu: () => void
-  onOpenMenu: (id: string, x: number, y: number) => void
+  onOpenMenu: (id: string, x: number, y: number, align?: MenuAlign) => void
   onWidgetChange?: WidgetChangeHandler
   onTimerFinish?: TimerFinishHandler
 }
@@ -387,6 +409,10 @@ const SortableBoardRow = memo(({
     id: item.id
   })
 
+  // Whether the menu was already up when the badge was pressed.
+  // The popover's light dismiss puts an open menu away on the press itself, so by the time the click arrives there is no telling a second click (close it) from a first one (open it) without this.
+  const menuWasOpen = useRef(false)
+
   const className = [
     "board-row--sortable",
     "board-row--draggable",
@@ -397,8 +423,22 @@ const SortableBoardRow = memo(({
     .filter(Boolean)
     .join(" ")
 
+  // The menu hangs from the badge however it was asked for there, so it always opens in the same place under the button that owns it.
+  const openUnder = (menuButton: HTMLElement) => {
+    const rect = menuButton.getBoundingClientRect()
+    onOpenMenu(item.id, rect.right, rect.bottom + MENU_BUTTON_GAP, "end")
+  }
+
   const handleContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasActions) {
+      return
+    }
+
+    const menuButton = menuButtonOf(event)
+
+    if (menuButton) {
+      event.preventDefault()
+      openUnder(menuButton)
       return
     }
 
@@ -422,6 +462,17 @@ const SortableBoardRow = memo(({
   }
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const isMenuKey =
+      event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")
+    const menuButton = menuButtonOf(event)
+
+    // The menu keys on the badge open the menu it owns, under it, as a click would.
+    if (hasActions && isMenuKey && menuButton) {
+      event.preventDefault()
+      openUnder(menuButton)
+      return
+    }
+
     // Keys typed into an interactive control (a note's textarea, a button) stay with that control and never start a drag or open the menu, except Escape, which still closes an open menu.
     if (isFromInteractiveControl(event) && event.key !== "Escape") {
       return
@@ -432,7 +483,7 @@ const SortableBoardRow = memo(({
       return
     }
 
-    if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+    if (isMenuKey) {
       event.preventDefault()
       // Keyboard activation has no cursor, so anchor near the card's corner.
       const rect = event.currentTarget.getBoundingClientRect()
@@ -473,6 +524,26 @@ const SortableBoardRow = memo(({
       tabIndex: 0
     },
     dragHandleProps: { onPointerDown },
+    menuButtonProps: hasActions
+      ? {
+          "aria-expanded": isMenuOpen,
+          "aria-haspopup": "menu" as const,
+          "aria-label": `Actions for ${item.title}`,
+          onPointerDown: () => {
+            menuWasOpen.current = isMenuOpen
+          },
+          onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
+            const wasOpen = menuWasOpen.current
+            menuWasOpen.current = false
+
+            if (wasOpen) {
+              onCloseMenu()
+            } else {
+              openUnder(event.currentTarget)
+            }
+          }
+        }
+      : undefined,
     className,
     item,
     ref: setNodeRef,
@@ -520,13 +591,18 @@ export const BoardList = ({
 
   // Stable so the memoized rows can skip re-rendering when only the tick changes.
   // Both belong above the empty-state return below: a hook called only when the board has cards is one hook fewer on the render that empties it, which is the "rendered fewer hooks than expected" crash.
+  const openings = useRef(0)
   const closeMenu = useCallback(() => setOpenMenu(null), [])
-  const handleOpenMenu = useCallback((id: string, x: number, y: number) => {
-    document
-      .querySelectorAll<HTMLDetailsElement>(".add-menu[open]")
-      .forEach((menu) => menu.removeAttribute("open"))
-    setOpenMenu({ id, x, y })
-  }, [])
+  const handleOpenMenu = useCallback(
+    (id: string, x: number, y: number, align: MenuAlign = "start") => {
+      document
+        .querySelectorAll<HTMLDetailsElement>(".add-menu[open]")
+        .forEach((menu) => menu.removeAttribute("open"))
+      openings.current += 1
+      setOpenMenu({ id, x, y, align, opening: openings.current })
+    },
+    []
+  )
 
   // Cards on the board at first render must not animate in; the page should simply be there on a new tab.
   // Only cards that show up later (added, restored) play the entrance animation.
@@ -581,8 +657,13 @@ export const BoardList = ({
           ))}
         </section>
       </SortableContext>
+      {/* Each opening gets a menu of its own.
+          Right-clicking a second card while one menu is up light-dismisses that menu, and its "closed" toggle event can land after the new menu has been asked for; a reused menu would never be shown again (it shows itself on mount) and would then take that stale event as its own dismissal, so nothing appeared at all.
+          A fresh mount shows itself, and the old menu's event fires on an element nobody is listening to any more. */}
       {openMenu && activeMenuItem && renderItemActions ? (
         <WidgetContextMenu
+          align={openMenu.align}
+          key={openMenu.opening}
           label={`Actions for ${activeMenuItem.title}`}
           onClose={closeMenu}
           x={openMenu.x}

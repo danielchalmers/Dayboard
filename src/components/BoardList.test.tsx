@@ -212,12 +212,12 @@ describe("BoardList", () => {
   it("opens a free-form popover menu under the cursor on right click", () => {
     const { container } = renderBoard()
 
-    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(screen.queryByRole("menu", { name: "Actions for Local time" })).not.toBeInTheDocument()
     expect(container.querySelector(".card-menu__panel")).not.toBeInTheDocument()
 
     const card = openMenu(container, { clientX: 320, clientY: 240 })
 
-    const panel = screen.getByLabelText("Actions for Local time")
+    const panel = screen.getByRole("menu", { name: "Actions for Local time" })
     expect(panel).toBeInTheDocument()
     expect(panel).toHaveAttribute("role", "menu")
     expect(screen.getByLabelText("Edit Local time")).toBeInTheDocument()
@@ -238,7 +238,7 @@ describe("BoardList", () => {
     openMenu(container, { clientX: -50, clientY: -50 })
 
     const menu = screen
-      .getByLabelText("Actions for Local time")
+      .getByRole("menu", { name: "Actions for Local time" })
       .closest(".card-menu") as HTMLElement
 
     // Negative cursor coordinates are clamped back to the viewport margin.
@@ -263,7 +263,7 @@ describe("BoardList", () => {
       openMenu(container, { clientX: 480, clientY: 380 })
 
       const menu = screen
-        .getByLabelText("Actions for Local time")
+        .getByRole("menu", { name: "Actions for Local time" })
         .closest(".card-menu") as HTMLElement
 
       // Clamped to innerWidth/Height − menu size − 8px margin, measured at full size.
@@ -284,7 +284,7 @@ describe("BoardList", () => {
 
     const moveUp = screen.getByLabelText("Move Local time back")
     const edit = screen.getByLabelText("Edit Local time")
-    const panel = screen.getByLabelText("Actions for Local time")
+    const panel = screen.getByRole("menu", { name: "Actions for Local time" })
 
     // Opening the menu moves focus into it: it sits outside the card's tab order.
     expect(document.activeElement).toBe(moveUp)
@@ -313,7 +313,7 @@ describe("BoardList", () => {
 
     const moveUp = screen.getByLabelText("Move Local time back")
     const edit = screen.getByLabelText("Edit Local time")
-    const panel = screen.getByLabelText("Actions for Local time")
+    const panel = screen.getByRole("menu", { name: "Actions for Local time" })
 
     const tab = (shiftKey = false) => {
       const event = createEvent.keyDown(panel, { key: "Tab", shiftKey })
@@ -347,7 +347,7 @@ describe("BoardList", () => {
     fireEvent(card, event)
 
     expect(event.defaultPrevented).toBe(false)
-    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(screen.queryByRole("menu", { name: "Actions for Local time" })).not.toBeInTheDocument()
   })
 
   // Triple-clicking a line is the most ordinary way to select one, and Chrome runs the resulting range past the end of the block it started in, so the range's common ancestor lands outside the card entirely.
@@ -366,7 +366,7 @@ describe("BoardList", () => {
     fireEvent(cards[0]!, event)
 
     expect(event.defaultPrevented).toBe(false)
-    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(screen.queryByRole("menu", { name: "Actions for Local time" })).not.toBeInTheDocument()
   })
 
   it("still opens its own menu when the selection sits on another card", () => {
@@ -381,7 +381,7 @@ describe("BoardList", () => {
 
     fireEvent.contextMenu(cards[0]!, { clientX: 10, clientY: 10 })
 
-    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
   })
 
   // A touch long-press opens the menu without focusing anything, and the menu hands focus back to whatever held it when it opened, so the card has to be what held it.
@@ -411,7 +411,7 @@ describe("BoardList", () => {
 
     fireEvent.scroll(document)
     expect(hidePopover).not.toHaveBeenCalled()
-    expect(screen.getByLabelText("Actions for Local time")).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
 
     const scrollY = Object.getOwnPropertyDescriptor(window, "scrollY")
     Object.defineProperty(window, "scrollY", { configurable: true, value: 120 })
@@ -434,7 +434,7 @@ describe("BoardList", () => {
     openMenu(container, { clientX: 10, clientY: 10 })
     fireEvent.click(screen.getByLabelText("Edit Local time"))
 
-    expect(screen.queryByLabelText("Actions for Local time")).not.toBeInTheDocument()
+    expect(screen.queryByRole("menu", { name: "Actions for Local time" })).not.toBeInTheDocument()
   })
 
   // A pointer user has no place on the board to keep, so only an item chosen from the keyboard closes the menu the way that hands focus back to the card.
@@ -462,5 +462,102 @@ describe("BoardList", () => {
     // A mouse click counts its clicks, and a key or a screen reader clicks with none.
     expect(chooseEdit(1)).not.toHaveBeenCalled()
     expect(chooseEdit(0)).toHaveBeenCalledTimes(1)
+  })
+
+  // Edit, Archive and Delete sit behind a right-click nothing on the card mentions, so the kind badge is their visible way in.
+  it("opens the menu from the kind badge and closes it on a second press", () => {
+    renderBoard()
+
+    const badge = screen.getByRole("button", { name: "Actions for Local time" })
+    expect(badge).toHaveAttribute("aria-haspopup", "menu")
+    expect(badge).toHaveAttribute("aria-expanded", "false")
+
+    fireEvent.click(badge)
+
+    expect(
+      screen.getByRole("menu", { name: "Actions for Local time" })
+    ).toBeInTheDocument()
+    expect(badge).toHaveAttribute("aria-expanded", "true")
+
+    // The press that lands on the badge of an open menu puts it away rather than opening it again.
+    fireEvent.pointerDown(badge)
+    fireEvent.click(badge)
+
+    expect(
+      screen.queryByRole("menu", { name: "Actions for Local time" })
+    ).not.toBeInTheDocument()
+    expect(badge).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("hangs the badge's menu from the badge's own corner", () => {
+    renderBoard()
+
+    const badge = screen.getByRole("button", { name: "Actions for Local time" })
+    vi.spyOn(badge, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(300, 40, 32, 32)
+    )
+    const offsetWidth = vi
+      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .mockReturnValue(236)
+    onTestFinished(() => offsetWidth.mockRestore())
+
+    fireEvent.click(badge)
+
+    const menu = screen
+      .getByRole("menu", { name: "Actions for Local time" })
+      .closest(".card-menu") as HTMLElement
+
+    // Right edges meet (332 - 236), and the menu starts just under the badge.
+    expect(menu.style.left).toBe("96px")
+    expect(menu.style.top).toBe("78px")
+  })
+
+  it("opens the badge's menu for a right-click or the menu key on the badge", () => {
+    renderBoard()
+
+    const badge = screen.getByRole("button", { name: "Actions for Local time" })
+    const rightClick = createEvent.contextMenu(badge, { clientX: 5, clientY: 5 })
+    fireEvent(badge, rightClick)
+
+    expect(rightClick.defaultPrevented).toBe(true)
+    expect(
+      screen.getByRole("menu", { name: "Actions for Local time" })
+    ).toBeInTheDocument()
+
+    fireEvent.keyDown(badge, { key: "Escape" })
+    fireEvent.keyDown(badge, { key: "F10", shiftKey: true })
+
+    expect(
+      screen.getByRole("menu", { name: "Actions for Local time" })
+    ).toBeInTheDocument()
+  })
+
+  it("leaves the badge a plain mark on a card with no menu", () => {
+    render(<BoardList items={widgets} />)
+
+    expect(
+      screen.queryByRole("button", { name: "Actions for Local time" })
+    ).not.toBeInTheDocument()
+  })
+
+  // A double-click on blank card background selects a lone line break, which is nothing to copy.
+  it("still opens its own menu when the selection is only whitespace", () => {
+    const { container } = renderBoard()
+
+    const card = container.querySelector(".board-row--draggable") as HTMLElement
+    const blank = document.createTextNode(" \n ")
+    card.append(blank)
+    const selection = window.getSelection()!
+    const range = document.createRange()
+    range.selectNode(blank)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    onTestFinished(() => selection.removeAllRanges())
+
+    openMenu(container, { clientX: 10, clientY: 10 })
+
+    expect(
+      screen.getByRole("menu", { name: "Actions for Local time" })
+    ).toBeInTheDocument()
   })
 })

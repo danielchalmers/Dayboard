@@ -77,6 +77,7 @@ interface BoardRowProps {
   now: Date
   articleProps?: ComponentPropsWithoutRef<"article">
   dragHandleProps?: ComponentPropsWithoutRef<"div">
+  menuButtonProps?: ComponentPropsWithoutRef<"button">
   className?: string
   style?: CSSProperties
   onWidgetChange?: WidgetChangeHandler
@@ -617,6 +618,7 @@ interface CardShellProps {
   item: Widget
   articleProps?: ComponentPropsWithoutRef<"article">
   dragHandleProps?: ComponentPropsWithoutRef<"div">
+  menuButtonProps?: ComponentPropsWithoutRef<"button">
   className?: string
   style?: CSSProperties
   bodyClassName?: string
@@ -627,7 +629,17 @@ interface CardShellProps {
 // The shared card frame: a themed article, the drag frame, and the title/detail header.
 // Each widget kind supplies only its body (and an optional detail line), so the wrapper lives in one place instead of being repeated per kind.
 const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
-  { item, articleProps, dragHandleProps, className, style, bodyClassName, detail, children },
+  {
+    item,
+    articleProps,
+    dragHandleProps,
+    menuButtonProps,
+    className,
+    style,
+    bodyClassName,
+    detail,
+    children
+  },
   ref
 ) {
   const rowClassName = [
@@ -667,10 +679,29 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
             <p className="board-row__detail">{detail}</p>
           ) : null}
         </div>
-        {/* A quiet badge in the card's own accent, so a glance tells the kind apart even when two cards share a color. */}
-        <span aria-hidden="true" className="board-row__badge">
-          <WidgetIcon kind={item.kind} size={18} />
-        </span>
+        {/* A quiet badge in the card's own accent, so a glance tells the kind apart even when two cards share a color.
+            On a card with a menu the badge is also the button that opens it: the one visible way to Edit, Archive and Delete, which are otherwise behind a right-click nothing on the card mentions.
+            At rest it shows only the kind; pointing at it, focusing it, or having its menu open swaps in a "more" glyph that says what pressing it does. */}
+        {menuButtonProps ? (
+          <button className="board-row__badge" type="button" {...menuButtonProps}>
+            <WidgetIcon kind={item.kind} size={18} />
+            <svg
+              aria-hidden="true"
+              className="board-row__badge-more"
+              fill="currentColor"
+              height="18"
+              viewBox="0 0 24 24"
+              width="18">
+              <circle cx="6" cy="12" r="1.7" />
+              <circle cx="12" cy="12" r="1.7" />
+              <circle cx="18" cy="12" r="1.7" />
+            </svg>
+          </button>
+        ) : (
+          <span aria-hidden="true" className="board-row__badge">
+            <WidgetIcon kind={item.kind} size={18} />
+          </span>
+        )}
       </div>
       <div
         className={`board-row__body${bodyClassName ? ` ${bodyClassName}` : ""}`}>
@@ -697,6 +728,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
     now,
     articleProps,
     dragHandleProps,
+    menuButtonProps,
     className,
     style,
     onWidgetChange,
@@ -704,7 +736,14 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   },
   ref
 ) {
-  const shell = { item, articleProps, dragHandleProps, className, style }
+  const shell = {
+    item,
+    articleProps,
+    dragHandleProps,
+    menuButtonProps,
+    className,
+    style
+  }
 
   if (item.kind === "clock") {
     const { timeZone } = item.settings

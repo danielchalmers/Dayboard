@@ -710,15 +710,44 @@ details > summary::-webkit-details-marker {
 
 /* The kind badge in the card's corner, tinted with the card's own accent. */
 .board-row__badge {
-  align-items: center;
   background: color-mix(in srgb, var(--card-accent-resolved) 12%, transparent);
   border-radius: 10px;
   color: var(--card-accent-resolved);
-  display: inline-flex;
+  display: inline-grid;
   block-size: 32px;
   inline-size: 32px;
-  justify-content: center;
   opacity: 0.9;
+  place-items: center;
+  transition: background-color var(--t-fast), opacity var(--t-fast);
+}
+
+/* On a card with a menu the badge is its button: the kind glyph and a "more" glyph share the one cell, and the more glyph only fades in while the button is pointed at, focused, or has its menu open.
+   At rest the badge is exactly the kind badge it always was.
+   The dots answer the badge alone rather than the whole card: a new tab mostly sits with the pointer resting on some card, and that card's kind glyph should not be swapped out while it is being read. */
+.board-row__badge > svg {
+  grid-area: 1 / 1;
+  transition: opacity var(--t-micro);
+}
+
+.board-row__badge-more {
+  opacity: 0;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 20%, transparent);
+  opacity: 1;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > svg {
+  opacity: 0;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > .board-row__badge-more {
+  opacity: 1;
+}
+
+button.board-row__badge:active {
+  background: color-mix(in srgb, var(--card-accent-resolved) 28%, transparent);
 }
 
 .board-row__body {
