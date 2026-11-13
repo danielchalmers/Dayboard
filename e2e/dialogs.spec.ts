@@ -382,3 +382,104 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 })
+
+// The list used to be laid out inside the dialog, so it belonged to the dialog's scroll area: opening it scrolled the title and the Save row away and the dialog's bottom edge cut the list short.
+test("the time zone list floats over the dialog instead of scrolling it", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Add clock" })
+  const field = page.getByLabel("Time zone")
+  const listbox = page.locator(".tz-field__listbox")
+
+  await field.click()
+  await expect(listbox).toBeVisible()
+  // Walk well down the list, which is what used to drag the dialog along with it.
+  for (let press = 0; press < 12; press += 1) {
+    await page.keyboard.press("ArrowDown")
+  }
+
+  expect(await dialog.evaluate((element) => element.scrollTop)).toBe(0)
+  await expect(page.getByRole("heading", { name: "Add clock" })).toBeInViewport()
+  await expect(page.getByRole("button", { name: "Save clock" })).toBeInViewport()
+
+  const fieldBox = await boxOf(field, "the time zone field")
+  const listBox = await boxOf(listbox, "the time zone list")
+  const dialogBox = await boxOf(dialog, "the dialog")
+
+  // Under the field at the field's own width, at its full height, and free to run past the dialog's bottom edge.
+  expect(Math.abs(listBox.x - fieldBox.x)).toBeLessThan(1)
+  expect(Math.abs(listBox.width - fieldBox.width)).toBeLessThan(1)
+  expect(listBox.y).toBeGreaterThan(fieldBox.y + fieldBox.height)
+  expect(listBox.height).toBeGreaterThan(250)
+  expect(listBox.y + listBox.height).toBeGreaterThan(
+    dialogBox.y + dialogBox.height
+  )
+
+  // Nothing of the dialog is drawn over the list: its last visible row is the list's own.
+  const coversList = await listbox.evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    const top = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.bottom - 12
+    )
+
+    return element.contains(top)
+  })
+  expect(coversList).toBe(true)
+
+  await page.keyboard.press("Enter")
+  await expect(listbox).toHaveCount(0)
+  await expect(field).not.toHaveValue("")
+})
+
+test("the time zone list opens above the field when the window leaves no room below", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 620 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const field = page.getByLabel("Time zone")
+  const listbox = page.locator(".tz-field__listbox")
+
+  await field.click()
+  await expect(listbox).toBeVisible()
+
+  const fieldBox = await boxOf(field, "the time zone field")
+  const listBox = await boxOf(listbox, "the time zone list")
+
+  expect(listBox.y).toBeGreaterThanOrEqual(0)
+  expect(listBox.y + listBox.height).toBeLessThan(fieldBox.y)
+})
+
+test("the time zone list says so when nothing matches", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const field = page.getByLabel("Time zone")
+
+  await field.pressSequentially("Lodnon")
+  await expect(page.getByText("No matching time zone")).toBeVisible()
+  await expect(page.getByRole("option")).toHaveCount(0)
+
+  // One letter back toward a real name and the options return.
+  await field.fill("")
+  await field.pressSequentially("Lond")
+  await expect(page.getByText("No matching time zone")).toHaveCount(0)
+  await expect(page.getByRole("option", { name: "Europe/London" })).toBeVisible()
+})

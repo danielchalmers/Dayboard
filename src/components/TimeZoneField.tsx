@@ -24,6 +24,19 @@ const options = [
 // Case-insensitive substring match that reads underscores as the spaces people type, so "new york" finds America/New_York.
 const normalize = (text: string) => text.toLowerCase().replaceAll("_", " ")
 
+// The open list is shown as a popover, which puts it in the browser's top layer, anchored to the field by the stylesheet.
+// Laid out inside the dialog it belonged to the dialog's scroll area: opening it scrolled the title and the Save row out of sight and cut the list off at the dialog's bottom edge.
+// In the top layer it floats over the dialog the way a native select's list does, and flips above the field when there is no room below.
+// "manual" leaves opening and closing to the field, which already closes on blur, Escape and a choice.
+// The optional call keeps jsdom (which has no popovers) out of trouble in tests.
+const showInTopLayer = (node: HTMLDivElement | null) => {
+  try {
+    node?.showPopover?.()
+  } catch {
+    // Already shown, so ignore.
+  }
+}
+
 // A combobox over the full IANA list rather than an input with a datalist: the native list only offers entries matching the current value,
 // so a clock already set to one zone never showed the others. Clicking here always opens the whole list; typing is what narrows it.
 export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
@@ -162,6 +175,8 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
           <div
             className="tz-field__listbox"
             id={`${id}-listbox`}
+            popover="manual"
+            ref={showInTopLayer}
             role="listbox">
             {visible.map((option, index) => (
               <div
@@ -181,6 +196,16 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
                 {option.label}
               </div>
             ))}
+          </div>
+        ) : popup ? (
+          // Typing that matches nothing used to close the list without a word, and Enter then did nothing at all.
+          // Saying so is what tells a typo from a zone the list doesn't have, before the card is saved on a name no browser knows.
+          <div
+            className="tz-field__listbox tz-field__listbox--empty"
+            popover="manual"
+            ref={showInTopLayer}
+            role="status">
+            No matching time zone
           </div>
         ) : null}
       </div>

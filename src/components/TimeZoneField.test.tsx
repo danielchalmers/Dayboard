@@ -141,4 +141,24 @@ describe("TimeZoneField", () => {
 
     expect(screen.queryByRole("listbox")).toBeNull()
   })
+
+  // Typing that matched nothing used to close the list without a word.
+  it("says so when nothing matches what was typed", () => {
+    render(<Harness />)
+
+    const field = screen.getByRole("combobox")
+    fireEvent.keyDown(field, { key: "x" })
+    fireEvent.change(field, { target: { value: "Lodnon" } })
+
+    expect(screen.getByRole("status")).toHaveTextContent("No matching time zone")
+    expect(screen.queryByRole("listbox")).toBeNull()
+
+    fireEvent.keyDown(field, { key: "Backspace" })
+    fireEvent.change(field, { target: { value: "Lond" } })
+
+    expect(screen.queryByRole("status")).toBeNull()
+    expect(
+      screen.getByRole("option", { name: "Europe/London" })
+    ).toBeInTheDocument()
+  })
 })

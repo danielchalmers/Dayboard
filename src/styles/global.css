@@ -1416,8 +1416,10 @@ select:focus {
   position: relative;
 }
 
-/* Make room for the arrow so a long zone name does not run beneath it. */
+/* Make room for the arrow so a long zone name does not run beneath it.
+   The field is also what its open list hangs from (see the listbox below). */
 .tz-field input {
+  anchor-name: --tz-field;
   padding-inline-end: 40px;
 }
 
@@ -1431,21 +1433,36 @@ select:focus {
   transform: translateY(-50%);
 }
 
-/* The open list floats over the form like a menu panel, capped so long lists scroll inside it. */
+/* The open list floats over the form like a menu panel, capped so long lists scroll inside it.
+   It is a popover in the top layer, hung from the field by anchor positioning: under it at the field's own width, or above it when the window leaves no room below.
+   Positioned inside the dialog it was part of the dialog's scroll area, so opening it scrolled the title and Save out of view and the dialog's edge cut the list short.
+   The UA's popover styles (centered, bordered, Canvas-colored) are reset back to the panel's own. */
 .tz-field__listbox {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow-panel);
+  color: var(--text);
   display: grid;
   gap: 1px;
-  inset-block-start: calc(100% + 6px);
-  inset-inline: 0;
+  inline-size: anchor-size(width);
+  inset: auto;
+  left: anchor(left);
+  margin: 0;
   max-block-size: 260px;
   overflow-y: auto;
   padding: 6px;
-  position: absolute;
-  z-index: 30;
+  position: fixed;
+  position-anchor: --tz-field;
+  position-try-fallbacks: flip-block;
+  top: calc(anchor(bottom) + 6px);
+}
+
+/* Nothing to pick from: one quiet line where the options would be. */
+.tz-field__listbox--empty {
+  color: var(--muted);
+  font-size: 0.92rem;
+  padding: 13px 16px;
 }
 
 .tz-field__option {
