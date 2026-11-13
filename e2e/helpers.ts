@@ -40,6 +40,14 @@ export const liftWithKeyboard = async (page: Page, card: Locator) => {
   )
 }
 
+// Waits out the moment after a pointer drop in which a click goes nowhere.
+// dnd-kit stops every click for 50ms once a pointer drag ends, so the release can't click whatever the card was dropped on, and Playwright reaches for a button sooner than a hand could.
+// A timeout of the same length set after the drop runs out behind dnd-kit's.
+export const settleAfterDrop = (page: Page) =>
+  page.evaluate(
+    () => new Promise<void>((resolve) => window.setTimeout(resolve, 50))
+  )
+
 // The whole add flow for the common case: open the menu, pick the kind, name it, save.
 // Anything that needs to assert mid-flow or fill an extra field still writes the steps out.
 export const addWidget = async (page: Page, kind: string, title: string) => {
