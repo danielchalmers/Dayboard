@@ -357,3 +357,52 @@ test("a double-click on a card's background leaves its menu a right-click away",
     page.getByRole("menu", { name: "Actions for 🕒 Local time" })
   ).toBeVisible()
 })
+
+test("the add menu takes the same arrow keys as a card's menu", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const trigger = page.getByRole("button", { name: "Add widget" })
+  const panel = page.locator(".add-menu__panel")
+  const item = (kind: string) => page.getByRole("button", { name: `Add ${kind}` })
+
+  // Down on the + button opens the menu onto its first kind, the way a menu button does.
+  await trigger.focus()
+  await page.keyboard.press("ArrowDown")
+  await expect(panel).toBeVisible()
+  await expect(item("clock")).toBeFocused()
+
+  await page.keyboard.press("ArrowDown")
+  await expect(item("countdown")).toBeFocused()
+  await page.keyboard.press("ArrowUp")
+  await expect(item("clock")).toBeFocused()
+
+  // The ends wrap, and Home and End reach them in one press.
+  await page.keyboard.press("ArrowUp")
+  await expect(item("quote")).toBeFocused()
+  await page.keyboard.press("ArrowDown")
+  await expect(item("clock")).toBeFocused()
+  await page.keyboard.press("End")
+  await expect(item("quote")).toBeFocused()
+  await page.keyboard.press("Home")
+  await expect(item("clock")).toBeFocused()
+
+  // The keys move focus and nothing else: the page under the menu stays where it was.
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+  await page.keyboard.press("Escape")
+  await expect(panel).toBeHidden()
+  await expect(trigger).toBeFocused()
+
+  // Up opens it from the other end.
+  await page.keyboard.press("ArrowUp")
+  await expect(item("quote")).toBeFocused()
+
+  // And the kind under focus is still chosen with Enter.
+  await page.keyboard.press("ArrowUp")
+  await expect(item("habit")).toBeFocused()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("dialog", { name: "Add habit" })).toBeVisible()
+})
