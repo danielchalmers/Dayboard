@@ -23,6 +23,8 @@
   /* Pressed states stay in the accent's own family, shaded toward black rather than blended with the page ink, which used to turn a colored accent gray under the pointer. */
   --accent-hover: color-mix(in srgb, var(--accent) 88%, #000);
   --accent-active: color-mix(in srgb, var(--accent) 78%, #000);
+  /* A neutral control held down: one step past its hover fill, so a press is felt before the action lands. */
+  --pressed: color-mix(in srgb, var(--text) 8%, var(--surface-strong));
   --danger: #e03131;
 
   /* Shadows */
@@ -32,7 +34,7 @@
   --shadow-panel: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
   --shadow-dialog: 0 24px 60px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.04);
 
-  /* Focus ring */
+  /* Focus ring: the soft halo a text field wears around its accent border. Every other control takes the solid outline under Reset & Base. */
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
   /* Border Radius: a rounder, friendlier shape language. */
@@ -149,7 +151,16 @@ button:disabled {
   opacity: 0.4;
 }
 
+/* Keyboard focus is one crisp line in the system accent, set just clear of the control, on everything from the header buttons to a card to a habit's day.
+   It used to be three things: a 30% halo on buttons (about 1.5:1 against the page, a wash rather than a mark), the browser's own black outline on the + button and on cards, which no rule here reached, and nothing at all on a link.
+   An outline rather than a shadow, too, so Windows High Contrast keeps it. */
 button:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 input:focus-visible,
 select:focus-visible {
   box-shadow: var(--focus-ring);
@@ -295,6 +306,12 @@ a {
   border-color: color-mix(in srgb, var(--text) 20%, transparent);
 }
 
+/* Every button answers a press, not only a hover.
+   Only the accent button and the round header buttons used to; Cancel, a menu item, or a timer's Start looked the same held down as hovered, which on a touch screen (no hover at all) meant no response until the action had already happened. */
+.secondary-button:active:not(:disabled) {
+  background: var(--pressed);
+}
+
 .danger-button {
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--danger) 15%, var(--line-strong));
@@ -304,6 +321,10 @@ a {
 .danger-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface-strong));
   border-color: var(--danger);
+}
+
+.danger-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 22%, var(--surface-strong));
 }
 
 .icon-button {
@@ -324,7 +345,7 @@ a {
 }
 
 .icon-button:active:not(:disabled) {
-  background: color-mix(in srgb, var(--text) 8%, var(--surface-strong));
+  background: var(--pressed);
 }
 
 /* ── Menus (Add widget & Dropdowns) ────────────────────────────────────── */
@@ -461,6 +482,15 @@ details > summary::-webkit-details-marker {
   background: var(--surface-strong);
 }
 
+.menu-button:active:not(:disabled) {
+  background: var(--pressed);
+}
+
+/* Items sit 2px apart in their panel, so the ring is drawn inside the row rather than around it, where it would run into the neighbours. */
+.menu-button:focus-visible {
+  outline-offset: -2px;
+}
+
 .menu-button--danger,
 .menu-button--danger > svg {
   color: var(--danger);
@@ -469,6 +499,10 @@ details > summary::-webkit-details-marker {
 .menu-button--danger:hover:not(:disabled),
 .menu-button--danger:focus-visible {
   background: color-mix(in srgb, var(--danger) 9%, transparent);
+}
+
+.menu-button--danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
 }
 
 /* A hairline between menu groups (e.g. before a destructive action). */
@@ -592,6 +626,10 @@ details > summary::-webkit-details-marker {
   color: var(--text);
 }
 
+.archive-toggle:active {
+  background: var(--pressed);
+}
+
 /* Archived cards sit quietly until you hover them. */
 .archive-section .board-row {
   opacity: 0.78;
@@ -710,15 +748,44 @@ details > summary::-webkit-details-marker {
 
 /* The kind badge in the card's corner, tinted with the card's own accent. */
 .board-row__badge {
-  align-items: center;
   background: color-mix(in srgb, var(--card-accent-resolved) 12%, transparent);
   border-radius: 10px;
   color: var(--card-accent-resolved);
-  display: inline-flex;
+  display: inline-grid;
   block-size: 32px;
   inline-size: 32px;
-  justify-content: center;
   opacity: 0.9;
+  place-items: center;
+  transition: background-color var(--t-fast), opacity var(--t-fast);
+}
+
+/* On a card with a menu the badge is its button: the kind glyph and a "more" glyph share the one cell, and the more glyph only fades in while the button is pointed at, focused, or has its menu open.
+   At rest the badge is exactly the kind badge it always was.
+   The dots answer the badge alone rather than the whole card: a new tab mostly sits with the pointer resting on some card, and that card's kind glyph should not be swapped out while it is being read. */
+.board-row__badge > svg {
+  grid-area: 1 / 1;
+  transition: opacity var(--t-micro);
+}
+
+.board-row__badge-more {
+  opacity: 0;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 20%, transparent);
+  opacity: 1;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > svg {
+  opacity: 0;
+}
+
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > .board-row__badge-more {
+  opacity: 1;
+}
+
+button.board-row__badge:active {
+  background: color-mix(in srgb, var(--card-accent-resolved) 28%, transparent);
 }
 
 .board-row__body {
@@ -926,6 +993,11 @@ details > summary::-webkit-details-marker {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 45%, var(--card-border-resolved));
 }
 
+/* Pressed, the button takes a wash of the card's accent, the same color its border leans toward on hover. */
+.timer-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 18%, var(--card-bg-resolved));
+}
+
 /* The card's own accent drives its primary action, so a rose timer starts with a rose button. */
 .timer-button--primary {
   background: var(--card-accent-resolved);
@@ -935,6 +1007,10 @@ details > summary::-webkit-details-marker {
 
 .timer-button--primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--card-accent-resolved) 88%, var(--text));
+}
+
+.timer-button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--card-accent-resolved) 76%, var(--text));
 }
 
 /* Habit week, the card's main content: the current week as a row of dots under its weekday letters, so the row reads as the week it is rather than as seven unlabeled days. */
@@ -1129,12 +1205,12 @@ details > summary::-webkit-details-marker {
   text-decoration: line-through;
 }
 
-/* Present but quiet, so four rows don't read as four buttons. */
+/* Present but quiet, so four rows don't read as four buttons, yet still dark enough to find: at 45% of the tint it measured about 2:1 and all but vanished on the paler cards. */
 .todo-task__remove {
   align-items: center;
   block-size: 24px;
   border-radius: 8px;
-  color: color-mix(in srgb, var(--card-tint-resolved) 45%, transparent);
+  color: color-mix(in srgb, var(--card-tint-resolved) 70%, transparent);
   display: inline-flex;
   inline-size: 24px;
   justify-content: center;
@@ -1144,6 +1220,10 @@ details > summary::-webkit-details-marker {
 .todo-task__remove:hover {
   background: color-mix(in srgb, var(--card-accent-resolved) 12%, transparent);
   color: var(--text);
+}
+
+.todo-task__remove:active {
+  background: color-mix(in srgb, var(--card-accent-resolved) 22%, transparent);
 }
 
 .todo-add {
@@ -1180,11 +1260,14 @@ details > summary::-webkit-details-marker {
   outline: 0;
 }
 
+/* The prompt takes the card's own tint at the remove buttons' strength: the page's quiet gray read at about 2.5:1 on a colored card. */
 .todo-add__field::placeholder {
-  color: var(--quiet);
+  color: color-mix(in srgb, var(--card-tint-resolved) 70%, transparent);
 }
 
-/* Timer length editor */
+/* Timer length editor.
+   The three boxes are 84px where there is room and give way evenly where there is not: at fixed widths the row was 410px across, wider than the dialog on anything under about 460px, and it took the whole form with it, so the name field, the swatches and Save all ran off the dialog's edge behind a sideways scroll.
+   The inline padding comes down for the same reason: the digits are centered, so the 16px a text field keeps either side only narrowed the room for them. */
 .duration-field {
   display: flex;
   gap: 12px;
@@ -1194,10 +1277,13 @@ details > summary::-webkit-details-marker {
   align-items: center;
   display: flex;
   gap: 8px;
+  min-inline-size: 0;
 }
 
 .duration-field__part input {
-  inline-size: 84px;
+  flex: 0 1 84px;
+  min-inline-size: 0;
+  padding-inline: 8px;
   text-align: center;
 }
 
@@ -1275,6 +1361,12 @@ details > summary::-webkit-details-marker {
 .board-row--menu-open {
   border-color: color-mix(in srgb, var(--card-accent-resolved) 35%, var(--card-border-resolved));
   box-shadow: var(--shadow-card-hover);
+}
+
+/* A focused card wears the same ring as every control on it, rather than the browser's own. */
+.board-row--draggable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* The in-list card while it is being dragged.
@@ -1360,14 +1452,22 @@ select:focus {
   outline: 0;
 }
 
+/* A date field's editable parts carry padding of their own, which made it 48px tall in a column of 46px fields.
+   Taking it out of the field's padding leaves the shared minimum height to set all of them. */
+input[type="datetime-local"] {
+  padding-block: 8px;
+}
+
 /* ── Time zone combobox ────────────────────────────────────────────────── */
 
 .tz-field {
   position: relative;
 }
 
-/* Make room for the arrow so a long zone name does not run beneath it. */
+/* Make room for the arrow so a long zone name does not run beneath it.
+   The field is also what its open list hangs from (see the listbox below). */
 .tz-field input {
+  anchor-name: --tz-field;
   padding-inline-end: 40px;
 }
 
@@ -1381,21 +1481,36 @@ select:focus {
   transform: translateY(-50%);
 }
 
-/* The open list floats over the form like a menu panel, capped so long lists scroll inside it. */
+/* The open list floats over the form like a menu panel, capped so long lists scroll inside it.
+   It is a popover in the top layer, hung from the field by anchor positioning: under it at the field's own width, or above it when the window leaves no room below.
+   Positioned inside the dialog it was part of the dialog's scroll area, so opening it scrolled the title and Save out of view and the dialog's edge cut the list short.
+   The UA's popover styles (centered, bordered, Canvas-colored) are reset back to the panel's own. */
 .tz-field__listbox {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow-panel);
+  color: var(--text);
   display: grid;
   gap: 1px;
-  inset-block-start: calc(100% + 6px);
-  inset-inline: 0;
+  inline-size: anchor-size(width);
+  inset: auto;
+  left: anchor(left);
+  margin: 0;
   max-block-size: 260px;
   overflow-y: auto;
   padding: 6px;
-  position: absolute;
-  z-index: 30;
+  position: fixed;
+  position-anchor: --tz-field;
+  position-try-fallbacks: flip-block;
+  top: calc(anchor(bottom) + 6px);
+}
+
+/* Nothing to pick from: one quiet line where the options would be. */
+.tz-field__listbox--empty {
+  color: var(--muted);
+  font-size: 0.92rem;
+  padding: 13px 16px;
 }
 
 .tz-field__option {
@@ -1438,6 +1553,10 @@ select:focus {
 .input-adorned__clear:hover {
   background: var(--surface-strong);
   color: var(--text);
+}
+
+.input-adorned__clear:active {
+  background: var(--pressed);
 }
 
 .form-note {
@@ -1519,6 +1638,11 @@ body:has(.board-row--overlay) .board-notice {
   color: var(--text);
 }
 
+.board-notice__action:active,
+.board-notice__dismiss:active {
+  background: var(--pressed);
+}
+
 /* The way back is the one thing the notice is there to offer, so it carries the accent rather than the muted ink of Dismiss.
    A system accent at full strength sits just under readable contrast on the notice in either scheme (about 4.2:1), so it leans a quarter of the way toward the page ink, which darkens it on light and lifts it on dark. */
 .board-notice__action,
@@ -1573,6 +1697,8 @@ body:has(.board-row--overlay) .board-notice {
   padding: 6px 0;
 }
 
+/* The chosen swatch wears a ring in its own color, set off by a gap in the dialog's surface, and it keeps the ring under the pointer.
+   The hover rule used to outrank it, so the swatch you had just clicked (still hovered, by definition) swapped its ring for the hover's soft shadow and shrank a step: the one moment the picker should confirm a choice was the moment it looked unselected. */
 .color-swatch {
   flex: 0 1 32px;
   min-inline-size: 0;
@@ -1594,8 +1720,9 @@ body:has(.board-row--overlay) .board-notice {
     transform: scale(1.12);
     box-shadow: 0 4px 10px color-mix(in srgb, var(--swatch-color-light) 40%, transparent);
   }
-  .color-swatch--selected {
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--swatch-color-light);
+  .color-swatch--selected,
+  .color-swatch--selected:hover {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-light);
     transform: scale(1.18);
   }
 }
@@ -1608,15 +1735,27 @@ body:has(.board-row--overlay) .board-notice {
     transform: scale(1.12);
     box-shadow: 0 4px 10px color-mix(in srgb, var(--swatch-color-dark) 40%, transparent);
   }
-  .color-swatch--selected {
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--swatch-color-dark);
+  .color-swatch--selected,
+  .color-swatch--selected:hover {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-dark);
     transform: scale(1.18);
   }
 }
 
 .color-swatch:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4.5px var(--accent);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--accent);
+}
+
+/* Twelve swatches in one row need about 470px. On a narrower dialog they used to shrink to fit, down to 17px dots at phone width, which is a small thing to aim a thumb at.
+   Two rows of six keep every swatch at its full size instead. */
+@media (max-width: 560px) {
+  .color-preset-picker {
+    display: grid;
+    gap: 14px 8px;
+    grid-template-columns: repeat(6, minmax(0, 32px));
+    justify-content: space-between;
+  }
 }
 
 /* ── Modal Dialogs ─────────────────────────────────────────────────────── */
@@ -1742,6 +1881,11 @@ body:has(.board-row--overlay) .board-notice {
   justify-content: space-between;
 }
 
+/* Where the links and the button don't fit on one line the button wraps to a line of its own, and it keeps to the trailing edge there, where every other dialog's primary action sits, rather than starting a new row at the left. */
+.modal-dialog__actions--split > .primary-button {
+  margin-inline-start: auto;
+}
+
 /* Quiet links sit together on the footer's left; the negative inline start pulls the first link's text back flush with the dialog edge, past its hover padding. */
 .settings-footer-links {
   align-items: center;
@@ -1765,11 +1909,6 @@ body:has(.board-row--overlay) .board-notice {
 
 .settings-footer-link:hover {
   color: var(--text);
-}
-
-.settings-footer-link:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: 0;
 }
 
 @media (max-width: 720px) {
@@ -1895,7 +2034,8 @@ body:has(.board-row--overlay) .board-notice {
 }
 
 .switch__input:focus-visible + .switch__track {
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ── Status Views & Empty States ───────────────────────────────────────── */

@@ -40,7 +40,7 @@ const deleteWidget = async (page: Page, title: string) => {
   await card.focus()
   await card.press("ContextMenu")
   await page.getByRole("menuitem", { name: `Delete ${title}` }).click()
-  await page.getByRole("button", { name: "Delete widget" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
   await expect(card).toHaveCount(0)
 }
 
@@ -60,7 +60,9 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(page.getByText("🕒 Local time")).toBeVisible()
   await expect(page.getByText("🌅 Morning")).toBeVisible()
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
-  await expect(page.getByLabel("Actions for 🕒 Local time")).toHaveCount(0)
+  await expect(
+    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
+  ).toHaveCount(0)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
@@ -999,7 +1001,7 @@ test("multiple open tabs stay synchronized", async ({
 
   await openWidgetMenu(thirdPage, "Tokyo")
   await thirdPage.getByRole("menuitem", { name: "Delete Tokyo" }).click()
-  await thirdPage.getByRole("button", { name: "Delete widget" }).click()
+  await thirdPage.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
 
   await expect(page.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
   await expect(secondPage.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
@@ -1973,7 +1975,7 @@ test("delete flow removes an existing widget", async ({ page, extensionId }) => 
   await expect(
     page.getByRole("dialog", { name: "Delete countdown?" })
   ).toBeVisible()
-  await page.getByRole("button", { name: "Delete widget" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
 
   await expect(page.getByText("🌅 Morning")).toHaveCount(0)
 })
@@ -2094,7 +2096,7 @@ test("archiving or deleting from the keyboard keeps its place on the board", asy
   await year.focus()
   await year.press("ContextMenu")
   await page.getByRole("menuitem", { name: "Delete 📅 This year" }).press("Enter")
-  await page.getByRole("button", { name: "Delete widget" }).press("Enter")
+  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).press("Enter")
 
   await expect(cardByTitle(page, "🚶 Daily walk")).toBeFocused()
 })
@@ -2604,7 +2606,7 @@ test("edit and delete controls still work after reordering", async ({
 
   await openWidgetMenu(page, "Morning plans")
   await page.getByRole("menuitem", { name: "Delete Morning plans" }).click()
-  await page.getByRole("button", { name: "Delete widget" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
 
   await expect(page.getByText("Morning plans")).toHaveCount(0)
 })

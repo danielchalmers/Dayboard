@@ -1,7 +1,13 @@
 import type { Locator, Request } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
-import { addWidget, boxOf, cardByTitle, openNewTab } from "./helpers"
+import {
+  addWidget,
+  boxOf,
+  cardByTitle,
+  openNewTab,
+  openWidgetMenu
+} from "./helpers"
 
 // The standing rules of the product, the ones a well-meaning change breaks quietly: a minimal manifest, no network, a board that scrolls from the top, centered dialogs, buttons that stay put, and menus that close.
 // Each of these is one line of config or CSS away from regressing with every feature test still green.
@@ -263,4 +269,141 @@ test("closes the add menu once a kind is chosen", async ({
     page.getByRole("button", { name: "Add countdown" })
   ).not.toBeVisible()
   await expect(page.getByRole("dialog", { name: "Add clock" })).toBeVisible()
+})
+
+test("marks keyboard focus with one ring, never the browser's own", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  // The board arrives a moment after the page does, and a Tab pressed into the page before then has nowhere to land.
+  await expect(page.locator(".board-row").first()).toBeVisible()
+
+  // Walk the whole page once: the header buttons, every card, its badge and the controls on it.
+  // A rule that names buttons misses whatever is not one (the + is a <summary>, a card an <article>), and what it misses falls back to the browser's outline with nothing in the feature tests to notice.
+  const stops: { what: string; outline: string }[] = []
+
+  for (let press = 0; press < 60; press += 1) {
+    await page.keyboard.press("Tab")
+
+    const stop = await page.evaluate(() => {
+      const element = document.activeElement
+
+      if (!element || element === document.body) {
+        return null
+      }
+
+      const style = getComputedStyle(element)
+
+      return {
+        what: `${element.tagName.toLowerCase()}.${element.classList[0] ?? ""}`,
+        // A text field shows focus with its caret (and, in a dialog, its accent border), not a ring.
+        isTextField: element.matches("textarea, input[type='text']"),
+        outline: `${style.outlineStyle} ${style.outlineWidth}`
+      }
+    })
+
+    if (!stop) {
+      break
+    }
+
+    if (!stop.isTextField) {
+      stops.push({ what: stop.what, outline: stop.outline })
+    }
+  }
+
+  const kinds = new Set(stops.map((stop) => stop.what))
+
+  expect(kinds).toContain("button.icon-button")
+  expect(kinds).toContain("summary.icon-button")
+  expect(kinds).toContain("article.board-row")
+  expect(kinds).toContain("button.board-row__badge")
+  expect(kinds).toContain("button.habit-day")
+  expect(stops.filter((stop) => stop.outline !== "solid 2px")).toEqual([])
+})
+
+test("every button answers a press, not only a hover", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // Held down, a control's fill is a step past its hover fill. Only the accent and header buttons used to change at all.
+  const expectPressedFill = async (control: Locator, what: string) => {
+    const fill = () =>
+      control.evaluate(async (element) => {
+        await Promise.all(
+          element.getAnimations().map((animation) => animation.finished)
+        )
+        return getComputedStyle(element).backgroundColor
+      })
+
+    await control.scrollIntoViewIfNeeded()
+    await control.hover()
+    const hovered = await fill()
+    await page.mouse.down()
+    const pressed = await fill()
+    // Let go somewhere else, so the press never becomes a click.
+    await page.mouse.move(2, 2)
+    await page.mouse.up()
+
+    expect(pressed, what).not.toBe(hovered)
+  }
+
+  await addWidget(page, "timer", "Tea")
+  const timer = cardByTitle(page, "Tea")
+  await expectPressedFill(
+    timer.getByRole("button", { name: "Start" }),
+    "a timer's Start"
+  )
+
+  await openWidgetMenu(page, "Tea")
+  await expectPressedFill(
+    page.getByRole("menuitem", { name: "Edit Tea" }),
+    "a menu item"
+  )
+  await expectPressedFill(
+    page.getByRole("menuitem", { name: "Delete Tea" }),
+    "the Delete menu item"
+  )
+  await page.getByRole("menuitem", { name: "Delete Tea" }).click()
+  await expectPressedFill(
+    page.getByRole("button", { name: "Cancel" }),
+    "the delete dialog's Cancel"
+  )
+  await expectPressedFill(
+    page.getByRole("dialog").getByRole("button", { name: /^Delete/ }),
+    "the delete dialog's Delete"
+  )
+})
+
+test("the chosen color keeps its ring while the pointer is still on it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add note" }).click()
+
+  const swatch = page.getByRole("radio", { name: "Sky" })
+  const look = () =>
+    swatch.evaluate(async (element) => {
+      await Promise.all(
+        element.getAnimations().map((animation) => animation.finished)
+      )
+      const style = getComputedStyle(element)
+      return { shadow: style.boxShadow, transform: style.transform }
+    })
+
+  // Clicking leaves the pointer on the swatch, and the hover rule used to outrank the selected one: the ring gave way to the hover shadow at the very moment it should confirm the choice.
+  await swatch.click()
+  await expect(swatch).toBeChecked()
+  const hovered = await look()
+
+  await page.getByRole("heading", { name: "Add note" }).hover()
+  const resting = await look()
+
+  expect(hovered).toEqual(resting)
+  // A ring is a spread with no blur; the hover shadow is all blur.
+  expect(resting.shadow).toContain("0px 0px 0px 4.5px")
 })

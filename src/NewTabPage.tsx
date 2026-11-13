@@ -154,6 +154,44 @@ const closeAddMenuToToggle = (menu: HTMLDetailsElement) => {
   menu.querySelector<HTMLElement>("summary")?.focus()
 }
 
+// The add menu takes the arrow keys a card's menu does: Down and Up walk the kinds and wrap, Home and End jump to the ends, and Down or Up on the + button opens the menu onto its first or last kind.
+// It used to answer only Tab, so the two menus on the page moved differently, and reaching "Add todo list" meant eight presses with no way to jump.
+// Tab is left alone: this is a disclosure in the page's own tab order rather than a trapped popup, and Tab walking on out of it is how a disclosure behaves.
+// Returns whether the key was one of these, so the caller knows to keep the page from scrolling under it.
+const moveInAddMenu = (menu: HTMLDetailsElement, key: string) => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(key)) {
+    return false
+  }
+
+  if (!menu.open) {
+    if (key === "Home" || key === "End") {
+      return false
+    }
+    menu.open = true
+  }
+
+  const items = Array.from(
+    menu.querySelectorAll<HTMLButtonElement>(".add-menu__panel .menu-button")
+  )
+  const current = items.indexOf(document.activeElement as HTMLButtonElement)
+  const last = items.length - 1
+  const next =
+    key === "Home"
+      ? 0
+      : key === "End"
+        ? last
+        : key === "ArrowDown"
+          ? current >= last
+            ? 0
+            : current + 1
+          : current <= 0
+            ? last
+            : current - 1
+
+  items[next]?.focus()
+  return true
+}
+
 const closeOpenMenus = (eventPath?: EventTarget[]) => {
   document
     .querySelectorAll<HTMLDetailsElement>(".add-menu[open], .card-menu[open]")
@@ -482,6 +520,8 @@ export function NewTabPage() {
                     // Native <details> ignores Escape; close it and refocus the toggle so the disclosure behaves like a real popup.
                     if (event.key === "Escape" && event.currentTarget.open) {
                       closeAddMenuToToggle(event.currentTarget)
+                    } else if (moveInAddMenu(event.currentTarget, event.key)) {
+                      event.preventDefault()
                     }
                   }}>
                   <summary

@@ -382,3 +382,198 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await expect(toggle).toHaveAccessibleName("Show archived")
   await expect(toggle).toHaveAttribute("aria-expanded", "false")
 })
+
+// The list used to be laid out inside the dialog, so it belonged to the dialog's scroll area: opening it scrolled the title and the Save row away and the dialog's bottom edge cut the list short.
+test("the time zone list floats over the dialog instead of scrolling it", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Add clock" })
+  const field = page.getByLabel("Time zone")
+  const listbox = page.locator(".tz-field__listbox")
+
+  await field.click()
+  await expect(listbox).toBeVisible()
+  // Walk well down the list, which is what used to drag the dialog along with it.
+  for (let press = 0; press < 12; press += 1) {
+    await page.keyboard.press("ArrowDown")
+  }
+
+  expect(await dialog.evaluate((element) => element.scrollTop)).toBe(0)
+  await expect(page.getByRole("heading", { name: "Add clock" })).toBeInViewport()
+  await expect(page.getByRole("button", { name: "Save clock" })).toBeInViewport()
+
+  const fieldBox = await boxOf(field, "the time zone field")
+  const listBox = await boxOf(listbox, "the time zone list")
+  const dialogBox = await boxOf(dialog, "the dialog")
+
+  // Under the field at the field's own width, at its full height, and free to run past the dialog's bottom edge.
+  expect(Math.abs(listBox.x - fieldBox.x)).toBeLessThan(1)
+  expect(Math.abs(listBox.width - fieldBox.width)).toBeLessThan(1)
+  expect(listBox.y).toBeGreaterThan(fieldBox.y + fieldBox.height)
+  expect(listBox.height).toBeGreaterThan(250)
+  expect(listBox.y + listBox.height).toBeGreaterThan(
+    dialogBox.y + dialogBox.height
+  )
+
+  // Nothing of the dialog is drawn over the list: its last visible row is the list's own.
+  const coversList = await listbox.evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    const top = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.bottom - 12
+    )
+
+    return element.contains(top)
+  })
+  expect(coversList).toBe(true)
+
+  await page.keyboard.press("Enter")
+  await expect(listbox).toHaveCount(0)
+  await expect(field).not.toHaveValue("")
+})
+
+test("the time zone list opens above the field when the window leaves no room below", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1280, height: 620 })
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const field = page.getByLabel("Time zone")
+  const listbox = page.locator(".tz-field__listbox")
+
+  await field.click()
+  await expect(listbox).toBeVisible()
+
+  const fieldBox = await boxOf(field, "the time zone field")
+  const listBox = await boxOf(listbox, "the time zone list")
+
+  expect(listBox.y).toBeGreaterThanOrEqual(0)
+  expect(listBox.y + listBox.height).toBeLessThan(fieldBox.y)
+})
+
+test("the time zone list says so when nothing matches", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const field = page.getByLabel("Time zone")
+
+  await field.pressSequentially("Lodnon")
+  await expect(page.getByText("No matching time zone")).toBeVisible()
+  await expect(page.getByRole("option")).toHaveCount(0)
+
+  // One letter back toward a real name and the options return.
+  await field.fill("")
+  await field.pressSequentially("Lond")
+  await expect(page.getByText("No matching time zone")).toHaveCount(0)
+  await expect(page.getByRole("option", { name: "Europe/London" })).toBeVisible()
+})
+
+test("the dialogs fit a phone-width window without scrolling sideways", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openNewTab(page, extensionId)
+
+  const dialog = page.locator(".modal-dialog")
+  const settled = () =>
+    dialog.evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished))
+    )
+  const overflow = () =>
+    dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
+
+  // The timer's three length fields used to hold their desktop width, which pushed "sec" and the Save button past the dialog's edge.
+  for (const kind of ["timer", "countdown", "clock", "quote"]) {
+    await page.getByRole("button", { name: "Add widget" }).click()
+    await page.getByRole("button", { name: `Add ${kind}` }).click()
+    await expect(dialog).toBeVisible()
+    await settled()
+    expect(await overflow(), kind).toBe(0)
+
+    if (kind === "timer") {
+      const dialogBox = await boxOf(dialog, "the timer dialog")
+      const seconds = await boxOf(
+        page.getByLabel("seconds"),
+        "the seconds field"
+      )
+      const save = await boxOf(
+        page.getByRole("button", { name: "Save timer" }),
+        "the Save button"
+      )
+      expect(seconds.x + seconds.width).toBeLessThan(dialogBox.x + dialogBox.width)
+      expect(save.x + save.width).toBeLessThan(dialogBox.x + dialogBox.width)
+
+      // Twelve swatches no longer shrink to fit one row: two rows of six, each at its full size.
+      // Read from layout rather than from bounding boxes, which the chosen swatch's scale (a random one on a new card) would throw off.
+      const swatches = await page
+        .getByRole("radio")
+        .evaluateAll((elements) =>
+          elements.map((element) => ({
+            left: (element as HTMLElement).offsetLeft,
+            size: (element as HTMLElement).offsetWidth,
+            top: (element as HTMLElement).offsetTop
+          }))
+        )
+      const [first, sixth, seventh] = [swatches[0]!, swatches[5]!, swatches[6]!]
+      expect(swatches.map((swatch) => swatch.size)).toEqual(Array(12).fill(32))
+      expect(sixth.top).toBe(first.top)
+      expect(seventh.left).toBe(first.left)
+      expect(seventh.top).toBeGreaterThan(first.top + first.size)
+    }
+
+    await page.keyboard.press("Escape")
+    await expect(dialog).toHaveCount(0)
+  }
+
+  // Options: Done wraps to a line of its own here, and keeps to the trailing edge where every other dialog's primary action sits.
+  await page.getByRole("button", { name: "Options" }).click()
+  await expect(dialog).toBeVisible()
+  await settled()
+  expect(await overflow(), "options").toBe(0)
+  const done = await boxOf(
+    page.getByRole("button", { name: "Done" }),
+    "the Done button"
+  )
+  const name = await boxOf(page.getByLabel("Your name"), "the name field")
+  expect(Math.abs(done.x + done.width - (name.x + name.width))).toBeLessThan(1)
+})
+
+test("a date field is the same height as the fields around it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+
+  const dialog = page.locator(".modal-dialog")
+  await expect(dialog).toBeVisible()
+  await dialog.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished))
+  )
+
+  const heights = await dialog.evaluate((element) =>
+    Array.from(
+      element.querySelectorAll<HTMLElement>("input:not([type=checkbox]), select")
+    ).map((field) => field.getBoundingClientRect().height)
+  )
+  expect(heights.length).toBeGreaterThanOrEqual(4)
+  expect(new Set(heights).size, heights.join(", ")).toBe(1)
+})
