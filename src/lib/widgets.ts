@@ -300,7 +300,7 @@ export const restoreWidget = (widgets: Widget[], id: string, beforeId?: string):
 export const neighborsOf = (
   widgets: Widget[],
   id: string
-): { previous?: Widget; next?: Widget } => {
+): { previous?: Widget | undefined; next?: Widget | undefined } => {
   const target = widgets.find((widget) => widget.id === id)
 
   if (!target) {
@@ -318,7 +318,7 @@ export const neighborsOf = (
 export const undoArchiveWidget = (
   widgets: Widget[],
   id: string,
-  { previousId, nextId }: { previousId?: string; nextId?: string }
+  { previousId, nextId }: { previousId?: string | undefined; nextId?: string | undefined }
 ): Widget[] => {
   const board = widgets.filter((widget) => !widget.archived)
   const boardIndexOf = (anchorId?: string) => board.findIndex((widget) => widget.id === anchorId)

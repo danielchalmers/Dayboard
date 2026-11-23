@@ -83,7 +83,7 @@ const normalizeCountdown = ({
 
   return {
     ...settings,
-    targetAt: text(settings.targetAt),
+    targetAt: text(settings["targetAt"]),
     ...(typeof timeZone === "string" && timeZone ? { timeZone } : {}),
     ...(typeof startAt === "string" && (display === undefined || display === "progress")
       ? { startAt }
@@ -103,47 +103,47 @@ const normalizeWidgetSettings = (
 ): Widget["settings"] => {
   switch (kind) {
     case "clock":
-      return { ...settings, timeZone: text(settings.timeZone) }
+      return { ...settings, timeZone: text(settings["timeZone"]) }
     case "countdown":
       return normalizeCountdown(settings)
     case "note":
-      return { ...settings, text: text(settings.text) }
+      return { ...settings, text: text(settings["text"]) }
     case "quote":
       return {
         ...settings,
-        quotes: Array.isArray(settings.quotes)
-          ? settings.quotes.filter((quote) => typeof quote === "string")
+        quotes: Array.isArray(settings["quotes"])
+          ? settings["quotes"].filter((quote) => typeof quote === "string")
           : [],
-        rotation: settings.rotation === "open" ? "open" : "daily"
+        rotation: settings["rotation"] === "open" ? "open" : "daily"
       }
     case "stopwatch": {
-      const startedAt = instant(settings.startedAt)
+      const startedAt = instant(settings["startedAt"])
 
       return {
         ...settings,
-        running: settings.running === true && startedAt !== null,
-        elapsedMs: span(settings.elapsedMs, 0),
+        running: settings["running"] === true && startedAt !== null,
+        elapsedMs: span(settings["elapsedMs"], 0),
         startedAt
       }
     }
     case "timer": {
-      const durationMs = span(settings.durationMs, 0) || DEFAULT_TIMER_DURATION_MS
-      const endsAt = instant(settings.endsAt)
+      const durationMs = span(settings["durationMs"], 0) || DEFAULT_TIMER_DURATION_MS
+      const endsAt = instant(settings["endsAt"])
 
       return {
         ...settings,
         durationMs,
-        running: settings.running === true && endsAt !== null,
-        remainingMs: span(settings.remainingMs, durationMs),
+        running: settings["running"] === true && endsAt !== null,
+        remainingMs: span(settings["remainingMs"], durationMs),
         endsAt,
         // Only a timer that has the switch gets it read back: stamping `chime: false` onto every timer saved without one made an upgraded board bigger on its first save, which a board near the sync limit can't afford.
-        ...(settings.chime !== undefined ? { chime: settings.chime === true } : {})
+        ...(settings["chime"] !== undefined ? { chime: settings["chime"] === true } : {})
       }
     }
     case "habit":
-      return { ...settings, history: normalizeHistory(settings.history) }
+      return { ...settings, history: normalizeHistory(settings["history"]) }
     case "todo":
-      return { ...settings, tasks: normalizeTasks(settings.tasks) }
+      return { ...settings, tasks: normalizeTasks(settings["tasks"]) }
   }
 }
 

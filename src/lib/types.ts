@@ -49,15 +49,15 @@ export interface CountdownWidget extends WidgetBase {
      * Span start for the progress bar (the target is the span end).
      * Setting a start is what turns the card into a progress bar; clearing it (the default for a new countdown) shows the remaining-time text.
      */
-    startAt?: string
+    startAt?: string | undefined
     /** When set, the target rolls forward to the next occurrence as it passes. */
-    repeat?: CountdownRepeat
+    repeat?: CountdownRepeat | undefined
     /**
      * The IANA zone the dates were set in.
      * A date is stored as the instant of that zone's midnight, and the zone is what lets a device somewhere else read it as the same calendar day rather than as the evening before or the small hours after (see `localizeCountdown` in time.ts).
      * A countdown saved before this was recorded has none, and reads as the instants it holds.
      */
-    timeZone?: string
+    timeZone?: string | undefined
   }
 }
 
@@ -102,7 +102,7 @@ export interface TimerWidget extends WidgetBase {
     /** Epoch ms when the timer will reach zero, or null while paused. */
     endsAt: number | null
     /** Play a soft chime when this timer reaches zero (opt-in, per timer). */
-    chime?: boolean
+    chime?: boolean | undefined
   }
 }
 

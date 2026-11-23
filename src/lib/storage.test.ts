@@ -448,9 +448,9 @@ describe("normalizing widgets read from storage or an import", () => {
 
     // A synced board is read in every zone its devices are in, so the card made at New York's midnight has to be recognised in Kolkata and on Kiritimati too.
     it("is recognised in any time zone, not only the one it was made in", async () => {
-      const zone = process.env.TZ
+      const zone = process.env["TZ"]
       const madeIn = (timeZone: string) => {
-        process.env.TZ = timeZone
+        process.env["TZ"] = timeZone
         return {
           targetAt: new Date(2027, 0, 1).toISOString(),
           startAt: new Date(2026, 0, 1).toISOString()
@@ -467,7 +467,7 @@ describe("normalizing widgets read from storage or an import", () => {
         ]
 
         for (const readIn of ["UTC", "Asia/Kolkata", "Pacific/Kiritimati", "America/Los_Angeles"]) {
-          process.env.TZ = readIn
+          process.env["TZ"] = readIn
 
           for (const span of cards) {
             expect((await parse([yearCard(span)]))[0]!.settings).toEqual({
@@ -479,9 +479,9 @@ describe("normalizing widgets read from storage or an import", () => {
       } finally {
         // Assigning undefined would set the string "undefined", which Node reads as UTC.
         if (zone === undefined) {
-          delete process.env.TZ
+          delete process.env["TZ"]
         } else {
-          process.env.TZ = zone
+          process.env["TZ"] = zone
         }
       }
     })

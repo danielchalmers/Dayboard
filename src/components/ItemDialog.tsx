@@ -27,7 +27,7 @@ interface ItemDialogProps {
   item: Widget | null
   mode: "add" | "edit"
   /** Why the last save was refused; the dialog stays open on its draft while this is set, so nothing typed is lost. */
-  error?: string | null
+  error?: string | null | undefined
   onClose: () => void
   onSave: (item: Widget) => void
 }

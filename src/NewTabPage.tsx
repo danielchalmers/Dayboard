@@ -37,7 +37,7 @@ interface EditorState {
   mode: "add" | "edit"
   item: Widget
   /** Why the last save from this dialog was refused. */
-  error?: string
+  error?: string | undefined
 }
 
 interface ImportUndo {
@@ -50,8 +50,8 @@ interface ImportUndo {
 // The last archive, kept just long enough to undo: the card, and the board cards either side of it when it left.
 interface UndoableArchive {
   id: string
-  previousId?: string
-  nextId?: string
+  previousId?: string | undefined
+  nextId?: string | undefined
 }
 
 // Leading icons for the card context menu.
@@ -235,7 +235,7 @@ export function NewTabPage() {
   // Archiving, restoring, or deleting a card unmounts whatever had focus (the menu item, the dialog's button, the card itself), which drops the keyboard on the page body and sends the next Tab to the far end of the board.
   // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
   // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
-  const focusLanding = useRef<{ id?: string } | null>(null)
+  const focusLanding = useRef<{ id?: string | undefined } | null>(null)
 
   // A new card joins the end of the board, which on a full board or a short screen is below the fold: the dialog closed on a page that looked the same, with nothing to say the card had been made.
   // Its id waits here from the moment its save lands until the page has drawn it, and then the card is brought into view.
@@ -277,7 +277,7 @@ export function NewTabPage() {
     }
 
     const card = Array.from(document.querySelectorAll<HTMLElement>("[data-widget-id]")).find(
-      (element) => element.dataset.widgetId === landing.id
+      (element) => element.dataset["widgetId"] === landing.id
     )
 
     ;(card ?? archiveToggleRef.current)?.focus()
@@ -295,7 +295,7 @@ export function NewTabPage() {
     // A card already in full view stays where it is, and one that is not moves only as far as it needs to (the stylesheet keeps it a little clear of the edge).
     // The glide shows which way the board went; with motion turned down the page is simply there.
     Array.from(document.querySelectorAll<HTMLElement>("[data-widget-id]"))
-      .find((element) => element.dataset.widgetId === id)
+      .find((element) => element.dataset["widgetId"] === id)
       ?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         block: "nearest"

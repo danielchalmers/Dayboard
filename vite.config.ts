@@ -8,7 +8,7 @@ const manifest = {
   name: "Dayboard",
   short_name: "Dayboard",
   // The release workflow stamps the tag's version here; the checked-in package.json stays at 0.0.0.
-  version: process.env.RELEASE_VERSION ?? "0.0.0",
+  version: process.env["RELEASE_VERSION"] ?? "0.0.0",
   description: "A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.",
   minimum_chrome_version: "116",
   permissions: ["storage"],
