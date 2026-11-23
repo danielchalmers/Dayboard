@@ -1,23 +1,37 @@
 {
-  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
     "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    },
     "types": [
       "chrome",
       "node",
+      "vite/client",
       "vitest/globals",
       "@testing-library/jest-dom"
-    ],
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true
+    ]
   },
   "include": [
     "src/**/*",
     "test/**/*",
     "e2e/**/*",
-    "wxt.config.ts",
+    "scripts/**/*",
+    "vite.config.ts",
     "playwright.config.ts",
-    "vitest.config.ts",
-    ".wxt/wxt.d.ts"
+    "vitest.config.ts"
   ]
 }

@@ -2,14 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Start WXT Dev Server",
+      "name": "Start Dev Browser",
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev",
       "cwd": "${workspaceFolder}"
     },
     {
-      "name": "Start WXT Dev Server (Edge)",
+      "name": "Start Dev Browser (Edge)",
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev:edge",
