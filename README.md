@@ -70,8 +70,8 @@ Dayboard is built with [Vite](https://vite.dev), [React](https://react.dev), and
 | `npm run build` | Build for Chrome (`.output/chrome-mv3`) |
 | `npm run build:edge` | Build for Edge (`.output/edge-mv3`) |
 | `npm test` | Run unit tests ([Vitest](https://vitest.dev)) |
-| `npm run e2e` | Run end-to-end tests ([Playwright](https://playwright.dev)) |
-| `npm run verify` | Typecheck, test, and build |
+| `npm run test:e2e` | Run end-to-end tests ([Playwright](https://playwright.dev)) |
+| `npm run check` | Typecheck, then run unit and end-to-end tests |
 
 ## Related
 
