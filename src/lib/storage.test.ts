@@ -240,6 +240,9 @@ describe("readDayboardState", () => {
 })
 
 describe("normalizing widgets read from storage or an import", () => {
+  // The zone the suite runs in (vitest.config.ts), which a date saved without one is taken to have been set in.
+  const here = { timeZone: "America/Chicago" }
+
   const widget = (kind: string, settings: unknown, extra = {}) => ({
     id: kind,
     kind,
@@ -352,9 +355,9 @@ describe("normalizing widgets read from storage or an import", () => {
       widget("countdown", settings, { id: "year-progress", title: "📅 This year" })
 
     // The first-run year card is on almost every board, so this is the upgrade nearly everyone makes.
-    it("leaves out the repeat a read filled in, so a board last saved by v0.8 goes back as it was", async () => {
-      const stored = board(
-        yearCard(calendarYear),
+    // The zone its dates were set in goes back with it (see "a countdown saved without a zone" below); the repeat does not.
+    it("leaves out the repeat a read filled in, so a board last saved by v0.8 gains only its zone", async () => {
+      const others = [
         widget("timer", {
           durationMs: 60_000,
           running: false,
@@ -363,13 +366,13 @@ describe("normalizing widgets read from storage or an import", () => {
           chime: false
         }),
         widget("note", { text: "Milk" })
-      )
+      ]
 
       const { parseDayboardState } = await import("./storage")
-      const state = parseDayboardState(stored)
+      const state = parseDayboardState(board(yearCard(calendarYear), ...others))
 
       expect(state.widgets[0]!.settings).toMatchObject({ repeat: "yearly" })
-      expect(await written(state)).toBe(stored)
+      expect(await written(state)).toBe(board(yearCard({ ...calendarYear, ...here }), ...others))
     })
 
     // Someone on v0.8 whose card had stopped at Complete could fix it by picking Yearly; a device still on v0.8 relies on that being stored.
@@ -385,7 +388,16 @@ describe("normalizing widgets read from storage or an import", () => {
 
       const { parseDayboardState } = await import("./storage")
 
-      expect(await written(parseDayboardState(stored))).toBe(stored)
+      expect(await written(parseDayboardState(stored))).toBe(
+        board(
+          yearCard({ ...calendarYear, repeat: "yearly", ...here }),
+          widget(
+            "countdown",
+            { ...calendarYear, repeat: "yearly", ...here },
+            { id: "fiscal", title: "Fiscal year" }
+          )
+        )
+      )
     })
 
     // An edit makes the card's settings anew, and what the dialog saves, Yearly included, is the person's own.
@@ -400,7 +412,8 @@ describe("normalizing widgets read from storage or an import", () => {
 
       expect(JSON.parse(await written(renamed)).widgets[0].settings).toEqual({
         ...calendarYear,
-        repeat: "yearly"
+        repeat: "yearly",
+        ...here
       })
     })
   })
@@ -448,9 +461,9 @@ describe("normalizing widgets read from storage or an import", () => {
         widget("countdown", calendarYear, { id: "fiscal" })
       ])
 
-      expect(renewed!.settings).toEqual({ ...calendarYear, repeat: "yearly" })
-      // A span someone set up on a card of their own is theirs to keep as it is.
-      expect(ownCard!.settings).toEqual(calendarYear)
+      expect(renewed!.settings).toEqual({ ...calendarYear, repeat: "yearly", ...here })
+      // A span someone set up on a card of their own is theirs to keep without one.
+      expect(ownCard!.settings).toEqual({ ...calendarYear, ...here })
     })
 
     // A synced board is read in every zone its devices are in, so the card made at New York's midnight has to be recognised in Kolkata and on Kiritimati too.
@@ -477,7 +490,8 @@ describe("normalizing widgets read from storage or an import", () => {
           process.env["TZ"] = readIn
 
           for (const span of cards) {
-            expect((await parse([yearCard(span)]))[0]!.settings).toEqual({
+            // Read where its New Year is midnight, a card is given that zone as well, which is not what this is about.
+            expect((await parse([yearCard(span)]))[0]!.settings).toMatchObject({
               ...span,
               repeat: "yearly"
             })
@@ -514,8 +528,52 @@ describe("normalizing widgets read from storage or an import", () => {
       const shortened = { ...calendarYear, targetAt: new Date(2026, 11, 31).toISOString() }
       const once = { ...calendarYear, repeat: "none" }
 
-      expect((await parse([yearCard(shortened)]))[0]!.settings).toEqual(shortened)
-      expect((await parse([yearCard(once)]))[0]!.settings).toEqual(once)
+      expect((await parse([yearCard(shortened)]))[0]!.settings).toEqual({ ...shortened, ...here })
+      expect((await parse([yearCard(once)]))[0]!.settings).toEqual({ ...once, ...here })
+    })
+  })
+
+  // Every countdown made before the zone was recorded lacks one, and read in another zone its date lands on the wrong day.
+  describe("a countdown saved without a zone", () => {
+    const settingsOf = async (settings: object) =>
+      (await parse([widget("countdown", settings)]))[0]!.settings
+
+    it("is given this device's when its target is a date here", async () => {
+      const christmas = { targetAt: new Date(2026, 11, 25).toISOString(), repeat: "yearly" }
+
+      expect(await settingsOf(christmas)).toEqual({ ...christmas, ...here })
+    })
+
+    it("is given it when only its start is a date here", async () => {
+      const term = {
+        targetAt: new Date(2026, 5, 30, 17, 0).toISOString(),
+        startAt: new Date(2026, 0, 5).toISOString()
+      }
+
+      expect(await settingsOf(term)).toEqual({ ...term, ...here })
+    })
+
+    // Midnight in New York is 11 PM here: a date set there, or a time of day set here, and nothing says which.
+    it("is left without one when neither end is midnight here", async () => {
+      const elsewhere = { targetAt: "2026-12-25T05:00:00.000Z" }
+      const meeting = { targetAt: new Date(2026, 11, 25, 9, 30).toISOString() }
+
+      expect(await settingsOf(elsewhere)).toEqual(elsewhere)
+      expect(await settingsOf(meeting)).toEqual(meeting)
+    })
+
+    it("is left without one when it repeats hourly or daily, which is never a date", async () => {
+      const nightly = { targetAt: new Date(2026, 11, 25).toISOString(), repeat: "daily" }
+      const hourly = { targetAt: new Date(2026, 11, 25).toISOString(), repeat: "hourly" }
+
+      expect(await settingsOf(nightly)).toEqual(nightly)
+      expect(await settingsOf(hourly)).toEqual(hourly)
+    })
+
+    it("keeps the zone it was saved with", async () => {
+      const tokyo = { targetAt: new Date(2026, 11, 25).toISOString(), timeZone: "Asia/Tokyo" }
+
+      expect(await settingsOf(tokyo)).toEqual(tokyo)
     })
   })
 
@@ -949,6 +1007,27 @@ describe("writeDayboardState", () => {
     expect(await readDayboardState()).toEqual(edited)
   })
 
+  // The move is the one save that writes every card, so it is when a board made before zones were recorded gets them.
+  it("writes the zone a read gave an old date as the board moves", async () => {
+    const { store } = stubChromeStorage()
+    const christmas = {
+      id: "christmas",
+      kind: "countdown",
+      title: "Christmas",
+      colorPreset: "rose",
+      settings: { targetAt: new Date(2026, 11, 25).toISOString(), repeat: "yearly" }
+    }
+    store.set(LEGACY_KEY, { ...structuredClone(board), widgets: [...board.widgets, christmas] })
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    expect(store.get(cardKey("christmas"))).toMatchObject({
+      settings: { ...christmas.settings, timeZone: "America/Chicago" }
+    })
+  })
+
   // Every release since v0.5 reads only the old item, and shows the first-run board when it is missing.
   it("leaves the old item holding one note that says where the board went", async () => {
     const { store } = stubChromeStorage()
@@ -994,8 +1073,22 @@ describe("writeDayboardState", () => {
     expect((store.get(LEGACY_KEY) as DayboardState).widgets).toHaveLength(1)
   })
 
+  // Nothing stored is a new install, or a board nobody has changed yet, and an old build on another device shows the first-run board for both.
+  // Left to, it would save changes of its own to the old item, which the next save here would put the note over.
+  it("leaves the note on the first save of a board nothing was stored for", async () => {
+    const { store } = stubChromeStorage()
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState({ ...state, settings: { name: "Dan" } }, state)
+
+    expect((store.get(LEGACY_KEY) as DayboardState).widgets).toMatchObject([
+      { kind: "note", title: "👋 Update on the way" }
+    ])
+  })
+
   // A later release takes the old item away for good, and a device still on this one mustn't put it back.
-  it("never gives a board the old item when it has none", async () => {
+  it("never gives a board already kept one card to an item the old item when it has none", async () => {
     const { store } = stubChromeStorage()
     seedSplit(store, board)
 
@@ -1004,6 +1097,39 @@ describe("writeDayboardState", () => {
     await writeDayboardState(withNote(state, "Milk, eggs"), state)
 
     expect(store.has(LEGACY_KEY)).toBe(false)
+  })
+
+  // A newer build may keep more in the board item than the order and the settings, and this one rewrites the item at every reorder.
+  it("writes back whatever else the board item holds", async () => {
+    const { store, addListener } = stubChromeStorage()
+    seedSplit(store, board)
+    store.set(BOARD_KEY, { ...(store.get(BOARD_KEY) as object), layout: { columns: 2 } })
+
+    const { readDayboardState, watchDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    watchDayboardState(() => {})
+
+    const reordered = { ...state, widgets: [...state.widgets].reverse() }
+    await writeDayboardState(reordered, state)
+
+    expect(store.get(BOARD_KEY)).toEqual({
+      layout: { columns: 2 },
+      order: ["habit-1", "note-1", "clock-1"],
+      settings: { name: "Dan" }
+    })
+
+    // And as the newer build last left it, when that has changed since this tab read the board.
+    const changedElsewhere = { ...(store.get(BOARD_KEY) as object), layout: { columns: 3 } }
+    store.set(BOARD_KEY, changedElsewhere)
+    addListener.mock.calls[0]![0]({ [BOARD_KEY]: { newValue: changedElsewhere } }, "sync")
+
+    await writeDayboardState({ ...reordered, settings: { name: "Dana" } }, reordered)
+
+    expect(store.get(BOARD_KEY)).toEqual({
+      layout: { columns: 3 },
+      order: ["habit-1", "note-1", "clock-1"],
+      settings: { name: "Dana" }
+    })
   })
 
   it("saves the first-run board whole when nothing was stored", async () => {

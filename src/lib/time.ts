@@ -364,6 +364,32 @@ export const localizeCountdown = (widget: CountdownWidget): CountdownWidget => {
   }
 }
 
+const isLocalMidnightAt = (instant: string | undefined): boolean => {
+  const date = new Date(instant ?? Number.NaN)
+
+  return !Number.isNaN(date.getTime()) && isLocalMidnight(date)
+}
+
+// Give a countdown saved without a zone this device's, when its dates are dates here.
+// Every countdown made before the zone was recorded lacks one, and without it a date reads as the wrong day anywhere else: the year card of a board made in Chicago ended "Thu, Dec 31, 10:00 PM" in Los Angeles.
+// The zone it was set in can't be known, but an end that falls exactly on this device's midnight was set here or somewhere that keeps the same time, and a wrong guess is harmless: the zone only ever moves an instant that is midnight in it (see dateHere), and here that instant already is.
+// A countdown whose ends are not midnight here is left without one, since somewhere else may be where they are.
+// This only fills the zone in on the board in memory; storage gets it the next time the card is written, which for a board still in the old single item is its first save, when every card is.
+export const assumeLocalZone = (
+  settings: CountdownWidget["settings"]
+): CountdownWidget["settings"] => {
+  const { targetAt, startAt, repeat, timeZone } = settings
+
+  // An hourly or daily repeat is never a date (see isDate), so it has no use for a zone.
+  if (timeZone || repeat === "hourly" || repeat === "daily") {
+    return settings
+  }
+
+  return isLocalMidnightAt(targetAt) || isLocalMidnightAt(startAt)
+    ? { ...settings, timeZone: getSystemTimeZone() }
+    : settings
+}
+
 // Resolve what a countdown means right now: a repeating one shows its next occurrence, and a start that cannot fill a bar is dropped.
 // Both ends of a repeating span move together so the bar keeps its length each cycle instead of stretching from the original start forever.
 // The result is computed on the fly, so the stored widget stays the anchor and every tab agrees without writes.

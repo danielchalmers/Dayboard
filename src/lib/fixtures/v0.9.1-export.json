@@ -1,0 +1,164 @@
+{
+  "widgets": [
+    {
+      "id": "home-clock",
+      "kind": "clock",
+      "title": "🕒 Local time",
+      "colorPreset": "sky",
+      "settings": {
+        "timeZone": ""
+      }
+    },
+    {
+      "id": "tomorrow-countdown",
+      "kind": "countdown",
+      "title": "🌅 Morning",
+      "colorPreset": "indigo",
+      "settings": {
+        "targetAt": "2026-11-23T15:00:00.000Z",
+        "repeat": "daily"
+      }
+    },
+    {
+      "id": "welcome-note",
+      "kind": "note",
+      "title": "👋 Welcome",
+      "colorPreset": "emerald",
+      "settings": {
+        "text": "Good to have you here. This is your space for the day. Keep what helps, change what doesn't, and let the rest be quiet.\nMilk, eggs"
+      }
+    },
+    {
+      "id": "reminder-quote",
+      "kind": "quote",
+      "title": "💬 Today's reminder",
+      "colorPreset": "violet",
+      "settings": {
+        "quotes": [
+          "Begin where you are; that is always enough.",
+          "One small thing, done well.",
+          "Quiet days still count.",
+          "Breathe. The rest can wait a moment."
+        ],
+        "rotation": "daily"
+      }
+    },
+    {
+      "id": "daily-walk-habit",
+      "kind": "habit",
+      "title": "🚶 Daily walk",
+      "colorPreset": "amber",
+      "settings": {
+        "history": [
+          "2026-11-23"
+        ]
+      }
+    },
+    {
+      "id": "year-progress",
+      "kind": "countdown",
+      "title": "📅 This year",
+      "colorPreset": "rose",
+      "settings": {
+        "targetAt": "2027-01-01T06:00:00.000Z",
+        "startAt": "2026-01-01T06:00:00.000Z",
+        "repeat": "yearly"
+      }
+    },
+    {
+      "colorPreset": "teal",
+      "id": "7d1f6a52-3c0e-4a4b-9f6e-2b8f0c1d5e11",
+      "kind": "clock",
+      "settings": {
+        "timeZone": "Asia/Tokyo"
+      },
+      "title": "Tokyo"
+    },
+    {
+      "colorPreset": "rose",
+      "id": "0b9a4c1e-88f2-4d0a-a7c3-51e6d2f4a902",
+      "kind": "countdown",
+      "settings": {
+        "targetAt": "2026-12-25T06:00:00.000Z",
+        "repeat": "yearly"
+      },
+      "title": "Christmas"
+    },
+    {
+      "colorPreset": "indigo",
+      "id": "c4e2b7a0-5d19-4f63-8a2e-9f0b3c6d7e15",
+      "kind": "countdown",
+      "settings": {
+        "targetAt": "2027-03-01T15:30:00.000Z"
+      },
+      "title": "Launch"
+    },
+    {
+      "colorPreset": "amber",
+      "id": "e81d3f09-6b7c-4a25-b1d4-0a9c8e7f6d23",
+      "kind": "countdown",
+      "settings": {
+        "targetAt": "2026-12-07T06:00:00.000Z",
+        "startAt": "2026-11-23T06:00:00.000Z"
+      },
+      "title": "Sprint"
+    },
+    {
+      "colorPreset": "lemon",
+      "id": "2f6c9d84-1a3b-4e7f-9c50-d8e7f6a5b431",
+      "kind": "stopwatch",
+      "settings": {
+        "elapsedMs": 65000,
+        "running": false,
+        "startedAt": null
+      },
+      "title": "Stopwatch"
+    },
+    {
+      "colorPreset": "coral",
+      "id": "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+      "kind": "timer",
+      "settings": {
+        "chime": true,
+        "durationMs": 180000,
+        "endsAt": null,
+        "remainingMs": 90000,
+        "running": false
+      },
+      "title": "Tea"
+    },
+    {
+      "colorPreset": "fuchsia",
+      "id": "5b4a3c2d-1e0f-4d9c-8b7a-6f5e4d3c2b1a",
+      "kind": "todo",
+      "settings": {
+        "tasks": [
+          {
+            "done": true,
+            "id": "3c1f0e9d-8b7a-4f6e-9d5c-4b3a2f1e0d9c",
+            "text": "Ship it"
+          },
+          {
+            "done": false,
+            "id": "a7b8c9d0-e1f2-4a3b-8c4d-5e6f7a8b9c0d",
+            "text": "Write the notes"
+          }
+        ]
+      },
+      "title": "Today"
+    },
+    {
+      "colorPreset": "slate",
+      "id": "d0e1f2a3-b4c5-4d6e-8f7a-8b9c0d1e2f3a",
+      "kind": "note",
+      "settings": {
+        "text": "Put away for later."
+      },
+      "title": "Old note",
+      "archived": true
+    }
+  ],
+  "settings": {
+    "name": "Sam"
+  }
+}

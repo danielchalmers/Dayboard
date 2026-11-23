@@ -874,6 +874,52 @@ test("a board saved by v0.9 moves to an item per card on its first save", async 
     .toEqual(["dayboard-board", "dayboard-card:walk", "dayboard-state"])
 })
 
+// Up to v0.9 a countdown did not record the zone its dates were set in, and opened anywhere else a date read as the evening before.
+test("a date saved by v0.9 is given its zone as the board moves", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // The browser is in UTC, so midnight UTC is a date here and half past nine is a time of day.
+  const christmas = {
+    id: "christmas",
+    kind: "countdown",
+    title: "Christmas",
+    colorPreset: "rose",
+    settings: { targetAt: "2030-12-25T00:00:00.000Z", repeat: "yearly" }
+  }
+  const launch = {
+    id: "launch",
+    kind: "countdown",
+    title: "Launch",
+    colorPreset: "indigo",
+    settings: { targetAt: "2030-03-01T09:30:00.000Z" }
+  }
+  const walk = {
+    id: "walk",
+    kind: "habit",
+    title: "Walk",
+    colorPreset: "amber",
+    settings: { history: [] as string[] }
+  }
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), {
+    widgets: [christmas, launch, walk],
+    settings: { name: "" }
+  })
+  await page.reload()
+  await expect(page.locator(".board-row h2")).toHaveText(["Christmas", "Launch", "Walk"])
+
+  // Reading the board changes nothing stored.
+  expect(await readWidgetSettings(page, "Christmas")).toEqual(christmas.settings)
+
+  // The first save writes every card, and the date goes with the zone it is a date in.
+  await page.getByRole("button", { name: "Mark today" }).click()
+
+  await expect
+    .poll(() => readWidgetSettings(page, "Christmas"))
+    .toEqual({ ...christmas.settings, timeZone: "UTC" })
+  // A time of day is the same moment everywhere, and has no use for one.
+  expect(await readWidgetSettings(page, "Launch")).toEqual(launch.settings)
+})
+
 // Sync hands a device the items of a change made elsewhere one at a time, in no promised order.
 test("the board is whole at every step of a change arriving from another device", async ({
   page,
