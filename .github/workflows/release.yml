@@ -47,15 +47,11 @@ jobs:
           cp .output/*-chrome.zip "dayboard-chrome-${RELEASE_VERSION}.zip"
           cp .output/*-edge.zip "dayboard-edge-${RELEASE_VERSION}.zip"
 
+      # This job can write to the repository, so it uses the runner's own gh CLI rather than a third-party action.
+      # A release that already exists (one written ahead of the tag, or a rerun) keeps its title and notes, and only its zips are replaced. Teichos's release does the same.
       - name: Attach release artifacts
-        uses: ncipollo/release-action@v1.21.0
-        with:
-          tag: ${{ env.RELEASE_TAG }}
-          name: ${{ env.RELEASE_TAG }}
-          artifacts: |
-            dayboard-chrome-${{ env.RELEASE_VERSION }}.zip
-            dayboard-edge-${{ env.RELEASE_VERSION }}.zip
-          allowUpdates: true
-          replacesArtifacts: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes "" --verify-tag
+          gh release upload "$RELEASE_TAG" "dayboard-chrome-${RELEASE_VERSION}.zip" "dayboard-edge-${RELEASE_VERSION}.zip" --clobber
