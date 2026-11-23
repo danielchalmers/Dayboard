@@ -154,6 +154,39 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Name")).toBeRequired()
   })
 
+  // Spaces satisfy `required`, so a name made of them needs its own mark to be held back the same way.
+  it("will not save a name that is only spaces", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ onSave }))
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "   " } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: " Tea" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(saved(onSave).title).toBe(" Tea")
+  })
+
+  // A card saved with a blank name by an earlier version opens on it, and each opening is a new field.
+  it("holds a blank name each time the dialog opens on it", () => {
+    const onSave = vi.fn()
+    const blank = { ...clockItem, title: "  " }
+
+    const { rerender } = render(itemDialog({ item: blank, onSave }))
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+
+    rerender(itemDialog({ isOpen: false, item: blank, onSave }))
+    rerender(itemDialog({ item: blank, onSave }))
+
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+  })
+
   it("will not save a timer with no length", () => {
     const onSave = vi.fn()
 

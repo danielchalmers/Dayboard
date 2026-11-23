@@ -88,6 +88,14 @@ export const ItemDialog = ({
     lengthRef.current?.setCustomValidity(isLengthless ? "Give it a length." : "")
   }, [isLengthless])
 
+  // A name of nothing but spaces passes `required`, and the card it saved had no heading to find it by, the same as a nameless one.
+  // The dialog can close and reopen on the same blank name, which makes a new field, so the mark is set again each time it opens.
+  const isBlankName =
+    draft !== null && draft.title !== "" && draft.title.trim() === ""
+  useEffect(() => {
+    nameRef.current?.setCustomValidity(isBlankName ? "Give it a name." : "")
+  }, [isBlankName, isOpen])
+
   // Save stays pinned to the bottom of a dialog that scrolls, so it can be pressed with the end of the form out of sight, and the end is where a refused save says why.
   // Bring that line into view above the pinned row, which the dialog's bottom scroll padding leaves room for.
   // The optional call keeps jsdom (which has no scrollIntoView) out of trouble in tests.
