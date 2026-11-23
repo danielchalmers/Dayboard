@@ -70,6 +70,57 @@ test("a menu opened as focus brings its card into view stays open", async ({
   await expect(page.locator(".card-menu")).toBeVisible()
 })
 
+test("a menu opened while the page glides stops the glide and stays open", async ({
+  page,
+  extensionId
+}) => {
+  await page.setViewportSize({ width: 1000, height: 400 })
+  await openNewTab(page, extensionId)
+
+  // Start the kind of glide adding a card makes, and open a card's menu on its first step, the way a quick right-click can land mid-glide.
+  const { openedAt, bottom } = await page.evaluate(
+    () =>
+      new Promise<{ openedAt: number; bottom: number }>((resolve) => {
+        // The default board scrolls only a few hundred pixels, a glide over in half a second, and a busy machine can report its first step when it is nearly done.
+        // A page a few thousand pixels taller keeps the glide going for a second, so its first step comes with most of the way still ahead.
+        const spacer = document.createElement("div")
+        spacer.style.height = "3000px"
+        document.body.append(spacer)
+
+        document.addEventListener(
+          "scroll",
+          () => {
+            const card = document.querySelector<HTMLElement>("article.board-row")!
+            const { left, top } = card.getBoundingClientRect()
+            card.dispatchEvent(
+              new MouseEvent("contextmenu", {
+                bubbles: true,
+                button: 2,
+                cancelable: true,
+                clientX: left + 20,
+                clientY: top + 20
+              })
+            )
+            resolve({
+              openedAt: window.scrollY,
+              bottom: document.documentElement.scrollHeight - window.innerHeight
+            })
+          },
+          { once: true }
+        )
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" })
+      })
+  )
+  // The glide had far to go, so one left running would move the page well past where the menu opened.
+  expect(bottom - openedAt).toBeGreaterThan(50)
+
+  // Give a glide that kept going time to move the page, which would close the menu.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+  await expect(page.locator(".card-menu")).toBeVisible()
+  // The page stopped where the menu opened, give or take the step already on its way, so the menu still points at its card.
+  expect((await page.evaluate(() => window.scrollY)) - openedAt).toBeLessThan(5)
+})
+
 test("the menu can't move a card past the ends of the board", async ({ page, extensionId }) => {
   // A tall viewport keeps the last card and its menu clear of the fold, since scrolling closes the menu.
   await page.setViewportSize({ width: 1280, height: 1000 })
