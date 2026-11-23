@@ -1,22 +1,19 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent
+} from "react"
 
-import { getTimeZoneOptions } from "~/lib/time"
+import { isKnownTimeZone } from "~/lib/time"
+import { listTimeZones, searchTimeZones, type ZoneOption } from "~/lib/zoneSearch"
 
 interface TimeZoneFieldProps {
   value: string
   onChange: (timeZone: string) => void
 }
-
-// The empty zone is a real option, not an absence: it means "follow the system clock", and it leads the list under its own name.
-const SYSTEM_OPTION = { value: "", label: "System time zone" }
-
-const options = [
-  SYSTEM_OPTION,
-  ...getTimeZoneOptions().map((zone) => ({ value: zone, label: zone }))
-]
-
-// Case-insensitive substring match that reads underscores as the spaces people type, so "new york" finds America/New_York.
-const normalize = (text: string) => text.toLowerCase().replaceAll("_", " ")
 
 // The open list is shown as a popover, which puts it in the browser's top layer, anchored to the field by the stylesheet.
 // Laid out inside the dialog it belonged to the dialog's scroll area: opening it scrolled the title and the Save row out of sight and cut the list off at the dialog's bottom edge.
@@ -33,30 +30,41 @@ const showInTopLayer = (node: HTMLDivElement | null) => {
 
 // A combobox over the full IANA list rather than an input with a datalist: the native list only offers entries matching the current value,
 // so a clock already set to one zone never showed the others. Clicking here always opens the whole list; typing is what narrows it.
+// Typing searches more than the names in the list (see `searchTimeZones`), but what the field ends up holding is always one of those names.
 export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
   const id = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
   // Open state carries whether the user is narrowing by typing; opened by click, the list ignores the current value and shows everything.
   const [popup, setPopup] = useState<{ filtering: boolean } | null>(null)
   const [highlighted, setHighlighted] = useState(0)
   // Set by real keystrokes just before their input event, which is how typing is told apart from a programmatic value change; the latter must not pop the list.
   const typingRef = useRef(false)
 
-  const visible =
-    popup?.filtering && value !== ""
-      ? options.filter((option) => normalize(option.label).includes(normalize(value)))
-      : options
+  const isFiltering = popup?.filtering === true
+  const visible = useMemo(
+    () => (isFiltering ? searchTimeZones(value) : listTimeZones()),
+    [isFiltering, value]
+  )
 
   const openAll = () => {
-    const current = options.findIndex((option) => option.value === value)
+    const current = listTimeZones().findIndex((option) => option.value === value)
 
     setPopup({ filtering: false })
     setHighlighted(Math.max(current, 0))
   }
 
-  const choose = (option: (typeof options)[number]) => {
+  const choose = (option: ZoneOption) => {
     onChange(option.value)
     setPopup(null)
   }
+
+  // The box takes typing so the list can be searched, which also let a card be saved on whatever was typed: "San Francisco" made a clock that showed local time and said it was lost.
+  // Marking anything the browser can't keep time for invalid lets native validation hold the save, the same as an empty required field.
+  // The test is the browser's, not the list's, so a name it knows but doesn't list (US/Pacific, Etc/GMT+5) still saves when typed out.
+  const isUnknown = value !== "" && !isKnownTimeZone(value)
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(isUnknown ? "Pick a time zone from the list." : "")
+  }, [isUnknown])
 
   // Keep the highlighted option in view as the highlight moves and when the list first opens on the current zone.
   // The optional call keeps jsdom (which has no scrollIntoView) out of trouble in tests.
@@ -140,6 +148,7 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
             }
           }}
           placeholder="System time zone"
+          ref={inputRef}
           role="combobox"
           spellCheck={false}
           type="text"
@@ -186,13 +195,21 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
                 onPointerMove={() => setHighlighted(index)}
                 role="option"
               >
-                {option.label}
+                {/* Found by a city, a country or an abbreviation, the row leads with that and the zone it stands for follows in quieter ink. */}
+                {option.hint === undefined ? (
+                  option.label
+                ) : (
+                  <>
+                    {option.hint}
+                    <span className="tz-field__zone"> · {option.label}</span>
+                  </>
+                )}
               </div>
             ))}
           </div>
         ) : popup ? (
           // Typing that matches nothing used to close the list without a word, and Enter then did nothing at all.
-          // Saying so is what tells a typo from a zone the list doesn't have, before the card is saved on a name no browser knows.
+          // Saying so here is what tells a typo from a place the list doesn't have, before Save refuses it.
           <div
             className="tz-field__listbox tz-field__listbox--empty"
             popover="manual"

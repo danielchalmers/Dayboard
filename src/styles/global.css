@@ -1601,11 +1601,23 @@ input[type="datetime-local"] {
   padding: 13px 16px;
 }
 
+/* A row can be a country and a zone side by side, longer than a narrow dialog is wide, and a zone name has no spaces to break at. */
 .tz-field__option {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
   padding: 7px 10px;
+}
+
+/* A row found by a city, a country or an abbreviation leads with that; the zone it stands for follows in quieter ink.
+   The list sits inside the field's label, whose rule for its caption reaches every span in it, so the caption's small capitals are taken back off here. */
+.tz-field__option .tz-field__zone {
+  color: var(--muted);
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .tz-field__option--highlighted {

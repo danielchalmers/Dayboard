@@ -47,7 +47,7 @@ describe("TimeZoneField", () => {
     const field = screen.getByLabelText("Time zone")
     typeIntoField(field, "berlin")
 
-    // Typing is kept as the value (free text is allowed) and filters the open list down to matches, which leaves out the system option too.
+    // Typing is kept as the value and filters the open list down to matches, which leaves out the system option too.
     expect(field).toHaveValue("berlin")
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "Europe/Berlin"
@@ -68,6 +68,48 @@ describe("TimeZoneField", () => {
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "America/New_York"
     ])
+  })
+
+  // The list used to know zone names and nothing else, so the city most people would type first found nothing.
+  it("finds a zone by a city, says so in the row, and fills in the zone", () => {
+    render(<Harness />)
+
+    const field = screen.getByLabelText("Time zone")
+    typeIntoField(field, "san francisco")
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "San Francisco · America/Los_Angeles"
+    ])
+
+    fireEvent.keyDown(field, { key: "Enter" })
+
+    // What the clock keeps is the zone, not the city it was found by.
+    expect(field).toHaveValue("America/Los_Angeles")
+    expect(screen.queryByRole("listbox")).toBeNull()
+  })
+
+  // A card saved on typed text showed local time under a line saying it was lost.
+  it("is invalid while it holds text that is not a zone", () => {
+    render(<Harness />)
+
+    const field = screen.getByLabelText<HTMLInputElement>("Time zone")
+    // Empty is the system's own zone, which is a choice.
+    expect(field).toBeValid()
+
+    typeIntoField(field, "San Francisco")
+    expect(field).toBeInvalid()
+    expect(field.validationMessage).toBe("Pick a time zone from the list.")
+
+    fireEvent.pointerDown(screen.getByRole("option"))
+    expect(field).toHaveValue("America/Los_Angeles")
+    expect(field).toBeValid()
+
+    // A name the browser keeps time for but leaves out of its list is still a zone.
+    fireEvent.change(field, { target: { value: "US/Pacific" } })
+    expect(field).toBeValid()
+
+    fireEvent.change(field, { target: { value: "Lodnon" } })
+    expect(field).toBeInvalid()
   })
 
   it("offers the system clock as a selectable option", () => {

@@ -593,15 +593,9 @@ export const formatCountdownTarget = (widget: CountdownWidget, now = new Date())
   }).format(target)
 }
 
+// Every zone a clock can be set to. The browser's list is of places, so it leaves out the one zone that isn't a place, and UTC leads it here.
 export const getTimeZoneOptions = (): string[] => {
-  const supportedValuesOf = Intl.supportedValuesOf?.bind(Intl)
-
-  if (supportedValuesOf) {
-    return supportedValuesOf("timeZone")
-  }
-
-  return [
-    "UTC",
+  const zones = Intl.supportedValuesOf?.("timeZone") ?? [
     "America/New_York",
     "America/Chicago",
     "America/Denver",
@@ -611,4 +605,6 @@ export const getTimeZoneOptions = (): string[] => {
     "Asia/Tokyo",
     "Australia/Sydney"
   ]
+
+  return zones.includes("UTC") ? zones : ["UTC", ...zones]
 }

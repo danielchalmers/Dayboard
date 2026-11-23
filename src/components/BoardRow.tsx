@@ -759,7 +759,7 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   if (item.kind === "clock") {
     const { timeZone } = item.settings
     // An empty zone follows the system clock, so the card says that rather than naming the zone it happens to be in today.
-    // Otherwise the zone is free text, so a card can be saved with a name no browser knows, and the formatters answer that with local time.
+    // Otherwise the zone is text. The dialog only saves a name this browser knows, but an import, an older save, or a browser with newer zones can still leave one it doesn't, and the formatters answer that with local time.
     // Say so on the card: the alternative is passing your own time off as somewhere else's, which is worse than a clock that admits it is lost.
     const detail =
       timeZone === ""
