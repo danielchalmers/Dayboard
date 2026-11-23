@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   dateTimeInputValueToIsoInstant,
+  getSystemTimeZone,
   isoInstantToDateTimeInputValue,
+  localizeCountdown,
   resolveCountdown
 } from "~/lib/time"
 import { quotesToText, textToQuotes } from "~/lib/quotes"
@@ -32,12 +34,17 @@ interface ItemDialogProps {
 
 // A repeating countdown is stored as the occurrence it was set on, which can be months or years back by now.
 // Open it on the occurrence its card is showing instead, so the fields agree with the card and switching it to Never keeps that date rather than reviving the old one.
+// The same goes for a date set in another time zone, which the card shows on this zone's calendar (resolving does that too).
 const toDraft = (item: Widget | null): Widget | null =>
-  item?.kind === "countdown" &&
-  item.settings.repeat &&
-  item.settings.repeat !== "none"
-    ? resolveCountdown(item)
-    : item
+  item?.kind !== "countdown"
+    ? (item ?? null)
+    : item.settings.repeat && item.settings.repeat !== "none"
+      ? resolveCountdown(item)
+      : localizeCountdown(item)
+
+// A date field takes a year of up to six digits unless it is given a latest date, and a stored target is read back as a four-digit one.
+// Left open, a slip to 20260 kept the dialog's old target and saved it without a word; with a limit the field stops at four digits, and a longer year that arrives some other way is held by native validation.
+const LATEST_DATE_TIME = "9999-12-31T23:59"
 
 export const ItemDialog = ({
   isOpen,
@@ -87,6 +94,14 @@ export const ItemDialog = ({
   useEffect(() => {
     lengthRef.current?.setCustomValidity(isLengthless ? "Give it a length." : "")
   }, [isLengthless])
+
+  // A name of nothing but spaces passes `required`, and the card it saved had no heading to find it by, the same as a nameless one.
+  // The dialog can close and reopen on the same blank name, which makes a new field, so the mark is set again each time it opens.
+  const isBlankName =
+    draft !== null && draft.title !== "" && draft.title.trim() === ""
+  useEffect(() => {
+    nameRef.current?.setCustomValidity(isBlankName ? "Give it a name." : "")
+  }, [isBlankName, isOpen])
 
   // Save stays pinned to the bottom of a dialog that scrolls, so it can be pressed with the end of the form out of sight, and the end is where a refused save says why.
   // Bring that line into view above the pinned row, which the dialog's bottom scroll padding leaves room for.
@@ -151,8 +166,9 @@ export const ItemDialog = ({
     const targetAt = dateTimeInputValueToIsoInstant(value)
 
     // Patching leaves startAt/repeat in place when only the target changes.
+    // The fields read and write this device's wall clock, so a date saved from them is a date in this zone.
     if (targetAt) {
-      patchSettings("countdown", { targetAt })
+      patchSettings("countdown", { targetAt, timeZone: getSystemTimeZone() })
     }
   }
 
@@ -170,11 +186,15 @@ export const ItemDialog = ({
       return
     }
 
-    patchSettings("countdown", { startAt: startAt ?? undefined })
+    patchSettings("countdown", {
+      startAt: startAt ?? undefined,
+      timeZone: getSystemTimeZone()
+    })
   }
 
   // Saved with its dates and repeat untouched, a countdown keeps the occurrence it is stored by rather than the one on show.
   // They read the same today, but a monthly countdown on the 31st shows the 28th in February, and storing that would move it off the 31st for good.
+  // The zone they were set in is kept with them, since a rename from somewhere else has not set them anywhere new.
   const toSaved = (edited: Widget): Widget =>
     edited.kind === "countdown" &&
     item?.kind === "countdown" &&
@@ -186,7 +206,8 @@ export const ItemDialog = ({
           settings: {
             ...edited.settings,
             targetAt: item.settings.targetAt,
-            startAt: item.settings.startAt
+            startAt: item.settings.startAt,
+            timeZone: item.settings.timeZone
           }
         }
       : edited
@@ -309,6 +330,7 @@ export const ItemDialog = ({
                 <label className="form-label-group">
                   <span>{widgetDefinition.editor.targetLabel}</span>
                   <input
+                    max={LATEST_DATE_TIME}
                     onChange={(event) => updateTargetAt(event.currentTarget.value)}
                     required
                     type="datetime-local"
@@ -337,6 +359,7 @@ export const ItemDialog = ({
                   <span>Starting from</span>
                   <div className="input-adorned">
                     <input
+                      max={LATEST_DATE_TIME}
                       onChange={(event) =>
                         updateStartAt(event.currentTarget.value)
                       }
@@ -434,7 +457,9 @@ export const ItemDialog = ({
                           // Typing into a part replaces it, rather than adding digits to what was there and turning 5 minutes and a typed 25 into 525.
                           onFocus={(event) => event.currentTarget.select()}
                           type="number"
-                          value={msToParts(draft.settings.durationMs)[part]}
+                          // Handed over as text, because React leaves a number field alone while what it shows is worth the same number.
+                          // An emptied part reads 0, the next digits land after that 0, and as a number 025 was close enough to 25 to be left on show.
+                          value={String(msToParts(draft.settings.durationMs)[part])}
                         />
                         <span>{label}</span>
                       </label>

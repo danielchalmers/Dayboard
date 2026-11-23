@@ -154,6 +154,39 @@ describe("ItemDialog", () => {
     expect(screen.getByLabelText("Name")).toBeRequired()
   })
 
+  // Spaces satisfy `required`, so a name made of them needs its own mark to be held back the same way.
+  it("will not save a name that is only spaces", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ onSave }))
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "   " } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: " Tea" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(saved(onSave).title).toBe(" Tea")
+  })
+
+  // A card saved with a blank name by an earlier version opens on it, and each opening is a new field.
+  it("holds a blank name each time the dialog opens on it", () => {
+    const onSave = vi.fn()
+    const blank = { ...clockItem, title: "  " }
+
+    const { rerender } = render(itemDialog({ item: blank, onSave }))
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+
+    rerender(itemDialog({ isOpen: false, item: blank, onSave }))
+    rerender(itemDialog({ item: blank, onSave }))
+
+    expect(screen.getByLabelText("Name")).toBeInvalid()
+  })
+
   it("will not save a timer with no length", () => {
     const onSave = vi.fn()
 
@@ -400,6 +433,33 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.targetAt).toBe(countdownItem.settings.targetAt)
   })
 
+  // The field itself stops a typed year at four digits, so this is the year that gets in some other way, which only the form's validation is left to hold.
+  // It was once shown in the field while the save quietly went ahead with the date the dialog opened on.
+  it("will not save a countdown whose year runs past four digits", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: countdownItem, onSave }))
+
+    fireEvent.change(screen.getByLabelText("When"), {
+      target: { value: "20260-12-25T09:00" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("When")).toBeInvalid()
+
+    fireEvent.change(screen.getByLabelText("When"), {
+      target: { value: "2026-12-25T09:00" }
+    })
+    fireEvent.change(screen.getByLabelText("Starting from"), {
+      target: { value: "20250-12-25T09:00" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("Starting from")).toBeInvalid()
+  })
+
   it("moves a countdown's target without disturbing its repeat or start", () => {
     const onSave = vi.fn()
 
@@ -417,8 +477,82 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings).toEqual({
       targetAt: new Date(2026, 0, 3, 9, 0, 0).toISOString(),
       startAt: countdownItem.settings.startAt,
-      repeat: "hourly"
+      repeat: "hourly",
+      // The fields are this device's wall clock, so dates saved from them say which zone that was.
+      timeZone: "America/Chicago"
     })
+  })
+
+  // Christmas set as a date in New York, on a board since opened in Chicago (where the suite runs): the instant stored is 11 PM on the 24th here.
+  describe("a countdown whose date was set in another time zone", () => {
+    const christmas: CountdownWidget = {
+      ...countdownItem,
+      settings: {
+        targetAt: "2026-12-25T05:00:00.000Z",
+        timeZone: "America/New_York"
+      }
+    }
+
+    it("opens on that date, as its card shows it", () => {
+      render(itemDialog({ item: christmas }))
+
+      expect(screen.getByLabelText("When")).toHaveValue("2026-12-25T00:00")
+    })
+
+    it("keeps the date and zone it is stored by when saved with its dates untouched", () => {
+      const onSave = vi.fn()
+
+      render(itemDialog({ item: christmas, onSave }))
+
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Christmas" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      // A rename from somewhere else has not set the date anywhere new, and rewriting it would only pass the card back and forth between devices.
+      expect(saved(onSave).title).toBe("Christmas")
+      expect(saved(onSave).settings).toEqual(christmas.settings)
+    })
+
+    it("saves a date picked here as a date here", () => {
+      const onSave = vi.fn()
+
+      render(itemDialog({ item: christmas, onSave }))
+
+      fireEvent.change(screen.getByLabelText("When"), {
+        target: { value: "2026-12-26T00:00" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      expect(saved(onSave).settings).toEqual({
+        targetAt: new Date(2026, 11, 26).toISOString(),
+        timeZone: "America/Chicago"
+      })
+    })
+
+    it("closes from the backdrop without saving when nothing was changed", () => {
+      const onSave = vi.fn()
+      const onClose = vi.fn()
+
+      render(itemDialog({ item: christmas, onClose, onSave }))
+
+      fireEvent.pointerDown(document.querySelector(".modal-backdrop") as HTMLElement)
+
+      expect(onClose).toHaveBeenCalledTimes(1)
+      expect(onSave).not.toHaveBeenCalled()
+    })
+  })
+
+  // A countdown saved before the zone was recorded has none, and only setting its dates again gives it one.
+  it("leaves a countdown with no time zone without one when its dates are untouched", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: countdownItem, onSave }))
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Liftoff" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.timeZone).toBeUndefined()
   })
 
   describe("a repeating countdown", () => {
@@ -543,6 +677,24 @@ describe("ItemDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
 
     expect(saved(onSave).settings.durationMs).toBe(45_000)
+  })
+
+  // An emptied part snaps to 0 with the caret after it, so the digits typed next arrive as 025.
+  // The length was right all along, but the field went on showing the zero.
+  it("drops the zero left in front of a retyped length part", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: timerItem, onSave }))
+
+    const minutes = screen.getByLabelText<HTMLInputElement>("minutes")
+    fireEvent.change(minutes, { target: { value: "" } })
+    fireEvent.change(minutes, { target: { value: "025" } })
+
+    expect(minutes.value).toBe("25")
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.durationMs).toBe(25 * 60_000)
   })
 
   // Typed digits would otherwise join the ones already there, so a click into 5 minutes and a typed 25 read 525.

@@ -287,13 +287,107 @@ const isDate = (target: Date, repeat: CountdownRepeat | undefined): boolean =>
 const isDateCountdown = (widget: CountdownWidget): boolean =>
   isDate(new Date(widget.settings.targetAt), widget.settings.repeat)
 
+// A zone's wall clock in plain numbers: the Gregorian calendar and Latin digits whatever the device's locale, since these parts are read back as numbers rather than shown.
+const wallClocks = new Map<string, Intl.DateTimeFormat>()
+
+const getWallClock = (timeZone: string): Intl.DateTimeFormat => {
+  let wallClock = wallClocks.get(timeZone)
+
+  if (!wallClock) {
+    wallClock = new Intl.DateTimeFormat("en-US-u-ca-gregory-nu-latn", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric"
+    })
+    wallClocks.set(timeZone, wallClock)
+  }
+
+  return wallClock
+}
+
+// A stored instant that is midnight in the zone it was set in, moved to the midnight that starts the same calendar day here.
+// Anything else comes back as it was: a time of day is a moment and stays one, and a year a date field could not have produced is left alone.
+const dateHere = (instant: string, timeZone: string): string => {
+  const date = new Date(instant)
+  const year = date.getUTCFullYear()
+
+  if (Number.isNaN(date.getTime()) || year < 1 || year > 9999) {
+    return instant
+  }
+
+  const clock: Partial<Record<Intl.DateTimeFormatPartTypes, number>> = {}
+
+  for (const part of getWallClock(timeZone).formatToParts(date)) {
+    clock[part.type] = Number(part.value)
+  }
+
+  if (
+    clock.hour !== 0 ||
+    clock.minute !== 0 ||
+    clock.second !== 0 ||
+    date.getUTCMilliseconds() !== 0 ||
+    !clock.year ||
+    !clock.month ||
+    !clock.day
+  ) {
+    return instant
+  }
+
+  const here = new Date(clock.year, clock.month - 1, clock.day)
+
+  // As in dateTimeInputValueToIsoInstant, a year under 100 would otherwise be read as 1900-something.
+  here.setFullYear(clock.year)
+
+  return here.toISOString()
+}
+
+// Read a countdown's dates as this device's calendar has them.
+// A date is stored as an instant, the midnight of the zone it was set in, and read as that instant anywhere else it lands on the wrong day with a time of day attached: Christmas set in New York was 9 PM on the 24th in Los Angeles, counted in hours.
+// The zone the dates were set in is stored beside them, so midnight there is known to be a date and is read as the same day here, start and target alike.
+// A countdown saved before the zone was recorded has none and reads as it always has, as does one whose zone this browser does not know.
+// An hourly or daily repeat is never a date (see isDate), so its midnight is a time of day like any other.
+// Like resolveCountdown, this is worked out on the fly and the stored widget stays as it is: nothing is written for having been opened somewhere else.
+export const localizeCountdown = (widget: CountdownWidget): CountdownWidget => {
+  const { targetAt, startAt, repeat, timeZone } = widget.settings
+
+  if (!timeZone || repeat === "hourly" || repeat === "daily") {
+    return widget
+  }
+
+  const here = getSystemTimeZone()
+
+  if (timeZone === here || !isKnownTimeZone(timeZone)) {
+    return widget
+  }
+
+  const target = dateHere(targetAt, timeZone)
+  const start = startAt ? dateHere(startAt, timeZone) : startAt
+
+  // Two names for one zone, or one that keeps the same offset as this one, and there is nothing to move.
+  if (target === targetAt && start === startAt) {
+    return widget
+  }
+
+  // The dates are now this zone's, which is what a save from the dialog would record.
+  return {
+    ...widget,
+    settings: { ...widget.settings, targetAt: target, startAt: start, timeZone: here }
+  }
+}
+
 // Resolve what a countdown means right now: a repeating one shows its next occurrence, and a start that cannot fill a bar is dropped.
 // Both ends of a repeating span move together so the bar keeps its length each cycle instead of stretching from the original start forever.
 // The result is computed on the fly, so the stored widget stays the anchor and every tab agrees without writes.
 export const resolveCountdown = (
-  widget: CountdownWidget,
+  stored: CountdownWidget,
   now = new Date()
 ): CountdownWidget => {
+  const widget = localizeCountdown(stored)
   const { targetAt, startAt, repeat } = widget.settings
   const target = new Date(targetAt)
 

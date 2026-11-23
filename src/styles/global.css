@@ -662,6 +662,8 @@ details > summary::-webkit-details-marker {
   padding: 26px 30px 24px;
   position: relative;
   overflow: hidden;
+  /* A card scrolled into view (a new one, or one Tab reaches) stops short of the window's edge, with room for its shadow and its focus ring. */
+  scroll-margin-block: 24px;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast),
@@ -859,6 +861,15 @@ button.board-row__badge:active {
   border: 0;
   box-shadow: none;
   outline: 0;
+}
+
+/* Reached with Tab, a note wears the same ring as every other stop on the page: its caret alone, at the start of a placeholder or in the middle of a paragraph, was not something to find it by.
+   A click into it still gets only the caret (see NoteField for how the two are told apart).
+   The field has no padding of its own, so the ring stands further off than a button's to keep clear of the first letter, and the small radius rounds it to match the others. */
+.note-field--keyboard-focus:focus {
+  border-radius: 4px;
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
 }
 
 .note-field::placeholder {

@@ -193,6 +193,33 @@ test("typing replaces a timer's length part", async ({ page, extensionId }) => {
   await page.keyboard.press("Tab")
   await page.keyboard.type("30")
   await expect(page.getByLabel("seconds")).toHaveValue("30")
+
+  // Emptying a part first leaves a 0 that is not selected, and the digits typed after it must not keep it in front of them (030).
+  await page.keyboard.press("Backspace")
+  await page.keyboard.press("Backspace")
+  await expect(page.getByLabel("seconds")).toHaveValue("0")
+  await page.keyboard.type("45")
+  await expect(page.getByLabel("seconds")).toHaveValue("45")
+})
+
+test("a countdown's year stops at four digits", async ({ page, extensionId }) => {
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add countdown" }).click()
+  const when = page.getByLabel("When")
+  await expect(when).toHaveValue("2026-03-05T00:00")
+
+  // Focus arriving from another field lands on the month, the way Tab does, and each part moves on once it is full.
+  // The slip is a fifth digit on the year: the field used to take it and show 20260, which the save then dropped for the date it opened on.
+  await when.focus()
+  await page.keyboard.type("12")
+  await page.keyboard.type("25")
+  await page.keyboard.type("20260")
+  await page.getByLabel("Name").focus()
+
+  await expect(when).toHaveValue(/^2026-12-25T/)
 })
 
 test("an outside click the form refuses keeps focus on the field and Escape working", async ({

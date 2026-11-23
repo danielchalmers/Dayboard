@@ -120,10 +120,12 @@ const PageGreeting = ({ name }: { name: string }) => {
   )
 }
 
-// An eye while the board is on show and the same eye struck through while it is hidden: the button wears the board's state, the way a balance you can hide does.
+// The icon shows what a press will do, the same as the button's label beside it: an eye struck through while the board is on show, when pressing hides it, and an open eye while it is hidden, when pressing shows it.
+// It used to wear the board's state instead, the way a balance you can hide does, which put an open eye under "Hide board" and a struck one under "Show board".
 // The stroke takes a sliver out of the eye beside it, so the two read as one mark rather than a line laid over a drawing.
 const HideIcon = ({ hidden }: { hidden: boolean }) => {
   const maskId = useId()
+  const struck = !hidden
 
   return (
     <svg aria-hidden="true" fill="none" height="24" viewBox="0 0 24 24" width="24">
@@ -131,7 +133,7 @@ const HideIcon = ({ hidden }: { hidden: boolean }) => {
         <rect fill="#fff" height="24" width="24" />
         <path d="M5.5 2.9 21.1 18.5" stroke="#000" strokeLinecap="round" strokeWidth="1.8" />
       </mask>
-      <g mask={hidden ? `url(#${maskId})` : undefined}>
+      <g mask={struck ? `url(#${maskId})` : undefined}>
         <path
           d="M2.8 12c2-3.9 5.2-6 9.2-6s7.2 2.1 9.2 6c-2 3.9-5.2 6-9.2 6s-7.2-2.1-9.2-6Z"
           stroke="currentColor"
@@ -140,7 +142,7 @@ const HideIcon = ({ hidden }: { hidden: boolean }) => {
         />
         <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.8" />
       </g>
-      {hidden ? (
+      {struck ? (
         <path d="M4.2 4.2 19.8 19.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
       ) : null}
     </svg>
@@ -233,6 +235,10 @@ export function NewTabPage() {
   // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
   // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
   const focusLanding = useRef<{ id?: string } | null>(null)
+
+  // A new card joins the end of the board, which on a full board or a short screen is below the fold: the dialog closed on a page that looked the same, with nothing to say the card had been made.
+  // Its id waits here from the moment its save lands until the page has drawn it, and then the card is brought into view.
+  const addedCardId = useRef<string | null>(null)
   const expireUndo = useCallback(() => setUndoableArchive(null), [])
 
   // Undo only stands for an archive that is still in place.
@@ -279,6 +285,27 @@ export function NewTabPage() {
   })
 
   useEffect(() => {
+    const id = addedCardId.current
+
+    if (!id) {
+      return
+    }
+
+    addedCardId.current = null
+
+    // A card already in full view stays where it is, and one that is not moves only as far as it needs to (the stylesheet keeps it a little clear of the edge).
+    // The glide shows which way the board went; with motion turned down the page is simply there.
+    Array.from(document.querySelectorAll<HTMLElement>("[data-widget-id]"))
+      .find((element) => element.dataset.widgetId === id)
+      ?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "nearest"
+      })
+  })
+
+  useEffect(() => {
     const closeMenusAfterOutsidePointerDown = (event: PointerEvent) =>
       closeOpenMenus(event.composedPath())
 
@@ -317,6 +344,10 @@ export function NewTabPage() {
         : current
     )
     const refused = nextWidgets ? await setWidgets(nextWidgets) : null
+
+    if (nextWidgets && !latest && !refused) {
+      addedCardId.current = item.id
+    }
 
     setEditorState((current) =>
       !current || current.item !== opened

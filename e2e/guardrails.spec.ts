@@ -295,8 +295,8 @@ test("marks keyboard focus with one ring, never the browser's own", async ({
 
       return {
         what: `${element.tagName.toLowerCase()}.${element.classList[0] ?? ""}`,
-        // A text field shows focus with its caret (and, in a dialog, its accent border), not a ring.
-        isTextField: element.matches("textarea, input[type='text']"),
+        // A todo's task field shows focus with its caret and the rule above it rather than a ring. A note has only its caret to go by, so Tab rings it like the rest.
+        isTextField: element.matches("input[type='text']"),
         outline: `${style.outlineStyle} ${style.outlineWidth}`
       }
     })
@@ -317,7 +317,14 @@ test("marks keyboard focus with one ring, never the browser's own", async ({
   expect(kinds).toContain("article.board-row")
   expect(kinds).toContain("button.board-row__badge")
   expect(kinds).toContain("button.habit-day")
+  expect(kinds).toContain("textarea.note-field")
   expect(stops.filter((stop) => stop.outline !== "solid 2px")).toEqual([])
+
+  // A click into a note is not keyboard focus: the ring would frame the words being typed, so the caret is left to mark it.
+  const note = page.getByLabel("👋 Welcome note")
+  await note.click()
+  await expect(note).toBeFocused()
+  await expect(note).toHaveCSS("outline-style", "none")
 })
 
 test("every button answers a press, not only a hover", async ({

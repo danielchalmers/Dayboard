@@ -73,10 +73,12 @@ type StoredSettings = Record<string, unknown>
 // Countdowns used to carry a `display` setting choosing between the remaining time and a progress bar; a start date is now the only switch.
 // Boards written before that still carry the key, so retire it on read, dropping the start alongside it when the card was set to text, which would otherwise come back as a bar the owner never asked for.
 // A repeat this build does not know is dropped rather than stepped by, since stepping by it runs the target off into an invalid date that throws on its way to the screen.
+// The zone the dates were set in is kept only as text; whether it names a real zone is asked when the dates are read (see `localizeCountdown` in time.ts).
 const normalizeCountdown = ({
   display,
   startAt,
   repeat,
+  timeZone,
   ...settings
 }: StoredSettings): CountdownWidget["settings"] => {
   const known = REPEATS.find((option) => option === repeat)
@@ -84,6 +86,7 @@ const normalizeCountdown = ({
   return {
     ...settings,
     targetAt: text(settings.targetAt),
+    ...(typeof timeZone === "string" && timeZone ? { timeZone } : {}),
     ...(typeof startAt === "string" && (display === undefined || display === "progress")
       ? { startAt }
       : {}),

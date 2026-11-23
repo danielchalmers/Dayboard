@@ -58,6 +58,8 @@ describe("createWidget", () => {
     expect(countdown.settings.targetAt).toBe(
       new Date(2026, 5, 20, 0, 0, 0).toISOString()
     )
+    // And it says which zone's tomorrow that is, so it is the same date on a device somewhere else.
+    expect(countdown.settings.timeZone).toBe("America/Chicago")
   })
 })
 
@@ -292,13 +294,18 @@ describe("applyDialogEdit", () => {
     }
     const draft: Widget = {
       ...countdown,
-      settings: { targetAt: "2027-01-01T09:00:00.000Z", repeat: "yearly" }
+      settings: {
+        targetAt: "2027-01-01T09:00:00.000Z",
+        repeat: "yearly",
+        timeZone: "America/Chicago"
+      }
     }
 
-    // Clearing the start in the dialog clears it on the card.
+    // Clearing the start in the dialog clears it on the card, and the zone the dates were set in goes with them.
     expect(applyDialogEdit(countdown, draft).settings).toEqual({
       targetAt: "2027-01-01T09:00:00.000Z",
-      repeat: "yearly"
+      repeat: "yearly",
+      timeZone: "America/Chicago"
     })
   })
 

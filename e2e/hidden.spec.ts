@@ -57,10 +57,17 @@ test("hiding the board covers every tab here, and the next one opened, until it 
   await expect(cardByTitle(other, "Dentist")).toBeVisible()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(GREETING_BY_NAME)
 
+  // The icon is of what a press will do, like the label: the eye is struck through on the button that hides, and open on the one that shows.
+  // The stroke is the one path drawn straight onto the icon; the eye's own outline sits in a group under it.
+  const strokeOn = (name: string) =>
+    page.getByRole("button", { name }).locator("svg > path")
+  await expect(strokeOn("Hide board")).toHaveCount(1)
+
   // From the keyboard, the button that hid the board is the one that shows it, so focus is already on the way back.
   await page.getByRole("button", { name: "Hide board" }).focus()
   await page.keyboard.press("Enter")
   await expect(page.getByRole("button", { name: "Show board" })).toBeFocused()
+  await expect(strokeOn("Show board")).toHaveCount(0)
 
   // The cards, the archive, and everything that edits the board go; the greeting stays, without the name.
   for (const tab of [page, other]) {

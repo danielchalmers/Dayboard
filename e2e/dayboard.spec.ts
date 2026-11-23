@@ -1013,6 +1013,35 @@ test("multiple open tabs stay synchronized", async ({
   await thirdPage.close()
 })
 
+test("a new card is scrolled into view, and an edit leaves the page where it was", async ({
+  page,
+  extensionId
+}) => {
+  // A 1366x768 laptop, which the first-run board fills, so the first card anyone adds starts a row below the fold.
+  // The dialog used to close on a page that looked untouched.
+  await page.setViewportSize({ width: 1366, height: 657 })
+  await openNewTab(page, extensionId)
+
+  await addWidget(page, "timer", "Tea")
+  await expect(cardByTitle(page, "Tea", true)).toBeInViewport({ ratio: 1 })
+
+  // With motion turned down the page jumps rather than glides, so where it is can be read as soon as the dialog has closed.
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await addWidget(page, "note", "Errands")
+  await expect(cardByTitle(page, "Errands", true)).toBeInViewport({ ratio: 1 })
+
+  // Only an arrival moves the page: a card that was edited is wherever it was left.
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await openWidgetMenu(page, "🕒 Local time")
+  await page.getByRole("menuitem", { name: "Edit 🕒 Local time" }).click()
+  await page.getByLabel("Name").fill("Home")
+  await page.getByRole("button", { name: "Save changes" }).click()
+  await expect(cardByTitle(page, "Home", true)).toBeVisible()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
 test("add note flow saves typed text and persists across reloads", async ({
   page,
   extensionId
@@ -1858,6 +1887,71 @@ test("a yearly date counts in days", async ({
   await expect(card.locator(".board-row__detail")).toHaveText(
     "Sat, Mar 14 · repeats yearly"
   )
+})
+
+test("a date set in another time zone stays that date", async ({
+  page,
+  extensionId
+}) => {
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+
+  // A board synced in from New York, read here in UTC: both cards hold the instant of New York's midnight on the 14th, which is 4 AM here.
+  // The first was saved with the zone its date was set in, and the second before that was recorded.
+  const countdown = (id: string, title: string, settings: object) => ({
+    id,
+    kind: "countdown",
+    title,
+    colorPreset: "rose",
+    settings: { targetAt: "2026-03-14T04:00:00.000Z", ...settings }
+  })
+
+  await page.evaluate(
+    (board) => chrome.storage.sync.set({ "dayboard-state": board }),
+    {
+      widgets: [
+        countdown("trip", "Trip", { timeZone: "America/New_York" }),
+        countdown("conference", "Conference", {})
+      ],
+      settings: { name: "" }
+    }
+  )
+
+  // Whole days to a date, with no time of day under the title.
+  const trip = cardByTitle(page, "Trip", true)
+  await expect(trip.locator(".board-row__value")).toHaveText("10 days")
+  await expect(trip.locator(".board-row__detail")).toHaveText("Sat, Mar 14")
+
+  // With no zone there is no telling the date from 4 AM, so that card reads as it always has.
+  await expect(
+    cardByTitle(page, "Conference").locator(".board-row__detail")
+  ).toHaveText(/^Sat, Mar 14, 4:00\sAM$/)
+
+  // The dialog opens on the date the card shows, and a rename leaves what is stored as New York set it.
+  await openWidgetMenu(page, "Trip")
+  await page.getByRole("menuitem", { name: "Edit Trip" }).click()
+  await expect(page.getByLabel("When")).toHaveValue("2026-03-14T00:00")
+  await page.getByLabel("Name").fill("Holiday")
+  await page.getByRole("button", { name: "Save changes" }).click()
+  // Save closes the dialog once its write lands, so what is stored can be read then.
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  expect(await readWidgetSettings(page, "Holiday")).toEqual({
+    targetAt: "2026-03-14T04:00:00.000Z",
+    timeZone: "America/New_York"
+  })
+
+  // A date picked here is a date here, and says so.
+  await openWidgetMenu(page, "Holiday")
+  await page.getByRole("menuitem", { name: "Edit Holiday" }).click()
+  await page.getByLabel("When").fill("2026-03-20T00:00")
+  await page.getByRole("button", { name: "Save changes" }).click()
+  await expect(
+    cardByTitle(page, "Holiday").locator(".board-row__detail")
+  ).toHaveText("Fri, Mar 20")
+  expect(await readWidgetSettings(page, "Holiday")).toEqual({
+    targetAt: "2026-03-20T00:00:00.000Z",
+    timeZone: "UTC"
+  })
 })
 
 test("a repeating countdown edits from the occurrence on its card", async ({

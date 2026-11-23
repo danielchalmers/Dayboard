@@ -13,6 +13,7 @@ import {
   isKnownTimeZone,
   isSameLocalDay,
   isoInstantToDateTimeInputValue,
+  localizeCountdown,
   resolveCountdown
 } from "./time"
 import {
@@ -409,6 +410,170 @@ describe("resolveCountdown", () => {
       startAt: "not a date"
     })
     expect(resolveCountdown(unreadable, now).settings.startAt).toBeUndefined()
+  })
+})
+
+// The suite runs in America/Chicago, an hour behind New York and six behind UTC in December.
+describe("localizeCountdown", () => {
+  // Christmas set as a date in New York: midnight there, which is 11 PM on the 24th here.
+  const christmas = countdownWidget("2026-12-25T05:00:00.000Z", {
+    timeZone: "America/New_York"
+  })
+
+  it("reads a date set in another zone as the same day here", () => {
+    const local = localizeCountdown(christmas)
+
+    expect(local.settings.targetAt).toBe(new Date(2026, 11, 25).toISOString())
+    // The dates are this zone's now, which is what the dialog saves beside them.
+    expect(local.settings.timeZone).toBe("America/Chicago")
+    // The stored card is the anchor and stays as it was.
+    expect(christmas.settings.targetAt).toBe("2026-12-25T05:00:00.000Z")
+  })
+
+  it("shows the card that date, counted in days, rather than the evening before", () => {
+    const now = new Date(2026, 9, 7, 10, 0, 0)
+    const card = resolveCountdown(christmas, now)
+
+    expect(formatCountdownTarget(card, now)).toBe("Fri, Dec 25")
+    expect(getCountdownParts(card, now).label).toBe("79 days from now")
+    // Read as the instant it was stored as, it was already "due" an hour before the day began here.
+    expect(getCountdownParts(card, new Date(2026, 11, 24, 23, 30, 0)).status).toBe("future")
+    expect(getCountdownParts(card, new Date(2026, 11, 25, 23, 30, 0)).status).toBe("today")
+  })
+
+  it("moves a span's start with its target when both are dates", () => {
+    // The calendar year as Tokyo has it, fifteen hours ahead of here.
+    const year = countdownWidget("2026-12-31T15:00:00.000Z", {
+      startAt: "2025-12-31T15:00:00.000Z",
+      repeat: "yearly",
+      timeZone: "Asia/Tokyo"
+    })
+
+    expect(localizeCountdown(year).settings).toEqual({
+      targetAt: new Date(2027, 0, 1).toISOString(),
+      startAt: new Date(2026, 0, 1).toISOString(),
+      repeat: "yearly",
+      timeZone: "America/Chicago"
+    })
+  })
+
+  it("keeps a repeating date on its day in the zone it is opened in", () => {
+    const birthday = countdownWidget("2026-03-13T15:00:00.000Z", {
+      repeat: "yearly",
+      timeZone: "Asia/Tokyo"
+    })
+
+    expect(
+      resolveCountdown(birthday, new Date(2027, 1, 20, 12, 0, 0)).settings.targetAt
+    ).toBe(new Date(2027, 2, 14).toISOString())
+  })
+
+  it("leaves a time of day the moment it is", () => {
+    // A launch at 3 PM in New York is at 2 PM here, and should be.
+    const launch = countdownWidget("2026-12-25T20:00:00.000Z", {
+      timeZone: "America/New_York"
+    })
+
+    expect(localizeCountdown(launch)).toBe(launch)
+  })
+
+  it("leaves a countdown with no zone as it has always read", () => {
+    // Saved before the zone was recorded: there is no telling a date from an evening, so it stays the instant it is.
+    const legacy = countdownWidget("2026-12-25T05:00:00.000Z")
+
+    expect(localizeCountdown(legacy)).toBe(legacy)
+    expect(formatCountdownTarget(legacy, new Date(2026, 9, 7, 10, 0, 0))).toMatch(
+      /^Thu, Dec 24, 11:00\sPM$/
+    )
+  })
+
+  it("leaves a countdown set in this zone alone", () => {
+    const here = countdownWidget(new Date(2026, 11, 25).toISOString(), {
+      timeZone: "America/Chicago"
+    })
+
+    expect(localizeCountdown(here)).toBe(here)
+  })
+
+  it("leaves an hourly or daily repeat at midnight on the clock", () => {
+    for (const repeat of ["hourly", "daily"] as const) {
+      const midnight = countdownWidget("2026-12-25T05:00:00.000Z", {
+        repeat,
+        timeZone: "America/New_York"
+      })
+
+      expect(localizeCountdown(midnight)).toBe(midnight)
+    }
+  })
+
+  it("leaves the dates alone when the zone is not one the browser knows", () => {
+    const lost = countdownWidget("2026-12-25T05:00:00.000Z", {
+      timeZone: "Mars/Olympus_Mons"
+    })
+
+    expect(localizeCountdown(lost)).toBe(lost)
+  })
+
+  // A build from before the zone was recorded carries it through an edit untouched, so the zone can outlive the date it described.
+  it("does not take a target moved by an older build for a date", () => {
+    // Midnight in Los Angeles, saved from there under the New York zone the card already had: 3 AM in New York, so not a date there.
+    const moved = countdownWidget("2026-12-31T08:00:00.000Z", {
+      timeZone: "America/New_York"
+    })
+
+    expect(localizeCountdown(moved)).toBe(moved)
+  })
+
+  it("keeps the first-run year card on the calendar year wherever it is opened", () => {
+    const year = createDefaultWidgets(new Date(2026, 9, 4)).find(
+      (widget): widget is CountdownWidget => widget.id === "year-progress"
+    )!
+    const zone = process.env.TZ
+
+    expect(year.settings.timeZone).toBe("America/Chicago")
+
+    try {
+      process.env.TZ = "Asia/Tokyo"
+
+      // Tokyo's own New Year's midnights, not Chicago's, which are 3 PM there.
+      expect(localizeCountdown(year).settings).toMatchObject({
+        startAt: new Date(2026, 0, 1).toISOString(),
+        targetAt: new Date(2027, 0, 1).toISOString()
+      })
+      expect(new Date(localizeCountdown(year).settings.targetAt).getHours()).toBe(0)
+    } finally {
+      if (zone === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = zone
+      }
+    }
+  })
+
+  it("reads a date in the zone the device has moved to", () => {
+    const zone = process.env.TZ
+
+    try {
+      process.env.TZ = "America/Los_Angeles"
+
+      expect(localizeCountdown(christmas).settings).toEqual({
+        targetAt: "2026-12-25T08:00:00.000Z",
+        timeZone: "America/Los_Angeles"
+      })
+
+      process.env.TZ = "Asia/Tokyo"
+
+      expect(localizeCountdown(christmas).settings.targetAt).toBe(
+        "2026-12-24T15:00:00.000Z"
+      )
+    } finally {
+      // Assigning undefined would set the string "undefined", which Node reads as UTC.
+      if (zone === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = zone
+      }
+    }
   })
 })
 

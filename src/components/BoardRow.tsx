@@ -115,12 +115,32 @@ const NoteField = ({
     onWidgetChange?.({ ...item, settings: { ...item.settings, text } })
   )
 
+  // A text field matches :focus-visible however focus reached it, so the stylesheet cannot tell Tab from a click, and a ring drawn on every click into a note would frame the words being typed.
+  // The note keeps track itself: focus that follows a press on it came by pointer, and any other came by keyboard and gets the ring.
+  const [focusedByKeyboard, setFocusedByKeyboard] = useState(false)
+  const pressedRef = useRef(false)
+
   return (
     <textarea
       aria-label={`${item.title} note`}
-      className="note-field"
+      className={
+        focusedByKeyboard ? "note-field note-field--keyboard-focus" : "note-field"
+      }
       dir="auto"
-      onBlur={field.onBlur}
+      onBlur={(event) => {
+        // Switching to another window blurs the note but leaves it the active element, and it is focused again on the way back, so how it was reached is kept for that.
+        if (document.activeElement !== event.currentTarget) {
+          pressedRef.current = false
+        }
+
+        setFocusedByKeyboard(false)
+        field.onBlur()
+      }}
+      onFocus={() => setFocusedByKeyboard(!pressedRef.current)}
+      onPointerDown={() => {
+        pressedRef.current = true
+        setFocusedByKeyboard(false)
+      }}
       onChange={(event) => field.onChange(event.currentTarget.value)}
       placeholder="Jot something down…"
       ref={field.fieldRef}

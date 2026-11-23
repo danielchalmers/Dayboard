@@ -65,6 +65,12 @@ export interface CountdownWidget extends WidgetBase {
     startAt?: string
     /** When set, the target rolls forward to the next occurrence as it passes. */
     repeat?: CountdownRepeat
+    /**
+     * The IANA zone the dates were set in.
+     * A date is stored as the instant of that zone's midnight, and the zone is what lets a device somewhere else read it as the same calendar day rather than as the evening before or the small hours after (see `localizeCountdown` in time.ts).
+     * A countdown saved before this was recorded has none, and reads as the instants it holds.
+     */
+    timeZone?: string
   }
 }
 
@@ -245,7 +251,9 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       settings: {
         targetAt: yearEnd.toISOString(),
         startAt: yearStart.toISOString(),
-        repeat: "yearly"
+        repeat: "yearly",
+        // Both ends are dates, so the card says where they were set, like any countdown made from the dialog.
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       }
     }
   ]
