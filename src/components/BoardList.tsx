@@ -11,7 +11,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEventHandler,
-  type ReactNode
+  type ReactNode,
+  type RefObject
 } from "react"
 
 import { BOARD_DROP_ID } from "~/components/BoardDnd"
@@ -176,6 +177,8 @@ interface WidgetContextMenuProps {
   align: MenuAlign
   label: string
   onClose: () => void
+  // Whether the page is gliding as the menu opens (see BoardList).
+  pageGliding: RefObject<boolean>
   children: ReactNode
 }
 
@@ -184,10 +187,19 @@ const getMenuItems = (panel: HTMLElement) =>
 
 // A free-form context menu that spawns under the cursor.
 // It uses the native Popover API so it renders in the top layer, escaping the card's clipped, overflow-hidden bounds, and gets light-dismiss + Escape handling for free.
-const WidgetContextMenu = ({ x, y, align, label, onClose, children }: WidgetContextMenuProps) => {
+const WidgetContextMenu = ({
+  x,
+  y,
+  align,
+  label,
+  onClose,
+  pageGliding,
+  children
+}: WidgetContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: x, top: y })
+  const stoppedGlide = useRef(false)
 
   // onClose is recreated on every parent render (the board re-renders each tick).
   // Keep the latest in a ref so the mount-only effects don't re-run and steal focus.
@@ -201,6 +213,15 @@ const WidgetContextMenu = ({ x, y, align, label, onClose, children }: WidgetCont
 
     if (!menu || !panel) {
       return
+    }
+
+    // A menu opened while the page is still gliding (to a card just added) would take the glide's next step for a scroll and close itself.
+    // An instant scroll to where the page already is stops the glide, so the card stays under the menu.
+    if (pageGliding.current) {
+      window.scrollTo({ left: window.scrollX, top: window.scrollY, behavior: "instant" })
+      // A glide stopped this way never reports scrollend.
+      pageGliding.current = false
+      stoppedGlide.current = true
     }
 
     menu.setAttribute("popover", "auto")
@@ -259,8 +280,22 @@ const WidgetContextMenu = ({ x, y, align, label, onClose, children }: WidgetCont
     // Focusing a card below the fold scrolls the page to it, and the browser reports that scroll a frame later.
     // A menu opened in between (Shift+F10 straight after focus, or a screen reader doing both at once) would take that late report for a drift and close on the spot, so a page scroll only counts once the page has moved since the menu opened.
     const openedAt = { x: window.scrollX, y: window.scrollY }
+    // A glide the menu stopped can still have one step on its way, which the browser reports in the next frame a pixel or two on.
+    // Until that frame has passed, the page's position is taken as where the menu opened rather than as a drift.
+    let settling = stoppedGlide.current
+    const frame = settling
+      ? requestAnimationFrame(() => {
+          settling = false
+        })
+      : 0
 
     const closeOnScroll = (event: Event) => {
+      if (event.target === document && settling) {
+        openedAt.x = window.scrollX
+        openedAt.y = window.scrollY
+        return
+      }
+
       if (
         event.target === document &&
         window.scrollX === openedAt.x &&
@@ -276,6 +311,7 @@ const WidgetContextMenu = ({ x, y, align, label, onClose, children }: WidgetCont
     window.addEventListener("scroll", closeOnScroll, true)
 
     return () => {
+      cancelAnimationFrame(frame)
       window.removeEventListener("resize", close)
       window.removeEventListener("scroll", closeOnScroll, true)
     }
@@ -569,6 +605,26 @@ export const BoardList = ({
     []
   )
 
+  // A smooth scroll, like the glide to a card just added, reports scroll events and no scrollend until it stops; an instant one reports both at once.
+  // So the page is gliding between a scroll and its scrollend, which a menu opening then needs to know (see WidgetContextMenu).
+  const pageGliding = useRef(false)
+  useEffect(() => {
+    const onScroll = () => {
+      pageGliding.current = true
+    }
+    const onScrollEnd = () => {
+      pageGliding.current = false
+    }
+
+    document.addEventListener("scroll", onScroll, { passive: true })
+    document.addEventListener("scrollend", onScrollEnd)
+
+    return () => {
+      document.removeEventListener("scroll", onScroll)
+      document.removeEventListener("scrollend", onScrollEnd)
+    }
+  }, [])
+
   // Cards on the board at first render must not animate in; the page should simply be there on a new tab.
   // Only cards that show up later (added, restored) play the entrance animation.
   const initialIdsRef = useRef<ReadonlySet<string> | null>(null)
@@ -627,6 +683,7 @@ export const BoardList = ({
           key={openMenu.opening}
           label={`Actions for ${activeMenuItem.title}`}
           onClose={closeMenu}
+          pageGliding={pageGliding}
           x={openMenu.x}
           y={openMenu.y}
         >
