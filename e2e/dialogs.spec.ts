@@ -5,7 +5,8 @@ import {
   cardByTitle,
   DEFAULT_BOARD_TITLES,
   openNewTab,
-  openWidgetMenu
+  openWidgetMenu,
+  readWidgetSettings
 } from "./helpers"
 
 test("canceling the delete dialog keeps the widget", async ({ page, extensionId }) => {
@@ -477,6 +478,97 @@ test("the time zone list says so when nothing matches", async ({ page, extension
   await field.pressSequentially("Lond")
   await expect(page.getByText("No matching time zone")).toHaveCount(0)
   await expect(page.getByRole("option", { name: "Europe/London" })).toBeVisible()
+})
+
+// The list only knew zone names, so the first thing most people type for a clock, a city, found nothing.
+// The zone is matched by either spelling because browsers still list some under an older name, and which is theirs to change.
+test("a clock's time zone is found by a city, a country, or an abbreviation", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const field = page.getByLabel("Time zone")
+  const options = page.getByRole("option")
+
+  await field.pressSequentially("san fran")
+  await expect(options).toHaveText(["San Francisco · America/Los_Angeles"])
+
+  await field.fill("")
+  await field.pressSequentially("PST")
+  await expect(options).toHaveText(["PST · America/Los_Angeles"])
+
+  // UTC is not a place, so the browser's list leaves it out; it is in this one, under either of its names.
+  await field.fill("")
+  await field.pressSequentially("gmt")
+  await expect(options).toHaveText(["GMT · UTC"])
+
+  // A country comes ahead of the zones that only start with its name, which were all "India" used to find.
+  await field.fill("")
+  await field.pressSequentially("India")
+  await expect(options.first()).toHaveText(/^India · Asia\/(Calcutta|Kolkata)$/)
+  await expect(page.getByRole("option", { name: "America/Indiana/Knox" })).toHaveCount(1)
+
+  // Enter takes the first match, and what the card keeps is the zone rather than what it was found by.
+  await field.fill("")
+  await field.pressSequentially("mumbai")
+  await expect(options).toHaveText([/^Mumbai · Asia\/(Calcutta|Kolkata)$/])
+  await page.keyboard.press("Enter")
+  await expect(field).toHaveValue(/^Asia\/(Calcutta|Kolkata)$/)
+
+  await page.getByLabel("Name").fill("Mumbai")
+  await page.getByRole("button", { name: "Save clock" }).click()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+
+  expect(await readWidgetSettings(page, "Mumbai")).toEqual({
+    timeZone: expect.stringMatching(/^Asia\/(Calcutta|Kolkata)$/)
+  })
+  // India keeps five and a half hours ahead of the UTC this browser is pinned to.
+  await expect(cardByTitle(page, "Mumbai")).toContainText("GMT+5:30")
+})
+
+// The box takes typing so its list can be searched, and Save used to take whatever was left in it: a card that showed local time and said it was lost.
+test("a clock is not saved on a time zone the browser does not know", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add clock" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Add clock" })
+  const field = page.getByLabel("Time zone")
+  const save = page.getByRole("button", { name: "Save clock" })
+
+  await page.getByLabel("Name").fill("Lost")
+  await field.pressSequentially("Lodnon")
+  await expect(page.getByText("No matching time zone")).toBeVisible()
+  await save.click()
+
+  // The save is held, and the field says why in the browser's own validation message.
+  await expect(dialog).toBeVisible()
+  expect(await field.evaluate((input: HTMLInputElement) => input.validationMessage)).toBe(
+    "Pick a time zone from the list."
+  )
+  await expect(cardByTitle(page, "Lost")).toHaveCount(0)
+
+  // Text that finds a zone is still not one until it is picked.
+  await field.fill("Tokyo")
+  await save.click()
+  await expect(dialog).toBeVisible()
+  await expect(cardByTitle(page, "Lost")).toHaveCount(0)
+
+  // A name the browser keeps time for saves as typed, even one its list leaves out.
+  await field.fill("US/Pacific")
+  await save.click()
+  await dialog.waitFor({ state: "hidden" })
+
+  expect(await readWidgetSettings(page, "Lost")).toEqual({ timeZone: "US/Pacific" })
+  await expect(cardByTitle(page, "Lost")).not.toContainText("unrecognized")
 })
 
 test("the dialogs fit a phone-width window without scrolling sideways", async ({

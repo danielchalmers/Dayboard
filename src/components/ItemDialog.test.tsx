@@ -249,6 +249,31 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.timeZone).toBe("Europe/Berlin")
   })
 
+  // The box takes typing so its list can be searched, and Save used to take whatever was left in it.
+  it("holds the save of a clock whose time zone is not one", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ onSave }))
+
+    const field = screen.getByLabelText("Time zone")
+
+    fireEvent.change(field, { target: { value: "San Francisco" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(field).toBeInvalid()
+
+    // A press on the backdrop saves too, and is held the same way.
+    fireEvent.pointerDown(document.querySelector(".modal-backdrop") as HTMLElement)
+    expect(onSave).not.toHaveBeenCalled()
+
+    // A name the browser knows saves as typed, in its list or not.
+    fireEvent.change(field, { target: { value: "US/Pacific" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.timeZone).toBe("US/Pacific")
+  })
+
   it("clears a clock's time zone so it follows the system clock", () => {
     const onSave = vi.fn()
 
