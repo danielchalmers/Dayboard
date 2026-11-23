@@ -13,8 +13,18 @@ import { normalizeHistory } from "./habit"
 import { normalizeTasks } from "./todo"
 import { DEFAULT_TIMER_DURATION_MS, widgetRegistry } from "./widgets"
 
-export const STORAGE_KEY = "dayboard-state"
+// chrome.storage.sync caps one item at 8,192 bytes, and the whole board used to share one, so a long quote list or note could fill it for every card.
+// The board is now kept one card to an item, each under its id, with a small item beside them for the order and the settings; sync's own limits (102,400 bytes and 512 items in all) are the ones left.
+export const BOARD_KEY = "dayboard-board"
+export const CARD_PREFIX = "dayboard-card:"
+// The one item the whole board was kept in up to v0.9, which a board is still read from until its first save here.
+export const LEGACY_KEY = "dayboard-state"
 export const CACHE_KEY = "dayboard-state-cache"
+
+type StoredItems = Record<string, unknown>
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const hasWidgets = (value: unknown): value is { widgets: unknown[] } =>
   typeof value === "object" &&
@@ -232,7 +242,7 @@ const uniqueIds = (widgets: StoredWidget[]): StoredWidget[] => {
 }
 
 // A kind this build doesn't know is a card a newer Dayboard made on another synced device, not junk.
-// It stays off the board, since there is nothing here that can draw it, but it is set aside with its place in the list rather than dropped: the whole board is written back on every save, so dropping it would delete it from every device the first time this one saved anything.
+// It stays off the board, since there is nothing here that can draw it, but it is set aside with its place in the list rather than dropped: the order is written back whole, and so is the board on its first save out of the old item, and a card left out of either would lose its place or be lost outright.
 const normalizeState = (value: unknown): DayboardState => {
   if (!hasWidgets(value)) {
     return createDefaultState()
@@ -256,7 +266,7 @@ const normalizeState = (value: unknown): DayboardState => {
   }
 }
 
-// The board as storage and an exported file hold it: one list of cards, with any this build can't show put back where they were.
+// The board as an exported file and the mirror hold it, and as storage does between its items: one list of cards, with any this build can't show put back where they were.
 // The places are where they stood when last read, so once the board around them has changed they are near where they were rather than exact, which is all a card this build never shows needs.
 const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
   const widgets: (Widget | StoredWidget)[] = state.widgets.map(withoutRenewedYear)
@@ -264,6 +274,86 @@ const toStoredState = ({ unknownWidgets, ...state }: DayboardState) => {
 
   return { ...state, widgets }
 }
+
+const isCardKey = (key: string): boolean => key.startsWith(CARD_PREFIX)
+
+// Whether storage holds the board one card to an item.
+// A card with no board item beside it counts: sync carries each item on its own, so a device can be handed some of the cards before the item that orders them.
+const isSplit = (items: StoredItems): boolean =>
+  Object.hasOwn(items, BOARD_KEY) || Object.keys(items).some(isCardKey)
+
+const MOVED_ID = "dayboard-moved"
+
+// What the old item is left holding once the board has moved out of it, for a device whose Dayboard still reads only that item.
+// Every release since v0.5 shows the first-run board when the item is missing, which looks like a board lost, so it holds one note saying where the board went instead.
+// A later release can remove the item once those builds are gone, which is why a board that has no old item is never given one.
+const movedNotice = () => ({
+  widgets: [
+    {
+      id: MOVED_ID,
+      kind: "note",
+      title: "👋 Update on the way",
+      colorPreset: "slate",
+      settings: {
+        text: "Your board is safe. A newer Dayboard on another device saved it, and it will be back here once this browser updates Dayboard too, which it does on its own."
+      }
+    }
+  ]
+})
+
+// The note stays the sign of it however the build that shows it has added to or rearranged the item since.
+const isMoved = (value: unknown): boolean =>
+  hasWidgets(value) && value.widgets.some((widget) => isRecord(widget) && widget["id"] === MOVED_ID)
+
+// The stored items as one board, in the shape the old item had and an exported file still has.
+// A card is on the board when its own item is there, and the board item only says where it goes.
+// Sync carries each item separately, so a device can hold any part of a change made elsewhere, and read this way every part is still a board: a card the order doesn't list yet goes at the end, and a card it lists that hasn't arrived, or has since been deleted, is passed over.
+const boardFrom = (items: StoredItems): unknown => {
+  if (!isSplit(items)) {
+    const legacy = items[LEGACY_KEY]
+
+    // The note with nothing beside it is a device the rest of the board hasn't reached yet, which has nothing of its own to show.
+    return isMoved(legacy) ? undefined : legacy
+  }
+
+  const board = items[BOARD_KEY]
+  const { order, settings } = (isRecord(board) ? board : {}) as StoredItems
+  const listed: unknown[] = Array.isArray(order) ? order : []
+  const places = new Map(listed.map((id, index) => [id, index]))
+  const place = (id: string) => places.get(id) ?? listed.length
+
+  // Unlisted cards fall in by id, so every device puts them in the same order.
+  const widgets = Object.entries(items)
+    .filter(([key, value]) => isCardKey(key) && isRecord(value))
+    .map(([key, value]) => ({ ...(value as StoredItems), id: key.slice(CARD_PREFIX.length) }))
+    .sort((a, b) => place(a.id) - place(b.id) || (a.id < b.id ? -1 : 1))
+
+  return { widgets, settings }
+}
+
+// The board a set of stored items adds up to.
+export const toDayboardState = (items: StoredItems): DayboardState =>
+  normalizeState(boardFrom(items))
+
+// A value to set for each item changed, or undefined for one removed, laid over what storage held.
+const withChanges = (items: StoredItems, changes: StoredItems): StoredItems => {
+  const next = { ...items, ...changes }
+
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === undefined) {
+      delete next[key]
+    }
+  }
+
+  return next
+}
+
+// What storage held at the last read, kept current by the watch below and by this tab's own writes.
+// It is what a change from elsewhere is laid over, since a change only carries the items it touched, and what says whether the board has left the old item yet.
+let held: StoredItems | null = null
+
+// Every item, since a card can sit under any id.
+const readItems = (): Promise<StoredItems> => chrome.storage.sync.get(null)
 
 // Structural equality over plain JSON data, blind to key order, which differs between a widget built in the page and the same widget read back out of storage.
 export const isSameData = (a: unknown, b: unknown): boolean => {
@@ -342,8 +432,9 @@ export const readCachedDayboardState = (): DayboardState | null => {
 }
 
 export const readDayboardState = async (): Promise<DayboardState> => {
-  const result = await chrome.storage.sync.get(STORAGE_KEY)
-  const state = normalizeState(result[STORAGE_KEY])
+  const items = await readItems()
+  held = items
+  const state = toDayboardState(items)
 
   cacheDayboardState(state)
 
@@ -378,10 +469,69 @@ export const parseDayboardState = (text: string): DayboardState => {
   return board
 }
 
-export const writeDayboardState = async (state: DayboardState): Promise<void> => {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: toStoredState(state) })
+// The id is the item's key, so the card is stored without it.
+const toCardItem = ({ id: _key, ...card }: Widget | StoredWidget) => card
+
+// Saves what a change did to the board rather than the board: the cards it added or altered, the board item when the order or the settings moved, and the removal of the cards it took away.
+// `previous` is the board the change was made to, or null to save every card with nothing to compare against, and a card the same on both is left alone, so a save can't put back a card another tab or device has changed since, and two devices changing different cards both keep their change.
+// A board still in the old item moves out of it here, on its first save: every card is written, and the old item is left saying where the board went.
+// Everything set goes in one call, which sync counts as one write however many items it carries and refuses whole if any of them is too big, so a refused save leaves storage as it was.
+// Removals follow in a call of their own, after the set has landed, so an import refused for its size has taken nothing away; a tab closed between the two leaves a card that was to go back at the end of the board, which is the lesser loss.
+export const writeDayboardState = async (
+  state: DayboardState,
+  previous: DayboardState | null
+): Promise<void> => {
+  const items = held ?? (await readItems())
+  held = items
+  const split = isSplit(items)
+
+  const next = toStoredState(state)
+  const last = split && previous ? toStoredState(previous) : { widgets: [], settings: undefined }
+  const lastCards = new Map(last.widgets.map((widget) => [widget.id, widget]))
+  const kept = new Set(next.widgets.map((widget) => widget.id))
+
+  const changed: StoredItems = {}
+
+  for (const widget of next.widgets) {
+    if (!isSameData(lastCards.get(widget.id), widget)) {
+      changed[CARD_PREFIX + widget.id] = toCardItem(widget)
+    }
+  }
+
+  // Taking a card away leaves the order of the rest as it was, and its place in the stored order is passed over from then on, so a delete is the one removal and nothing more.
+  const order = next.widgets.map((widget) => widget.id)
+  const lastOrder = last.widgets.map((widget) => widget.id).filter((id) => kept.has(id))
+
+  if (!split || !isSameData(order, lastOrder) || !isSameData(next.settings, last.settings)) {
+    changed[BOARD_KEY] = { order, settings: next.settings }
+  }
+
+  // The old item says where the board went from the first save out of it, and again if a build that still reads it has written a board of its own there since.
+  const legacy = items[LEGACY_KEY]
+
+  if (!isMoved(legacy) && (!split || legacy !== undefined)) {
+    changed[LEGACY_KEY] = movedNotice()
+  }
+
+  const removed = last.widgets
+    .filter((widget) => !kept.has(widget.id))
+    .map((widget) => CARD_PREFIX + widget.id)
+
+  if (Object.keys(changed).length > 0) {
+    await chrome.storage.sync.set(changed)
+    held = withChanges(held ?? items, changed)
+  }
+
+  if (removed.length > 0) {
+    await chrome.storage.sync.remove(removed)
+    held = withChanges(held ?? items, Object.fromEntries(removed.map((key) => [key, undefined])))
+  }
+
   cacheDayboardState(state)
 }
+
+const isBoardKey = (key: string): boolean =>
+  key === BOARD_KEY || key === LEGACY_KEY || isCardKey(key)
 
 export const watchDayboardState = (listener: (state: DayboardState) => void): (() => void) => {
   const handleStorageChange = (
@@ -392,12 +542,24 @@ export const watchDayboardState = (listener: (state: DayboardState) => void): ((
       return
     }
 
-    const change = changes[STORAGE_KEY]
-    if (!change) {
+    const keys = Object.keys(changes).filter(isBoardKey)
+    if (keys.length === 0) {
       return
     }
 
-    const state = normalizeState(change.newValue)
+    // A change carries only the items it touched, so with nothing read yet to lay it over, the board is read whole instead.
+    if (!held) {
+      void readDayboardState().then(listener, () => {})
+      return
+    }
+
+    // A removed item arrives with no new value.
+    const items = withChanges(
+      held,
+      Object.fromEntries(keys.map((key) => [key, changes[key]!.newValue]))
+    )
+    held = items
+    const state = toDayboardState(items)
 
     cacheDayboardState(state)
     listener(state)

@@ -86,10 +86,14 @@ const openStoryBoard = async (page: Page, extensionId: string) => {
   await page.clock.setFixedTime(STORY_NOW)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(({ key, state }) => chrome.storage.sync.set({ [key]: state }), {
-    key: STORAGE_KEY,
-    state: storyState
-  })
+  // Emptied first: the worker's browser is shared, and a board an earlier test left one card to an item is read ahead of the single item seeded here.
+  await page.evaluate(
+    async ({ key, state }) => {
+      await chrome.storage.sync.clear()
+      await chrome.storage.sync.set({ [key]: state })
+    },
+    { key: STORAGE_KEY, state: storyState }
+  )
   await page.reload()
   // The browser is pinned to UTC, so STORY_NOW is a Friday afternoon on every machine and the greeting is a fixed string rather than a pattern.
   await expect(page.getByRole("heading", { name: "Good afternoon" })).toBeVisible()

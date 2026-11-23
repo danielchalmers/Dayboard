@@ -78,12 +78,30 @@ export const boxOf = async (locator: Locator, what: string) => {
   return box
 }
 
+// The board as chrome.storage.sync holds it, undefined until one has been stored at all.
+// It is kept one card to an item under the card's id, with one more item for the order and the settings, and is put back together here in that order.
+// A board seeded the way v0.9 stored it sits whole in the old single item until its first save, and is read from there.
+export const readStoredBoard = (page: Page) =>
+  page.evaluate(async () => {
+    const items = await chrome.storage.sync.get(null)
+    const board = items["dayboard-board"] as
+      { order: string[]; settings: DayboardState["settings"] } | undefined
+
+    if (!board) {
+      return items["dayboard-state"] as DayboardState | undefined
+    }
+
+    return {
+      widgets: board.order.flatMap((id) => {
+        const card = items[`dayboard-card:${id}`] as object | undefined
+
+        return card ? [{ ...card, id }] : []
+      }),
+      settings: board.settings
+    } as DayboardState
+  })
+
 // What a widget actually persisted, read back out of chrome.storage.sync.
 // The title is what identifies it, since the default board ships cards of every kind alongside the one a test added.
-export const readWidgetSettings = (page: Page, title: string) =>
-  page.evaluate(async (name) => {
-    const stored = await chrome.storage.sync.get("dayboard-state")
-    const { widgets } = stored["dayboard-state"] as DayboardState
-
-    return widgets.find((widget) => widget.title === name)?.settings
-  }, title)
+export const readWidgetSettings = async (page: Page, title: string) =>
+  (await readStoredBoard(page))?.widgets.find((widget) => widget.title === title)?.settings

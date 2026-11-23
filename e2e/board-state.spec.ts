@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test"
 
-import type { DayboardState } from "../src/lib/types"
 import { expect, test } from "./fixtures"
 import {
   DEFAULT_BOARD_TITLES,
@@ -9,16 +8,12 @@ import {
   cardByTitle,
   openNewTab,
   openWidgetMenu,
+  readStoredBoard,
   readWidgetSettings
 } from "./helpers"
 
 // The greeting name as chrome.storage.sync holds it, undefined until the board has been written at all.
-const readStoredName = (page: Page) =>
-  page.evaluate(async () => {
-    const stored = await chrome.storage.sync.get("dayboard-state")
-
-    return (stored["dayboard-state"] as DayboardState | undefined)?.settings.name
-  })
+const readStoredName = async (page: Page) => (await readStoredBoard(page))?.settings.name
 
 // A rejected write is the one thing the shared browser's guard fails a test over, so the test that goes looking for one says so up front.
 test.describe("a board too large to sync", () => {
@@ -254,13 +249,8 @@ test.describe("a board saved too often", () => {
     await expect(cardByTitle(page, "Scratch")).toHaveCount(0)
     await expect(page.getByRole("alert")).toHaveCount(0)
     await expect
-      .poll(() =>
-        page.evaluate(async () => {
-          const stored = await chrome.storage.sync.get("dayboard-state")
-          const { widgets } = stored["dayboard-state"] as DayboardState
-
-          return widgets.find((widget) => widget.title === "Scratch")
-        })
+      .poll(async () =>
+        (await readStoredBoard(page))?.widgets.find((widget) => widget.title === "Scratch")
       )
       .toMatchObject({ archived: true, settings: { text: "Typed while saving too often" } })
     await expect(cardByTitle(page, "Scratch")).toHaveCount(0)
@@ -519,9 +509,7 @@ test("a board from a newer Dayboard keeps what this one can't show through a sav
   await expect
     .poll(() => readWidgetSettings(page, "Walk"))
     .toMatchObject({ history: [expect.any(String)], goalPerWeek: 4 })
-  const stored = await page.evaluate(
-    async () => (await chrome.storage.sync.get("dayboard-state"))["dayboard-state"] as DayboardState
-  )
+  const stored = (await readStoredBoard(page))!
   expect(stored.widgets[1]).toEqual(agenda)
   expect(stored.settings).toEqual({ name: "", theme: "dusk" })
 })
@@ -763,4 +751,171 @@ test("a card carrying data this version can't read leaves the rest of the board 
   // The unknown repeat is dropped, so the countdown reads as a plain one-off in the past rather than throwing on its way to a date.
   await expect(cardByTitle(page, "Payday").getByText("ago")).toBeVisible()
   await expect(cardByTitle(page, "Words")).toContainText("Add a few quotes")
+})
+
+// Every item chrome.storage.sync holds for the extension, by key.
+const storedKeys = (page: Page) =>
+  page.evaluate(async () => Object.keys(await chrome.storage.sync.get(null)).sort())
+
+// The whole board once shared one sync item, which holds 8,192 bytes, so a long quote list left no room to mark a habit or add a timer.
+test("a board bigger than one sync item keeps saving", async ({ page, extensionId }) => {
+  await openNewTab(page, extensionId)
+
+  // A hundred quotes of seventy characters come to most of an item on their own.
+  await page.getByRole("button", { name: "Add widget" }).click()
+  await page.getByRole("button", { name: "Add quote" }).click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByLabel("Name").fill("Stoics")
+  await dialog
+    .getByLabel("Quotes (one per line)")
+    .fill(
+      Array.from({ length: 100 }, (_, line) => `Quote ${line + 1}: `.padEnd(70, "q")).join("\n")
+    )
+  await dialog.getByRole("button", { name: "Save quote" }).click()
+  await expect(dialog).toHaveCount(0)
+
+  await addWidget(page, "note", "Scratch")
+  const field = page.getByLabel("Scratch note")
+  await field.fill("n".repeat(2_350))
+  await field.blur()
+  await expect.poll(() => readWidgetSettings(page, "Scratch")).toEqual({ text: "n".repeat(2_350) })
+
+  // The board is past 8 KB now, and the small changes that used to be refused there still save.
+  await page.getByRole("button", { name: "Mark today" }).click()
+  await addWidget(page, "timer", "Tea")
+
+  await expect
+    .poll(() => readWidgetSettings(page, "🚶 Daily walk"))
+    .toEqual({ history: [expect.any(String)] })
+  await expect.poll(() => readWidgetSettings(page, "Tea")).toBeDefined()
+  expect(await page.evaluate(() => chrome.storage.sync.getBytesInUse(null))).toBeGreaterThan(8_192)
+  await expect(page.getByRole("alert")).toHaveCount(0)
+
+  // Storage, not the copy this tab keeps for its first paint, is what the next new tab has to find it all in.
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+  await expect(page.locator(".board-row h2")).toHaveText([
+    ...DEFAULT_BOARD_TITLES,
+    "Stoics",
+    "Scratch",
+    "Tea"
+  ])
+})
+
+test("a board saved by v0.9 moves to an item per card on its first save", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  // Up to v0.9 the whole board was the one item.
+  const walk = {
+    id: "walk",
+    kind: "habit",
+    title: "Walk",
+    colorPreset: "amber",
+    settings: { history: [] as string[] }
+  }
+  const jot = {
+    id: "jot",
+    kind: "note",
+    title: "Jot",
+    colorPreset: "mint",
+    settings: { text: "Milk" }
+  }
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), {
+    widgets: [walk, jot],
+    settings: { name: "Sam" }
+  })
+  await page.reload()
+  const titles = page.locator(".board-row h2")
+  await expect(titles).toHaveText(["Walk", "Jot"])
+
+  // Opening a tab writes nothing; the board moves with the next thing saved.
+  expect(await storedKeys(page)).toEqual(["dayboard-state"])
+
+  await page.getByRole("button", { name: "Mark today" }).click()
+
+  await expect
+    .poll(() => storedKeys(page))
+    .toEqual(["dayboard-board", "dayboard-card:jot", "dayboard-card:walk", "dayboard-state"])
+  expect(await readStoredBoard(page)).toEqual({
+    widgets: [{ ...walk, settings: { history: [expect.any(String)] } }, jot],
+    settings: { name: "Sam" }
+  })
+
+  // The old item is left holding one note, which is what a device still on an older version shows until it updates.
+  const left = await page.evaluate(
+    async () =>
+      (await chrome.storage.sync.get("dayboard-state"))["dayboard-state"] as {
+        widgets: { kind: string; title: string }[]
+      }
+  )
+  expect(left.widgets).toHaveLength(1)
+  expect(left.widgets[0]).toMatchObject({ kind: "note", title: "👋 Update on the way" })
+
+  // This version reads past that note to the board itself, from storage rather than the copy it paints first.
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+  await expect(titles).toHaveText(["Walk", "Jot"])
+  await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
+
+  // Deleting a card takes its item with it.
+  const card = cardByTitle(page, "Jot")
+  await card.focus()
+  await card.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Delete Jot" }).click()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .click()
+  await expect
+    .poll(() => storedKeys(page))
+    .toEqual(["dayboard-board", "dayboard-card:walk", "dayboard-state"])
+})
+
+// Sync hands a device the items of a change made elsewhere one at a time, in no promised order.
+test("the board is whole at every step of a change arriving from another device", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+
+  const note = (title: string) => ({
+    kind: "note",
+    title,
+    colorPreset: "sky",
+    settings: { text: "" }
+  })
+  const arrive = (items: Record<string, unknown>) =>
+    page.evaluate((arriving) => chrome.storage.sync.set(arriving), items)
+  const titles = page.locator(".board-row h2")
+
+  // Two cards arrive ahead of the item that orders them, and are shown by id until it does.
+  await arrive({ "dayboard-card:b": note("Bravo"), "dayboard-card:a": note("Alpha") })
+  await expect(titles).toHaveText(["Alpha", "Bravo"])
+
+  // The order arrives listing a card that hasn't yet, which is passed over.
+  await arrive({ "dayboard-board": { order: ["c", "b", "a"], settings: { name: "Sam" } } })
+  await expect(titles).toHaveText(["Bravo", "Alpha"])
+  await expect(page.locator(".page-header__greeting")).toHaveText(/, Sam$/)
+
+  await arrive({ "dayboard-card:c": note("Charlie") })
+  await expect(titles).toHaveText(["Charlie", "Bravo", "Alpha"])
+
+  // A card deleted elsewhere arrives as its item gone, while the order still lists it.
+  await page.evaluate(() => chrome.storage.sync.remove("dayboard-card:b"))
+  await expect(titles).toHaveText(["Charlie", "Alpha"])
+
+  // A change made here saves its own card and nothing else: the order from the other device stands, and the old item is not brought back.
+  const field = page.getByLabel("Alpha note")
+  await field.fill("Typed here")
+  await field.blur()
+  await expect.poll(() => readWidgetSettings(page, "Alpha")).toEqual({ text: "Typed here" })
+  expect(await storedKeys(page)).toEqual(["dayboard-board", "dayboard-card:a", "dayboard-card:c"])
+  expect(
+    await page.evaluate(
+      async () => (await chrome.storage.sync.get("dayboard-board"))["dayboard-board"]
+    )
+  ).toEqual({ order: ["c", "b", "a"], settings: { name: "Sam" } })
 })

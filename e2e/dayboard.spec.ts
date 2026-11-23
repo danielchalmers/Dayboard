@@ -1355,6 +1355,9 @@ test("a timer found long after its finish settles without a chime or a title", a
       }
     })
 
+    // The worker's browser is shared, and a board an earlier test left one card to an item is read ahead of the old single item seeded here, so storage is emptied first.
+    // Both calls are sent before the page asks for its board, and sync answers them in order.
+    void chrome.storage.sync.clear()
     void chrome.storage.sync.set({
       "dayboard-state": {
         widgets: [timer("laundry", "Laundry", false), timer("bread", "Bread", true)],
@@ -1403,6 +1406,8 @@ test("a new tab chimes for a run storage still has going, not one only its mirro
       settings: { name: "" }
     })
 
+    // Emptied first, as above, since an earlier test's board would be read ahead of this one.
+    void chrome.storage.sync.clear()
     void chrome.storage.sync.set({ "dayboard-state": board(false) })
     localStorage.setItem("dayboard-state-cache", JSON.stringify(board(true)))
   })

@@ -111,7 +111,7 @@ export interface HabitWidget extends WidgetBase {
   settings: {
     /**
      * Local day keys (YYYY-MM-DD) on which the habit was marked done, pruned to the week the dot row can show.
-     * An unbounded list eventually grew into the chrome.storage.sync per-item quota the whole board shares.
+     * An unbounded list eventually grew into the chrome.storage.sync per-item quota, which the whole board shared then and each card still has.
      */
     history: string[]
   }
@@ -157,7 +157,7 @@ export interface UnknownWidget {
 export interface DayboardState {
   widgets: Widget[]
   settings: DayboardSettings
-  /** Cards this build can't show, kept off the board but written back with every save so the version that made them still has them. */
+  /** Cards this build can't show, kept off the board with their places, so the order it writes back still holds them and the version that made them still has them. */
   unknownWidgets?: UnknownWidget[]
 }
 
