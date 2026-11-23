@@ -1,7 +1,7 @@
 {
   "name": "dayboard",
   "version": "0.0.0",
-  "description": "A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.",
+  "description": "A calm new tab board of clocks, countdowns, notes, todo lists, timers, quotes, and habits.",
   "author": "Dayboard contributors",
   "license": "MIT",
   "private": true,

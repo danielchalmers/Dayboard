@@ -17,6 +17,9 @@ test("ships a minimal, new-tab-only manifest", async ({ page, extensionId }) => 
   // Storage is the whole ask. Anything else here is a new store-review conversation.
   expect(manifest["permissions"]).toEqual(["storage"])
   expect(manifest["host_permissions"]).toBeUndefined()
+  // Raising this leaves every browser below it on the last build it got, without a word, so it is a decision rather than a tidy-up.
+  // 128 is where the last piece of CSS anchor positioning the time zone list is placed with arrived.
+  expect(manifest["minimum_chrome_version"]).toBe("128")
 
   expect(manifest).toMatchObject({
     chrome_url_overrides: { newtab: "newtab.html" },
@@ -355,4 +358,98 @@ test("the chosen color keeps its ring while the pointer is still on it", async (
   expect(hovered).toEqual(resting)
   // A ring is a spread with no blur; the hover shadow is all blur.
   expect(resting.shadow).toContain("0px 0px 0px 4.5px")
+})
+
+// A contrast theme (forced colors) repaints every background with the page's own and drops every shadow.
+// A mark drawn with nothing else is then not there at all, and every other test still passes.
+test("the marks a card is read by survive a contrast theme", async ({ page, extensionId }) => {
+  // A Wednesday, so the week has a day done, a day left open, today, and days still to come.
+  await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
+  await openNewTab(page, extensionId)
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), {
+    widgets: [
+      {
+        id: "walk",
+        kind: "habit",
+        title: "Walk",
+        colorPreset: "amber",
+        settings: { history: ["2026-03-02"] }
+      },
+      {
+        id: "term",
+        kind: "countdown",
+        title: "Term",
+        colorPreset: "rose",
+        settings: { startAt: "2026-03-01T00:00:00.000Z", targetAt: "2026-03-08T00:00:00.000Z" }
+      },
+      {
+        id: "list",
+        kind: "todo",
+        title: "List",
+        colorPreset: "sky",
+        settings: {
+          tasks: [
+            { id: "a", text: "Done", done: true },
+            { id: "b", text: "Open", done: false }
+          ]
+        }
+      }
+    ],
+    settings: { name: "" }
+  })
+  await page.reload()
+  await expect(page.locator(".board-row h2")).toHaveText(["Walk", "Term", "List"])
+  await page.emulateMedia({ forcedColors: "active" })
+
+  const paint = (locator: Locator, pseudo?: string) =>
+    locator.evaluate(async (element, pseudoElement) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished))
+      const style = getComputedStyle(element, pseudoElement)
+
+      return {
+        fill: style.backgroundColor,
+        edge: style.borderTopStyle === "none" ? 0 : Number.parseFloat(style.borderTopWidth),
+        ring: style.outlineStyle
+      }
+    }, pseudo)
+  // A fill that is there: opaque, and not the card's own background.
+  const walk = cardByTitle(page, "Walk")
+  const ground = (await paint(walk)).fill
+  const expectFilled = (fill: string, what: string) => {
+    expect(fill, what).toMatch(/^rgb\(/)
+    expect(fill, what).not.toBe(ground)
+  }
+
+  const day = (state: string) => walk.locator(`.habit-day${state} .habit-day__dot`).first()
+  expectFilled((await paint(day(".habit-day--done"))).fill, "a done day")
+  const open = await paint(
+    day(":not(.habit-day--done):not(.habit-day--today):not(.habit-day--future)")
+  )
+  expect(open.edge, "a day left open").toBeGreaterThan(0)
+  expect(open.fill, "a day left open").not.toMatch(/^rgb\(/)
+  expect((await paint(day(".habit-day--future"))).edge, "a day to come").toBeGreaterThan(0)
+  expect((await paint(day(".habit-day--today"))).ring, "today").toBe("solid")
+
+  const bar = cardByTitle(page, "Term").locator(".progress-bar")
+  expect((await paint(bar)).edge, "the progress track").toBeGreaterThan(0)
+  expectFilled((await paint(bar.locator(".progress-bar__fill"))).fill, "the progress fill")
+
+  const list = cardByTitle(page, "List")
+  const checked = await paint(list.locator(".todo-task__box:checked"))
+  expectFilled(checked.fill, "a checked task")
+  expect(
+    (await paint(list.locator(".todo-task__box:checked"), "::after")).fill,
+    "its tick"
+  ).not.toBe(checked.fill)
+  expect(
+    (await paint(list.locator(".todo-task__box:not(:checked)"))).edge,
+    "an open task"
+  ).toBeGreaterThan(0)
+
+  // The color picker's swatches are the one place the colors are the content, so they are left as they are.
+  await openWidgetMenu(page, "Walk")
+  await page.getByRole("menuitem", { name: "Edit Walk" }).click()
+  const sky = await paint(page.getByRole("radio", { name: "Sky" }))
+  const rose = await paint(page.getByRole("radio", { name: "Rose" }))
+  expect(sky.fill).not.toBe(rose.fill)
 })

@@ -1,8 +1,8 @@
 # Privacy Policy
 
 Dayboard replaces the browser new tab page with a board of widgets — clocks,
-countdowns, notes, quotes, a stopwatch, timers, and habits. This policy explains
-what data Dayboard stores and how it is handled.
+countdowns, notes, todo lists, quotes, a stopwatch, timers, and habits. This
+policy explains what data Dayboard stores and how it is handled.
 
 ## Data Dayboard Stores
 
@@ -47,8 +47,8 @@ site and storage data in your browser.
 
 ## Changes
 
-If this policy changes, the updated version will be published with a new
-effective date.
+If this policy changes, the updated version will be published here, and the
+file's history in the project's repository shows what changed and when.
 
 ## Contact
 

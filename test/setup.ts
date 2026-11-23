@@ -1,5 +1,13 @@
 import "@testing-library/jest-dom/vitest"
 
+// jsdom lays nothing out, so it has no `checkVisibility`. The `hidden` attribute is the one way a test hides anything, so that is what the stand-in goes by.
+// What CSS hides (a notice stepped aside for a drag) is covered by the Playwright e2e suite.
+if (typeof Element !== "undefined" && !Element.prototype.checkVisibility) {
+  Element.prototype.checkVisibility = function checkVisibility() {
+    return this.closest("[hidden]") === null
+  }
+}
+
 // jsdom (the environment the DOM-facing tests opt into) does not implement the Popover API, so provide shims for the lifecycle methods our components call.
 // The real top-layer, light-dismiss, and Escape behavior is covered by the Playwright e2e suite.
 if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype.showPopover) {
