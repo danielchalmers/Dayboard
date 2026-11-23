@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  getDaypart,
-  getGreeting,
-  getHeaderDate,
-  getTimeOfDayGreeting
-} from "./greeting"
+import { getDaypart, getGreeting, getHeaderDate, getTimeOfDayGreeting } from "./greeting"
 
 const at = (hour: number) => new Date(2026, 0, 1, hour, 0, 0)
 

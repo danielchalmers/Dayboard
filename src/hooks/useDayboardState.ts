@@ -9,12 +9,7 @@ import {
   writeDayboardState
 } from "~/lib/storage"
 import { finishTimer } from "~/lib/timers"
-import type {
-  DayboardSettings,
-  DayboardState,
-  TimerWidget,
-  Widget
-} from "~/lib/types"
+import type { DayboardSettings, DayboardState, TimerWidget, Widget } from "~/lib/types"
 
 // Each change resolves to why storage refused it, or null once it is saved (or there was nothing to save), so whatever the user typed for it can be held on to until it lands.
 type Save<T> = (value: T) => Promise<string | null>
@@ -303,9 +298,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
       void saveState({
         ...current,
-        widgets: current.widgets.map((candidate) =>
-          candidate === existing ? settled : candidate
-        )
+        widgets: current.widgets.map((candidate) => (candidate === existing ? settled : candidate))
       })
 
       return settled

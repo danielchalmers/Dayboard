@@ -15,10 +15,7 @@ const launchExtension = () =>
     channel: "chromium",
     locale: "en-US",
     timezoneId: "UTC",
-    args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`
-    ]
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`]
   })
 
 // An unpacked extension's id is derived from its path, so it is the same for every launch; resolving it once per worker keeps each test off the service-worker startup race.
@@ -86,11 +83,7 @@ export const test = base.extend<
   },
 
   extensionId: async ({ context, workerContext, workerExtensionId }, use) => {
-    await use(
-      context === workerContext
-        ? workerExtensionId
-        : await resolveExtensionId(context)
-    )
+    await use(context === workerContext ? workerExtensionId : await resolveExtensionId(context))
   },
 
   page: async ({ context }, use) => {

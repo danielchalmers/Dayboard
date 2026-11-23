@@ -3,12 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { STORED_DAYS, toDayKey } from "./habit"
-import type {
-  CountdownWidget,
-  DayboardState,
-  HabitWidget,
-  TodoWidget
-} from "./types"
+import type { CountdownWidget, DayboardState, HabitWidget, TodoWidget } from "./types"
 
 const STORAGE_KEY = "dayboard-state"
 
@@ -273,7 +268,13 @@ describe("normalizing widgets read from storage or an import", () => {
       widget("note", { text: "Buy milk" }),
       widget("quote", { quotes: ["One", "Two"], rotation: "open" }),
       widget("stopwatch", { running: true, elapsedMs: 5_000, startedAt: 1_000 }),
-      widget("timer", { durationMs: 60_000, running: true, remainingMs: 30_000, endsAt: 90_000, chime: true }),
+      widget("timer", {
+        durationMs: 60_000,
+        running: true,
+        remainingMs: 30_000,
+        endsAt: 90_000,
+        chime: true
+      }),
       widget("habit", { history: ["2026-07-08", "2026-07-09"] }),
       widget("todo", { tasks: [{ id: "a", text: "Call the vet", done: true }] })
     ]
@@ -347,7 +348,13 @@ describe("normalizing widgets read from storage or an import", () => {
     it("leaves out the repeat a read filled in, so a board last saved by v0.8 goes back as it was", async () => {
       const stored = board(
         yearCard(calendarYear),
-        widget("timer", { durationMs: 60_000, running: false, remainingMs: 60_000, endsAt: null, chime: false }),
+        widget("timer", {
+          durationMs: 60_000,
+          running: false,
+          remainingMs: 60_000,
+          endsAt: null,
+          chime: false
+        }),
         widget("note", { text: "Milk" })
       )
 
@@ -362,7 +369,11 @@ describe("normalizing widgets read from storage or an import", () => {
     it("keeps a Yearly someone picked, on the year card or a card of their own", async () => {
       const stored = board(
         yearCard({ ...calendarYear, repeat: "yearly" }),
-        widget("countdown", { ...calendarYear, repeat: "yearly" }, { id: "fiscal", title: "Fiscal year" })
+        widget(
+          "countdown",
+          { ...calendarYear, repeat: "yearly" },
+          { id: "fiscal", title: "Fiscal year" }
+        )
       )
 
       const { parseDayboardState } = await import("./storage")
@@ -375,7 +386,10 @@ describe("normalizing widgets read from storage or an import", () => {
       const { parseDayboardState } = await import("./storage")
       const state = parseDayboardState(board(yearCard(calendarYear)))
       const card = state.widgets[0] as CountdownWidget
-      const renamed = { ...state, widgets: [{ ...card, title: "2026", settings: { ...card.settings } }] }
+      const renamed = {
+        ...state,
+        widgets: [{ ...card, title: "2026", settings: { ...card.settings } }]
+      }
 
       expect(JSON.parse(await written(renamed)).widgets[0].settings).toEqual({
         ...calendarYear,
@@ -400,7 +414,11 @@ describe("normalizing widgets read from storage or an import", () => {
 
   it("keeps fields this build does not know, for the version that wrote them", async () => {
     const [entry] = await parse([
-      widget("countdown", { targetAt: "2027-01-01T00:00:00.000Z", repeat: "weekly", label: "later" }, { pinned: true })
+      widget(
+        "countdown",
+        { targetAt: "2027-01-01T00:00:00.000Z", repeat: "weekly", label: "later" },
+        { pinned: true }
+      )
     ])
 
     expect(entry).toMatchObject({
@@ -472,7 +490,10 @@ describe("normalizing widgets read from storage or an import", () => {
     it("allows an hour's leeway for a zone that changed its offset during the year", async () => {
       const almaty = { startAt: "2023-12-31T18:00:00.000Z", targetAt: "2024-12-31T19:00:00.000Z" }
 
-      expect((await parse([yearCard(almaty)]))[0]!.settings).toEqual({ ...almaty, repeat: "yearly" })
+      expect((await parse([yearCard(almaty)]))[0]!.settings).toEqual({
+        ...almaty,
+        repeat: "yearly"
+      })
     })
 
     // 13:00 UTC on New Year's Day is later than any zone's midnight, so a card running from there was set up that way on purpose (8 AM in New York).
@@ -643,7 +664,13 @@ describe("shareUnchanged", () => {
     } as const
     const previous: DayboardState = { ...sampleState, widgets: [...sampleState.widgets, note] }
     // Key order differs from the page's own objects once a widget has been round-tripped, so it must not count as a change.
-    const reordered = { settings: { text: "b" }, colorPreset: "mint", title: "Note", kind: "note", id: "note-1" } as const
+    const reordered = {
+      settings: { text: "b" },
+      colorPreset: "mint",
+      title: "Note",
+      kind: "note",
+      id: "note-1"
+    } as const
     const next = shareUnchanged(previous, {
       ...previous,
       widgets: [JSON.parse(JSON.stringify(previous.widgets[0])), reordered]
@@ -680,9 +707,9 @@ describe("shareUnchanged", () => {
       unknownWidgets: [{ index: 1, widget: agenda }]
     }
 
-    expect(
-      shareUnchanged(previous, JSON.parse(JSON.stringify(previous)) as DayboardState)
-    ).toBe(previous)
+    expect(shareUnchanged(previous, JSON.parse(JSON.stringify(previous)) as DayboardState)).toBe(
+      previous
+    )
 
     // Missing it would leave this tab holding the old card, and its next save would write that back over the newer build's edit.
     const edited: DayboardState = {
@@ -705,13 +732,9 @@ describe("shareUnchanged", () => {
 
 describe("serializeDayboardState / parseDayboardState", () => {
   it("round-trips a board through JSON", async () => {
-    const { serializeDayboardState, parseDayboardState } = await import(
-      "./storage"
-    )
+    const { serializeDayboardState, parseDayboardState } = await import("./storage")
 
-    expect(parseDayboardState(serializeDayboardState(sampleState))).toEqual(
-      sampleState
-    )
+    expect(parseDayboardState(serializeDayboardState(sampleState))).toEqual(sampleState)
   })
 
   it("rejects invalid JSON and non-board payloads", async () => {
@@ -766,9 +789,7 @@ describe("writeDayboardState", () => {
     await writeDayboardState(state)
 
     const stored = JSON.stringify(store.get(STORAGE_KEY))
-    expect(STORAGE_KEY.length + stored.length).toBeLessThan(
-      QUOTA_BYTES_PER_ITEM
-    )
+    expect(STORAGE_KEY.length + stored.length).toBeLessThan(QUOTA_BYTES_PER_ITEM)
   })
 })
 
@@ -849,9 +870,7 @@ describe("watchDayboardState", () => {
   it("falls back to a default board when another device clears the key", async () => {
     const { addListener } = stubChromeStorage()
 
-    const { readCachedDayboardState, watchDayboardState } = await import(
-      "./storage"
-    )
+    const { readCachedDayboardState, watchDayboardState } = await import("./storage")
     const cachedWhenNotified: (DayboardState | null)[] = []
     const handleChange = vi.fn<(next: DayboardState) => void>(() => {
       cachedWhenNotified.push(readCachedDayboardState())

@@ -46,14 +46,7 @@ const toDraft = (item: Widget | null): Widget | null =>
 // Left open, a slip to 20260 kept the dialog's old target and saved it without a word; with a limit the field stops at four digits, and a longer year that arrives some other way is held by native validation.
 const LATEST_DATE_TIME = "9999-12-31T23:59"
 
-export const ItemDialog = ({
-  isOpen,
-  item,
-  mode,
-  error,
-  onClose,
-  onSave
-}: ItemDialogProps) => {
+export const ItemDialog = ({ isOpen, item, mode, error, onClose, onSave }: ItemDialogProps) => {
   // What the dialog opened on, which for a repeating countdown is the occurrence its card shows rather than the item itself.
   const [openedDraft, setOpenedDraft] = useState<Widget | null>(() => toDraft(item))
   const [draft, setDraft] = useState<Widget | null>(openedDraft)
@@ -97,8 +90,7 @@ export const ItemDialog = ({
 
   // A name of nothing but spaces passes `required`, and the card it saved had no heading to find it by, the same as a nameless one.
   // The dialog can close and reopen on the same blank name, which makes a new field, so the mark is set again each time it opens.
-  const isBlankName =
-    draft !== null && draft.title !== "" && draft.title.trim() === ""
+  const isBlankName = draft !== null && draft.title !== "" && draft.title.trim() === ""
   useEffect(() => {
     nameRef.current?.setCustomValidity(isBlankName ? "Give it a name." : "")
   }, [isBlankName, isOpen])
@@ -126,13 +118,12 @@ export const ItemDialog = ({
   const submitLabel = mode === "add" ? `Save ${draft.kind}` : "Save changes"
 
   // Every edit makes a new draft, so the draft still being the one the dialog opened on means nothing has been typed or picked, short of a date that is only half entered.
-  const isUntouched =
-    draft === openedDraft && targetInput === null && startInput === null
+  const isUntouched = draft === openedDraft && targetInput === null && startInput === null
 
   // What the Starting from field shows right now: the raw string mid-edit, else the stored start.
   const startValue =
     draft.kind === "countdown"
-      ? startInput ?? isoInstantToDateTimeInputValue(draft.settings.startAt ?? "")
+      ? (startInput ?? isoInstantToDateTimeInputValue(draft.settings.startAt ?? ""))
       : ""
 
   const updateTitle = (title: string) => {
@@ -273,18 +264,18 @@ export const ItemDialog = ({
         if (event.target === event.currentTarget) {
           event.preventDefault()
         }
-      }}>
+      }}
+    >
       <section
         aria-labelledby="item-dialog-title"
         aria-modal="true"
         className="modal-dialog"
         ref={dialogRef}
         role="dialog"
-        tabIndex={-1}>
+        tabIndex={-1}
+      >
         <div className="modal-dialog__header modal-dialog__header--with-badge">
-          <span
-            aria-hidden="true"
-            className="menu-chip menu-chip--large">
+          <span aria-hidden="true" className="menu-chip menu-chip--large">
             <WidgetIcon kind={draft.kind} size={22} />
           </span>
           <h2 className="modal-dialog__title" id="item-dialog-title">
@@ -298,7 +289,8 @@ export const ItemDialog = ({
           onSubmit={(event) => {
             event.preventDefault()
             onSave(toSaved(draft))
-          }}>
+          }}
+        >
           <div className="form-grid">
             <label className="form-label-group">
               <span>Name</span>
@@ -313,16 +305,10 @@ export const ItemDialog = ({
               />
             </label>
 
-            <ColorPresetPicker
-              value={draft.colorPreset}
-              onChange={updateColorPreset}
-            />
+            <ColorPresetPicker value={draft.colorPreset} onChange={updateColorPreset} />
 
             {draft.kind === "clock" ? (
-              <TimeZoneField
-                onChange={updateTimeZone}
-                value={draft.settings.timeZone}
-              />
+              <TimeZoneField onChange={updateTimeZone} value={draft.settings.timeZone} />
             ) : null}
 
             {draft.kind === "countdown" ? (
@@ -334,10 +320,7 @@ export const ItemDialog = ({
                     onChange={(event) => updateTargetAt(event.currentTarget.value)}
                     required
                     type="datetime-local"
-                    value={
-                      targetInput ??
-                      isoInstantToDateTimeInputValue(draft.settings.targetAt)
-                    }
+                    value={targetInput ?? isoInstantToDateTimeInputValue(draft.settings.targetAt)}
                   />
                 </label>
 
@@ -345,7 +328,8 @@ export const ItemDialog = ({
                   <span>Repeats</span>
                   <select
                     onChange={(event) => updateRepeat(event.currentTarget.value)}
-                    value={draft.settings.repeat ?? "none"}>
+                    value={draft.settings.repeat ?? "none"}
+                  >
                     <option value="none">Never</option>
                     <option value="hourly">Hourly</option>
                     <option value="daily">Daily</option>
@@ -360,9 +344,7 @@ export const ItemDialog = ({
                   <div className="input-adorned">
                     <input
                       max={LATEST_DATE_TIME}
-                      onChange={(event) =>
-                        updateStartAt(event.currentTarget.value)
-                      }
+                      onChange={(event) => updateStartAt(event.currentTarget.value)}
                       type="datetime-local"
                       value={startValue}
                     />
@@ -372,13 +354,15 @@ export const ItemDialog = ({
                         className="input-adorned__clear"
                         onClick={() => updateStartAt("")}
                         title="Clear"
-                        type="button">
+                        type="button"
+                      >
                         <svg
                           aria-hidden="true"
                           fill="none"
                           height="14"
                           viewBox="0 0 24 24"
-                          width="14">
+                          width="14"
+                        >
                           <path
                             d="M6 6l12 12M18 6 6 18"
                             stroke="currentColor"
@@ -391,17 +375,14 @@ export const ItemDialog = ({
                   </div>
                 </label>
                 <p className="form-note">
-                  Optional. Set a start and the card becomes a progress bar
-                  filling from there to the target; leave it empty to show the
-                  time remaining.
+                  Optional. Set a start and the card becomes a progress bar filling from there to
+                  the target; leave it empty to show the time remaining.
                 </p>
               </>
             ) : null}
 
             {draft.kind === "clock" ? (
-              <p className="form-note">
-                Dayboard uses your system clock format automatically.
-              </p>
+              <p className="form-note">Dayboard uses your system clock format automatically.</p>
             ) : null}
 
             {draft.kind === "note" ? (
@@ -412,21 +393,18 @@ export const ItemDialog = ({
 
             {draft.kind === "stopwatch" ? (
               <p className="form-note">
-                Start, pause, and reset the stopwatch with the buttons on the
-                card.
+                Start, pause, and reset the stopwatch with the buttons on the card.
               </p>
             ) : null}
 
             {draft.kind === "habit" ? (
-              <p className="form-note">
-                Mark it done each day on the card to fill in your week.
-              </p>
+              <p className="form-note">Mark it done each day on the card to fill in your week.</p>
             ) : null}
 
             {draft.kind === "todo" ? (
               <p className="form-note">
-                Add and check off tasks right on the card. It holds four at a
-                time &mdash; the few things you&rsquo;re actually doing today.
+                Add and check off tasks right on the card. It holds four at a time &mdash; the few
+                things you&rsquo;re actually doing today.
               </p>
             ) : null}
 
@@ -449,10 +427,7 @@ export const ItemDialog = ({
                           min={0}
                           ref={part === "hours" ? lengthRef : undefined}
                           onChange={(event) =>
-                            updateDuration(
-                              part,
-                              event.currentTarget.valueAsNumber
-                            )
+                            updateDuration(part, event.currentTarget.valueAsNumber)
                           }
                           // Typing into a part replaces it, rather than adding digits to what was there and turning 5 minutes and a typed 25 into 525.
                           onFocus={(event) => event.currentTarget.select()}
@@ -469,9 +444,7 @@ export const ItemDialog = ({
 
                 <div className="option-row">
                   <div className="option-row__text">
-                    <label
-                      className="option-row__label"
-                      htmlFor="item-timer-chime">
+                    <label className="option-row__label" htmlFor="item-timer-chime">
                       Chime when it ends
                     </label>
                     <span className="option-row__hint">
@@ -483,9 +456,7 @@ export const ItemDialog = ({
                       checked={draft.settings.chime ?? false}
                       className="switch__input"
                       id="item-timer-chime"
-                      onChange={(event) =>
-                        updateChime(event.currentTarget.checked)
-                      }
+                      onChange={(event) => updateChime(event.currentTarget.checked)}
                       role="switch"
                       type="checkbox"
                     />
@@ -514,7 +485,8 @@ export const ItemDialog = ({
                   <span>Show a new one</span>
                   <select
                     onChange={(event) => updateRotation(event.currentTarget.value)}
-                    value={draft.settings.rotation}>
+                    value={draft.settings.rotation}
+                  >
                     <option value="daily">Each day</option>
                     <option value="open">Every time I open a tab</option>
                   </select>
@@ -523,10 +495,7 @@ export const ItemDialog = ({
             ) : null}
 
             {error ? (
-              <p
-                className="form-note form-note--error"
-                ref={errorRef}
-                role="alert">
+              <p className="form-note form-note--error" ref={errorRef} role="alert">
                 {error}
               </p>
             ) : null}

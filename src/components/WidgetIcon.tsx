@@ -37,12 +37,7 @@ const ICON_PATHS: Record<WidgetKind, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth="1.8"
       />
-      <path
-        d="M8 9h8M8 12.5h5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.6"
-      />
+      <path d="M8 9h8M8 12.5h5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
     </>
   ),
   quote: (
@@ -93,23 +88,12 @@ const ICON_PATHS: Record<WidgetKind, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth="1.8"
       />
-      <path
-        d="M13 8h7M13 17h7"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
+      <path d="M13 8h7M13 17h7" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
     </>
   )
 }
 
-export const WidgetIcon = ({
-  kind,
-  size = 22
-}: {
-  kind: WidgetKind
-  size?: number
-}) => (
+export const WidgetIcon = ({ kind, size = 22 }: { kind: WidgetKind; size?: number }) => (
   <svg aria-hidden="true" fill="none" height={size} viewBox="0 0 24 24" width={size}>
     {ICON_PATHS[kind]}
   </svg>

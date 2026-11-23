@@ -14,11 +14,7 @@ import {
 import { COLOR_PRESETS } from "./colors"
 import type { Widget } from "./types"
 
-const createWidget = (
-  id: string,
-  title: string,
-  archived = false
-): Widget => ({
+const createWidget = (id: string, title: string, archived = false): Widget => ({
   id,
   kind: "clock",
   title,
@@ -31,9 +27,7 @@ const createWidget = (
 
 describe("createWidget", () => {
   it("preselects a random colorful preset — never the neutral slate", () => {
-    const presets = Array.from({ length: 40 }, () =>
-      createActualWidget("clock").colorPreset
-    )
+    const presets = Array.from({ length: 40 }, () => createActualWidget("clock").colorPreset)
 
     presets.forEach((preset) => {
       expect(COLOR_PRESETS.some(({ id }) => id === preset)).toBe(true)
@@ -55,9 +49,7 @@ describe("createWidget", () => {
     // A start is what makes the card a progress bar, and that is opt-in from the dialog's Starting from field rather than pre-filled.
     expect(countdown.settings.startAt).toBeUndefined()
     // The target defaults to the start of tomorrow, a date, so picking another day in the dialog keeps it a date.
-    expect(countdown.settings.targetAt).toBe(
-      new Date(2026, 5, 20, 0, 0, 0).toISOString()
-    )
+    expect(countdown.settings.targetAt).toBe(new Date(2026, 5, 20, 0, 0, 0).toISOString())
     // And it says which zone's tomorrow that is, so it is the same date on a device somewhere else.
     expect(countdown.settings.timeZone).toBe("America/Chicago")
   })
@@ -164,25 +156,13 @@ describe("moveActiveWidget", () => {
     const moved = moveActiveWidget(widgets, "delta", -1)
 
     // Full storage order keeps the archived widget; delta hops above beta.
-    expect(moved.map((w) => w.id)).toEqual([
-      "alpha",
-      "delta",
-      "beta",
-      "charlie"
-    ])
+    expect(moved.map((w) => w.id)).toEqual(["alpha", "delta", "beta", "charlie"])
     // What the board shows (the active widgets) reflects the move.
-    expect(moved.filter((w) => !w.archived).map((w) => w.id)).toEqual([
-      "alpha",
-      "delta",
-      "beta"
-    ])
+    expect(moved.filter((w) => !w.archived).map((w) => w.id)).toEqual(["alpha", "delta", "beta"])
   })
 
   it("leaves the list unchanged at the visible edges or for unknown ids", () => {
-    const widgets = [
-      createWidget("alpha", "Alpha"),
-      createWidget("beta", "Beta", true)
-    ]
+    const widgets = [createWidget("alpha", "Alpha"), createWidget("beta", "Beta", true)]
 
     expect(moveActiveWidget(widgets, "alpha", -1)).toBe(widgets)
     expect(moveActiveWidget(widgets, "alpha", 1)).toBe(widgets)
@@ -216,11 +196,7 @@ describe("archiveWidget / restoreWidget", () => {
     const archived = archiveWidget(widgets, "alpha")
     const restored = restoreWidget(archived, "alpha")
 
-    expect(restored.map((widget) => widget.id)).toEqual([
-      "beta",
-      "gamma",
-      "alpha"
-    ])
+    expect(restored.map((widget) => widget.id)).toEqual(["beta", "gamma", "alpha"])
     expect(restored.every((widget) => !widget.archived)).toBe(true)
   })
 
@@ -234,24 +210,24 @@ describe("archiveWidget / restoreWidget", () => {
     const restored = restoreWidget(archived, "gamma", "alpha")
 
     // Dropped onto "alpha", so it takes alpha's slot and pushes it down.
-    expect(restored.map((widget) => widget.id)).toEqual([
-      "gamma",
-      "alpha",
-      "beta"
-    ])
+    expect(restored.map((widget) => widget.id)).toEqual(["gamma", "alpha", "beta"])
     expect(restored.every((widget) => !widget.archived)).toBe(true)
   })
 
   it("falls back to the end of the board when the drop target is unknown or archived", () => {
     const archived = archiveWidget(archiveWidget(widgets, "beta"), "gamma")
 
-    expect(
-      restoreWidget(archived, "gamma", "missing").map((widget) => widget.id)
-    ).toEqual(["alpha", "gamma", "beta"])
+    expect(restoreWidget(archived, "gamma", "missing").map((widget) => widget.id)).toEqual([
+      "alpha",
+      "gamma",
+      "beta"
+    ])
     // Another archived card is not a board slot; it cannot anchor the restore.
-    expect(
-      restoreWidget(archived, "gamma", "beta").map((widget) => widget.id)
-    ).toEqual(["alpha", "gamma", "beta"])
+    expect(restoreWidget(archived, "gamma", "beta").map((widget) => widget.id)).toEqual([
+      "alpha",
+      "gamma",
+      "beta"
+    ])
   })
 })
 
@@ -261,7 +237,13 @@ describe("applyDialogEdit", () => {
     kind: "timer",
     title: "Tea",
     colorPreset: "teal",
-    settings: { durationMs: 180_000, running: true, remainingMs: 180_000, endsAt: 40_000, chime: true }
+    settings: {
+      durationMs: 180_000,
+      running: true,
+      remainingMs: 180_000,
+      endsAt: 40_000,
+      chime: true
+    }
   }
 
   it("lays the dialog's fields over the card as it is now, not as it was when the dialog opened", () => {
@@ -279,9 +261,11 @@ describe("applyDialogEdit", () => {
       settings: { tasks: [{ id: "a", text: "Call Sam", done: true }] }
     }
 
-    expect(
-      applyDialogEdit(latest, { ...opened, title: "Errands", colorPreset: "rose" })
-    ).toEqual({ ...latest, title: "Errands", colorPreset: "rose" })
+    expect(applyDialogEdit(latest, { ...opened, title: "Errands", colorPreset: "rose" })).toEqual({
+      ...latest,
+      title: "Errands",
+      colorPreset: "rose"
+    })
   })
 
   it("takes the settings the dialog has fields for", () => {
@@ -426,9 +410,6 @@ describe("undoArchiveWidget", () => {
       "alpha"
     )
 
-    expect(boardIds(undoArchiveWidget(withoutEither, "beta", neighbors))).toEqual([
-      "delta",
-      "beta"
-    ])
+    expect(boardIds(undoArchiveWidget(withoutEither, "beta", neighbors))).toEqual(["delta", "beta"])
   })
 })

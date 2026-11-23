@@ -11,10 +11,7 @@ describe("textToQuotes / quotesToText", () => {
 
 describe("cleanQuotes", () => {
   it("trims entries and removes blank lines", () => {
-    expect(cleanQuotes(["  hello ", "", "   ", "world"])).toEqual([
-      "hello",
-      "world"
-    ])
+    expect(cleanQuotes(["  hello ", "", "   ", "world"])).toEqual(["hello", "world"])
   })
 })
 

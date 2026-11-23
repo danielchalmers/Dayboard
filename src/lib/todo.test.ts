@@ -17,9 +17,7 @@ const task = (id: string, text: string, done = false): TodoTask => ({
 })
 
 const fullList = (): TodoTask[] =>
-  Array.from({ length: MAX_TASKS }, (_, index) =>
-    task(String(index), `Task ${index}`)
-  )
+  Array.from({ length: MAX_TASKS }, (_, index) => task(String(index), `Task ${index}`))
 
 describe("addTask", () => {
   it("appends a trimmed, unchecked task", () => {
@@ -87,14 +85,12 @@ describe("normalizeTasks", () => {
   })
 
   it("caps an oversized imported list", () => {
-    expect(normalizeTasks([...fullList(), task("extra", "Extra")])).toHaveLength(
-      MAX_TASKS
-    )
+    expect(normalizeTasks([...fullList(), task("extra", "Extra")])).toHaveLength(MAX_TASKS)
   })
 
   it("keeps what a newer build stores on a task", () => {
-    expect(
-      normalizeTasks([{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }])
-    ).toEqual([{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }])
+    expect(normalizeTasks([{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }])).toEqual(
+      [{ id: "1", text: "Call Sam", done: false, due: "2026-10-08" }]
+    )
   })
 })

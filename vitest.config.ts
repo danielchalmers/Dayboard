@@ -10,12 +10,7 @@ export default defineConfig({
     // Pin one zone that observes DST so the whole suite means the same thing everywhere.
     env: { TZ: "America/Chicago" },
     // `.claude` holds agent worktrees, full checkouts whose tests must not be collected into this repo's run.
-    exclude: [
-      "**/node_modules/**",
-      "**/.output/**",
-      "**/e2e/**",
-      "**/.claude/**"
-    ],
+    exclude: ["**/node_modules/**", "**/.output/**", "**/e2e/**", "**/.claude/**"],
     globals: true,
     setupFiles: ["./test/setup.ts"]
   },

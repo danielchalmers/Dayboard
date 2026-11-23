@@ -10,12 +10,7 @@ interface DeleteDialogProps {
   onConfirm: (item: Widget) => void
 }
 
-export const DeleteDialog = ({
-  isOpen,
-  item,
-  onCancel,
-  onConfirm
-}: DeleteDialogProps) => {
+export const DeleteDialog = ({ isOpen, item, onCancel, onConfirm }: DeleteDialogProps) => {
   const dialogRef = useRef<HTMLElement>(null)
 
   useModalFocus(isOpen, dialogRef, onCancel)
@@ -31,14 +26,16 @@ export const DeleteDialog = ({
         if (event.target === event.currentTarget) {
           onCancel()
         }
-      }}>
+      }}
+    >
       <section
         aria-labelledby="delete-dialog-title"
         aria-modal="true"
         className="modal-dialog modal-dialog--narrow"
         ref={dialogRef}
         role="dialog"
-        tabIndex={-1}>
+        tabIndex={-1}
+      >
         <div className="modal-dialog__header">
           <div>
             <h2 className="modal-dialog__title" id="delete-dialog-title">
@@ -56,10 +53,7 @@ export const DeleteDialog = ({
           <button className="secondary-button" onClick={onCancel} type="button">
             Cancel
           </button>
-          <button
-            className="danger-button"
-            onClick={() => onConfirm(item)}
-            type="button">
+          <button className="danger-button" onClick={() => onConfirm(item)} type="button">
             Delete {item.kind}
           </button>
         </div>

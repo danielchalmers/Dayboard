@@ -19,9 +19,7 @@ const droppableRects = new Map([
   [ARCHIVE_DROP_ID, rect(510, 808, 420, 64)]
 ])
 
-const droppableContainers = [...droppableRects.keys()].map(
-  (id) => ({ id }) as DroppableContainer
-)
+const droppableContainers = [...droppableRects.keys()].map((id) => ({ id }) as DroppableContainer)
 
 const collide = ({
   cardAt,
@@ -43,27 +41,23 @@ describe("boardCollision", () => {
   const liftedByTopEdge = rect(506, 630, 412, 240)
 
   it("reorders onto the card under the pointer even when the lifted card's center sits nearer the archive zone", () => {
-    expect(
-      collide({ cardAt: liftedByTopEdge, pointer: { x: 712, y: 640 } })
-    ).toBe("year")
+    expect(collide({ cardAt: liftedByTopEdge, pointer: { x: 712, y: 640 } })).toBe("year")
   })
 
   it("archives once the pointer is inside the zone, wherever the card was grabbed", () => {
-    expect(
-      collide({ cardAt: rect(400, 600, 412, 240), pointer: { x: 720, y: 840 } })
-    ).toBe(ARCHIVE_DROP_ID)
+    expect(collide({ cardAt: rect(400, 600, 412, 240), pointer: { x: 720, y: 840 } })).toBe(
+      ARCHIVE_DROP_ID
+    )
   })
 
   it("does not archive with the pointer just outside the zone", () => {
-    expect(
-      collide({ cardAt: rect(510, 700, 412, 240), pointer: { x: 720, y: 800 } })
-    ).not.toBe(ARCHIVE_DROP_ID)
+    expect(collide({ cardAt: rect(510, 700, 412, 240), pointer: { x: 720, y: 800 } })).not.toBe(
+      ARCHIVE_DROP_ID
+    )
   })
 
   // The keyboard moves the card from slot to slot with no pointer at all, so it keeps sorting by centers over every target.
   it("sorts a keyboard drag by centers, the zone included", () => {
-    expect(
-      collide({ cardAt: rect(510, 780, 412, 120), pointer: null })
-    ).toBe(ARCHIVE_DROP_ID)
+    expect(collide({ cardAt: rect(510, 780, 412, 120), pointer: null })).toBe(ARCHIVE_DROP_ID)
   })
 })

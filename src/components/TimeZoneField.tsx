@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent
-} from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 
 import { getTimeZoneOptions } from "~/lib/time"
 
@@ -68,9 +62,7 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
   // The optional call keeps jsdom (which has no scrollIntoView) out of trouble in tests.
   useEffect(() => {
     if (popup) {
-      document
-        .getElementById(`${id}-option-${highlighted}`)
-        ?.scrollIntoView?.({ block: "nearest" })
+      document.getElementById(`${id}-option-${highlighted}`)?.scrollIntoView?.({ block: "nearest" })
     }
   }, [popup, highlighted, id])
 
@@ -84,9 +76,7 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
       }
 
       const step = event.key === "ArrowDown" ? 1 : -1
-      setHighlighted(
-        (current) => (current + step + visible.length) % Math.max(visible.length, 1)
-      )
+      setHighlighted((current) => (current + step + visible.length) % Math.max(visible.length, 1))
       return
     }
 
@@ -162,7 +152,8 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
           fill="none"
           height="16"
           viewBox="0 0 24 24"
-          width="16">
+          width="16"
+        >
           <path
             d="m6 9 6 6 6-6"
             stroke="currentColor"
@@ -177,7 +168,8 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
             id={`${id}-listbox`}
             popover="manual"
             ref={showInTopLayer}
-            role="listbox">
+            role="listbox"
+          >
             {visible.map((option, index) => (
               <div
                 aria-selected={option.value === value}
@@ -192,7 +184,8 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
                   choose(option)
                 }}
                 onPointerMove={() => setHighlighted(index)}
-                role="option">
+                role="option"
+              >
                 {option.label}
               </div>
             ))}
@@ -204,7 +197,8 @@ export const TimeZoneField = ({ value, onChange }: TimeZoneFieldProps) => {
             className="tz-field__listbox tz-field__listbox--empty"
             popover="manual"
             ref={showInTopLayer}
-            role="status">
+            role="status"
+          >
             No matching time zone
           </div>
         ) : null}

@@ -5,18 +5,11 @@ import { createElement, useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { CACHE_KEY } from "~/lib/storage"
-import type {
-  DayboardState,
-  HabitWidget,
-  NoteWidget,
-  TimerWidget
-} from "~/lib/types"
+import type { DayboardState, HabitWidget, NoteWidget, TimerWidget } from "~/lib/types"
 
 // Chrome's own wording for the two quotas a write runs into, which is all there is to tell them apart by.
 const TOO_LARGE = new Error("Resource::kQuotaBytesPerItem quota exceeded")
-const TOO_OFTEN = new Error(
-  "This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota."
-)
+const TOO_OFTEN = new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota.")
 const TOO_LARGE_NOTICE =
   "Couldn’t save — that’s more than browser sync can hold. Try shortening a long note or list."
 const TOO_OFTEN_NOTICE =
@@ -128,14 +121,10 @@ describe("describeSaveError", () => {
 
     expect(describeSaveError(TOO_LARGE)).toBe(TOO_LARGE_NOTICE)
     // The whole-area quota is the same problem as the one-item quota as far as the user can tell.
-    expect(describeSaveError(new Error("QUOTA_BYTES quota exceeded"))).toBe(
-      TOO_LARGE_NOTICE
-    )
+    expect(describeSaveError(new Error("QUOTA_BYTES quota exceeded"))).toBe(TOO_LARGE_NOTICE)
     expect(describeSaveError(TOO_OFTEN)).toBe(TOO_OFTEN_NOTICE)
     expect(
-      describeSaveError(
-        new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_HOUR quota.")
-      )
+      describeSaveError(new Error("This request exceeds the MAX_WRITE_OPERATIONS_PER_HOUR quota."))
     ).toBe(TOO_OFTEN_NOTICE)
     // Chrome has spelled the size quota both ways, so the rate quotas are read in either spelling too.
     expect(
@@ -154,8 +143,20 @@ describe("describeSaveError", () => {
 describe("useDayboardState change handling", () => {
   const board: DayboardState = {
     widgets: [
-      { id: "t1", kind: "timer", title: "Tea", colorPreset: "teal", settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false } },
-      { id: "t2", kind: "timer", title: "Eggs", colorPreset: "amber", settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false } }
+      {
+        id: "t1",
+        kind: "timer",
+        title: "Tea",
+        colorPreset: "teal",
+        settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false }
+      },
+      {
+        id: "t2",
+        kind: "timer",
+        title: "Eggs",
+        colorPreset: "amber",
+        settings: { durationMs: 1000, running: true, remainingMs: 1000, endsAt: 1, chime: false }
+      }
     ],
     settings: { name: "" }
   }
@@ -179,8 +180,10 @@ describe("useDayboardState change handling", () => {
       widgets.map((widget) => widget.kind === "timer" && widget.settings.remainingMs === 0)
 
     expect(finished(result.current.state!.widgets)).toEqual([true, true])
-    const written = vi.mocked(chrome.storage.sync.set).mock.calls.at(-1)?.[0] as
-      Record<string, DayboardState>
+    const written = vi.mocked(chrome.storage.sync.set).mock.calls.at(-1)?.[0] as Record<
+      string,
+      DayboardState
+    >
     expect(finished(Object.values(written)[0]!.widgets)).toEqual([true, true])
 
     unmount()
@@ -214,10 +217,7 @@ describe("useDayboardState change handling", () => {
 
     const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
     act(() => {
-      listener(
-        { "dayboard-state": { newValue: JSON.parse(JSON.stringify(board)) } },
-        "sync"
-      )
+      listener({ "dayboard-state": { newValue: JSON.parse(JSON.stringify(board)) } }, "sync")
     })
 
     expect(result.current.state).toBe(shown)
@@ -409,8 +409,10 @@ describe("useDayboardState change handling", () => {
     expect(settled[0]).toBeNull()
     expect(settled[1]?.title).toBe("Eggs")
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
-    const written = vi.mocked(chrome.storage.sync.set).mock.calls[0]![0] as
-      Record<string, DayboardState>
+    const written = vi.mocked(chrome.storage.sync.set).mock.calls[0]![0] as Record<
+      string,
+      DayboardState
+    >
     const saved = Object.values(written)[0]!
     expect(saved.settings).toEqual({ name: "Sam" })
     expect(saved.widgets.map((widget) => widget.settings)).toMatchObject([
@@ -641,7 +643,13 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
     const board: { current: ReturnType<typeof useDayboardState> | null } = { current: null }
     const settled: Promise<TimerWidget | null>[] = []
 
-    const Settles = ({ timer, settleTimer }: { timer: TimerWidget; settleTimer: (id: string, endsAt: number) => Promise<TimerWidget | null> }) => {
+    const Settles = ({
+      timer,
+      settleTimer
+    }: {
+      timer: TimerWidget
+      settleTimer: (id: string, endsAt: number) => Promise<TimerWidget | null>
+    }) => {
       useEffect(() => {
         settled.push(settleTimer(timer.id, timer.settings.endsAt!))
       }, [settleTimer, timer])
@@ -655,7 +663,9 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
         (widget): widget is TimerWidget => widget.kind === "timer" && widget.settings.running
       )
 
-      return timer ? createElement(Settles, { timer, settleTimer: board.current.settleTimer }) : null
+      return timer
+        ? createElement(Settles, { timer, settleTimer: board.current.settleTimer })
+        : null
     }
 
     const view = renderComponent(createElement(Board))
@@ -664,7 +674,12 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
     expect(board.current!.state).toEqual(remembered)
     expect(settled).toHaveLength(1)
 
-    return { ...view, board, settled, answerFirstRead: (state: DayboardState) => answerFirstRead(state) }
+    return {
+      ...view,
+      board,
+      settled,
+      answerFirstRead: (state: DayboardState) => answerFirstRead(state)
+    }
   }
 
   it("answers a finish storage has moved on from with no, and writes nothing", async () => {

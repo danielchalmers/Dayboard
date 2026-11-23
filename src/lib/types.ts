@@ -1,14 +1,7 @@
 import type { TodoTask } from "./todo"
 
 export type WidgetKind =
-  | "clock"
-  | "countdown"
-  | "note"
-  | "quote"
-  | "stopwatch"
-  | "timer"
-  | "habit"
-  | "todo"
+  "clock" | "countdown" | "note" | "quote" | "stopwatch" | "timer" | "habit" | "todo"
 
 export type QuoteRotation = "daily" | "open"
 
@@ -46,13 +39,7 @@ export interface ClockWidget extends WidgetBase {
   }
 }
 
-export type CountdownRepeat =
-  | "none"
-  | "hourly"
-  | "daily"
-  | "weekly"
-  | "monthly"
-  | "yearly"
+export type CountdownRepeat = "none" | "hourly" | "daily" | "weekly" | "monthly" | "yearly"
 
 export interface CountdownWidget extends WidgetBase {
   kind: "countdown"

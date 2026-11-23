@@ -17,9 +17,7 @@ export const formatDuration = (ms: number): string => {
   const seconds = totalSeconds % 60
   const pad = (value: number) => String(value).padStart(2, "0")
 
-  return hours > 0
-    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
-    : `${minutes}:${pad(seconds)}`
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`
 }
 
 export const msToParts = (ms: number): DurationParts => {
@@ -37,10 +35,7 @@ export const partsToMs = ({ hours, minutes, seconds }: DurationParts): number =>
 
 // ── Stopwatch ─────────────────────────────────────────────────────────────
 
-export const stopwatchElapsedMs = (
-  settings: StopwatchSettings,
-  nowMs: number
-): number => {
+export const stopwatchElapsedMs = (settings: StopwatchSettings, nowMs: number): number => {
   const elapsed =
     settings.running && settings.startedAt != null
       ? settings.elapsedMs + (nowMs - settings.startedAt)
@@ -50,19 +45,13 @@ export const stopwatchElapsedMs = (
 }
 
 // Each of these keeps whatever else the settings carry, like the timer's below, so a field a newer build added survives a press on an older one.
-export const startStopwatch = (
-  settings: StopwatchSettings,
-  nowMs: number
-): StopwatchSettings => ({
+export const startStopwatch = (settings: StopwatchSettings, nowMs: number): StopwatchSettings => ({
   ...settings,
   running: true,
   startedAt: nowMs
 })
 
-export const pauseStopwatch = (
-  settings: StopwatchSettings,
-  nowMs: number
-): StopwatchSettings => ({
+export const pauseStopwatch = (settings: StopwatchSettings, nowMs: number): StopwatchSettings => ({
   ...settings,
   running: false,
   elapsedMs: stopwatchElapsedMs(settings, nowMs),
@@ -78,25 +67,16 @@ export const resetStopwatch = (settings: StopwatchSettings): StopwatchSettings =
 
 // ── Timer ─────────────────────────────────────────────────────────────────
 
-export const timerRemainingMs = (
-  settings: TimerSettings,
-  nowMs: number
-): number => {
+export const timerRemainingMs = (settings: TimerSettings, nowMs: number): number => {
   const remaining =
-    settings.running && settings.endsAt != null
-      ? settings.endsAt - nowMs
-      : settings.remainingMs
+    settings.running && settings.endsAt != null ? settings.endsAt - nowMs : settings.remainingMs
 
   return Math.max(0, remaining)
 }
 
-export const startTimer = (
-  settings: TimerSettings,
-  nowMs: number
-): TimerSettings => {
+export const startTimer = (settings: TimerSettings, nowMs: number): TimerSettings => {
   // Resume from where it was paused, or start a fresh full duration.
-  const remaining =
-    settings.remainingMs > 0 ? settings.remainingMs : settings.durationMs
+  const remaining = settings.remainingMs > 0 ? settings.remainingMs : settings.durationMs
 
   return {
     ...settings,
@@ -106,10 +86,7 @@ export const startTimer = (
   }
 }
 
-export const pauseTimer = (
-  settings: TimerSettings,
-  nowMs: number
-): TimerSettings => ({
+export const pauseTimer = (settings: TimerSettings, nowMs: number): TimerSettings => ({
   ...settings,
   running: false,
   remainingMs: timerRemainingMs(settings, nowMs),

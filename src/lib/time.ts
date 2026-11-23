@@ -11,12 +11,8 @@ export interface CountdownParts {
   label: string
 }
 
-export const dateTimeInputValueToIsoInstant = (
-  localDateTime: string
-): string | null => {
-  const match = localDateTime.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
-  )
+export const dateTimeInputValueToIsoInstant = (localDateTime: string): string | null => {
+  const match = localDateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/)
 
   if (!match) {
     return null
@@ -71,9 +67,7 @@ const formatterCache = new Map<string, Intl.DateTimeFormat>()
 
 // A clock's time zone is typed free-hand, so a card can be carrying a string that is not a real IANA zone, and asking Intl for a formatter on one throws a RangeError.
 // Every clock formatter is called from render, so that throw would take the whole board down rather than the one card; fall back to the local zone instead, and cache the fallback under the same key so a mistyped zone costs one failed construction rather than one per tick.
-const createFormatter = (
-  options: Intl.DateTimeFormatOptions
-): Intl.DateTimeFormat => {
+const createFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat => {
   try {
     return new Intl.DateTimeFormat(undefined, options)
   } catch {
@@ -168,11 +162,7 @@ const setMonthClamped = (date: Date, year: number, month: number): void => {
 }
 
 // Move an instant forward by whole repeat steps, using calendar arithmetic so the time of day survives DST and a monthly countdown keeps its day number instead of drifting the way repeated single steps would.
-const advanceByRepeat = (
-  base: Date,
-  repeat: CountdownRepeat | undefined,
-  steps: number
-): Date => {
+const advanceByRepeat = (base: Date, repeat: CountdownRepeat | undefined, steps: number): Date => {
   const next = new Date(base)
 
   if (!repeat || repeat === "none" || steps <= 0) {
@@ -230,10 +220,7 @@ const countdownRepeatSteps = (
     steps += 1
   }
 
-  while (
-    steps > 0 &&
-    advanceByRepeat(base, repeat, steps - 1).getTime() > now.getTime()
-  ) {
+  while (steps > 0 && advanceByRepeat(base, repeat, steps - 1).getTime() > now.getTime()) {
     steps -= 1
   }
 
@@ -247,14 +234,11 @@ const startOfLocalDay = (date: Date): Date => {
   return start
 }
 
-const isLocalMidnight = (date: Date): boolean =>
-  date.getTime() === startOfLocalDay(date).getTime()
+const isLocalMidnight = (date: Date): boolean => date.getTime() === startOfLocalDay(date).getTime()
 
 // Days between two instants on the local calendar, counted in midnights rather than 24-hour blocks, so a DST change (a 23- or 25-hour day) doesn't land the count a day short or long.
 const calendarDaysBetween = (from: Date, to: Date): number =>
-  Math.round(
-    (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS
-  )
+  Math.round((startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS)
 
 // Whole months from one instant to a later one, stepped the way a monthly repeat steps, so the 31st is a month from the last day of a shorter month.
 // Estimated from the span and then nudged into place, the same as the repeat steps above.
@@ -383,10 +367,7 @@ export const localizeCountdown = (widget: CountdownWidget): CountdownWidget => {
 // Resolve what a countdown means right now: a repeating one shows its next occurrence, and a start that cannot fill a bar is dropped.
 // Both ends of a repeating span move together so the bar keeps its length each cycle instead of stretching from the original start forever.
 // The result is computed on the fly, so the stored widget stays the anchor and every tab agrees without writes.
-export const resolveCountdown = (
-  stored: CountdownWidget,
-  now = new Date()
-): CountdownWidget => {
+export const resolveCountdown = (stored: CountdownWidget, now = new Date()): CountdownWidget => {
   const widget = localizeCountdown(stored)
   const { targetAt, startAt, repeat } = widget.settings
   const target = new Date(targetAt)
@@ -401,9 +382,7 @@ export const resolveCountdown = (
 
   // A start that does not parse, or that does not sit before the target, is not a span a bar can fill; the card falls back to the remaining-time text.
   const hasSpan =
-    start !== null &&
-    !Number.isNaN(start.getTime()) &&
-    start.getTime() < target.getTime()
+    start !== null && !Number.isNaN(start.getTime()) && start.getTime() < target.getTime()
 
   // The steps land on the first occurrence still ahead, but two kinds of occurrence outlast their target, so stay on the one just passed while it lasts.
   if (steps > 0) {
@@ -436,18 +415,12 @@ export const resolveCountdown = (
     settings: {
       ...widget.settings,
       targetAt: advanceByRepeat(target, repeat, steps).toISOString(),
-      startAt:
-        hasSpan && start
-          ? advanceByRepeat(start, repeat, steps).toISOString()
-          : undefined
+      startAt: hasSpan && start ? advanceByRepeat(start, repeat, steps).toISOString() : undefined
     }
   }
 }
 
-export const getCountdownParts = (
-  widget: CountdownWidget,
-  now = new Date()
-): CountdownParts => {
+export const getCountdownParts = (widget: CountdownWidget, now = new Date()): CountdownParts => {
   const target = new Date(widget.settings.targetAt)
   const totalMs = target.getTime() - now.getTime()
 
@@ -462,8 +435,7 @@ export const getCountdownParts = (
     // The eve itself falls through to hours and minutes, so New Year's Eve still ticks down to midnight.
     if (days !== 1) {
       const today = startOfLocalDay(now)
-      const years =
-        days > 0 ? describeYears(today, target) : describeYears(target, today)
+      const years = days > 0 ? describeYears(today, target) : describeYears(target, today)
 
       return {
         status: days > 0 ? "future" : "past",
@@ -490,9 +462,7 @@ export const getCountdownParts = (
 
 export const formatRelativeCountdown = (totalMs: number): string => {
   if (Number.isNaN(totalMs) || Math.abs(totalMs) < 60_000) {
-    return totalMs >= 0 || Number.isNaN(totalMs)
-      ? "less than a minute from now"
-      : "just now"
+    return totalMs >= 0 || Number.isNaN(totalMs) ? "less than a minute from now" : "just now"
   }
 
   const suffix = totalMs >= 0 ? "from now" : "ago"
@@ -541,14 +511,9 @@ const pluralize = (value: number, unit: string): string =>
 
 // Fraction (0..1) of the way from the widget's start to its target, for the progress display.
 // Falls back gracefully when no usable start span exists.
-export const getCountdownProgress = (
-  widget: CountdownWidget,
-  now = new Date()
-): number => {
+export const getCountdownProgress = (widget: CountdownWidget, now = new Date()): number => {
   const target = new Date(widget.settings.targetAt).getTime()
-  const start = widget.settings.startAt
-    ? new Date(widget.settings.startAt).getTime()
-    : Number.NaN
+  const start = widget.settings.startAt ? new Date(widget.settings.startAt).getTime() : Number.NaN
 
   if (Number.isNaN(target)) {
     return 0
@@ -583,10 +548,7 @@ export const getCountdownPercent = (fraction: number): number => {
 
 // The detail line reads the way a date is written by hand: a date has no "12:00 AM", and the year appears once it isn't this one.
 // A repeating countdown leaves the year off, since its next occurrence is always the coming one.
-export const formatCountdownTarget = (
-  widget: CountdownWidget,
-  now = new Date()
-): string => {
+export const formatCountdownTarget = (widget: CountdownWidget, now = new Date()): string => {
   const target = new Date(widget.settings.targetAt)
 
   if (Number.isNaN(target.getTime())) {
@@ -594,8 +556,7 @@ export const formatCountdownTarget = (
   }
 
   const { repeat } = widget.settings
-  const showsYear =
-    (!repeat || repeat === "none") && target.getFullYear() !== now.getFullYear()
+  const showsYear = (!repeat || repeat === "none") && target.getFullYear() !== now.getFullYear()
 
   return getFormatter({
     weekday: "short",

@@ -27,10 +27,7 @@ export const finestGranularity = (
 }
 
 // The start of the unit an instant falls in. Days start at local midnight, which is the day the board reads everywhere else.
-export const floorToGranularity = (
-  ms: number,
-  granularity: ClockGranularity
-): number => {
+export const floorToGranularity = (ms: number, granularity: ClockGranularity): number => {
   if (granularity === "day") {
     return new Date(ms).setHours(0, 0, 0, 0)
   }
@@ -76,8 +73,7 @@ const listeners = new Map<Listener, ClockGranularity>()
 let current = Date.now()
 let timer: ReturnType<typeof setTimeout> | undefined
 
-const isHidden = () =>
-  typeof document !== "undefined" && document.visibilityState === "hidden"
+const isHidden = () => typeof document !== "undefined" && document.visibilityState === "hidden"
 
 const clearTimer = () => {
   if (timer !== undefined) {

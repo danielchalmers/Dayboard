@@ -9,9 +9,7 @@ import { AUTO_SAVE_DELAY } from "~/hooks/useAutoSave"
 import { DEFAULT_SETTINGS } from "~/lib/types"
 
 // An open dialog on default settings with inert callbacks, so each test names only the props it actually cares about.
-const settingsDialog = (
-  props: Partial<ComponentProps<typeof SettingsDialog>> = {}
-) => (
+const settingsDialog = (props: Partial<ComponentProps<typeof SettingsDialog>> = {}) => (
   <SettingsDialog
     isOpen
     settings={DEFAULT_SETTINGS}
@@ -169,25 +167,25 @@ describe("SettingsDialog", () => {
 
     rerender(settingsDialog({ importError: "That file is not a Dayboard board." }))
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "That file is not a Dayboard board."
-    )
+    expect(screen.getByRole("alert")).toHaveTextContent("That file is not a Dayboard board.")
   })
 
   it("links to the project on GitHub", () => {
     render(settingsDialog())
 
-    expect(
-      screen.getByRole("link", { name: /Dayboard on GitHub/ })
-    ).toHaveAttribute("href", "https://github.com/danielchalmers/Dayboard")
+    expect(screen.getByRole("link", { name: /Dayboard on GitHub/ })).toHaveAttribute(
+      "href",
+      "https://github.com/danielchalmers/Dayboard"
+    )
   })
 
   it("offers a feedback link to the GitHub issues page", () => {
     render(settingsDialog())
 
-    expect(
-      screen.getByRole("link", { name: /Give feedback/ })
-    ).toHaveAttribute("href", "https://github.com/danielchalmers/Dayboard/issues")
+    expect(screen.getByRole("link", { name: /Give feedback/ })).toHaveAttribute(
+      "href",
+      "https://github.com/danielchalmers/Dayboard/issues"
+    )
   })
 
   it("closes from the Done button", () => {

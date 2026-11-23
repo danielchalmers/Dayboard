@@ -9,13 +9,7 @@ import { playChimeOnce, primeChime } from "~/lib/chime"
 import { formatDayLabel, toDayKey } from "~/lib/habit"
 import { dailyQuoteIndex } from "~/lib/quotes"
 import { MAX_TASKS, type TodoTask } from "~/lib/todo"
-import type {
-  HabitWidget,
-  NoteWidget,
-  TimerWidget,
-  TodoWidget,
-  Widget
-} from "~/lib/types"
+import type { HabitWidget, NoteWidget, TimerWidget, TodoWidget, Widget } from "~/lib/types"
 
 // Sound is the one thing a test cannot observe by rendering, so the chime module is stubbed for the whole file and asserted on by call.
 vi.mock("~/lib/chime", () => ({
@@ -49,7 +43,9 @@ describe("BoardRow", () => {
 
     expect(screen.getByRole("heading", { name: "UTC" })).toBeInTheDocument()
     expect(screen.getByLabelText("UTC time")).toHaveTextContent(/12:30/)
-    expect(screen.getByText(/Thu, Jan 1, 2026/).closest(".board-row__meta")).toHaveTextContent("UTC")
+    expect(screen.getByText(/Thu, Jan 1, 2026/).closest(".board-row__meta")).toHaveTextContent(
+      "UTC"
+    )
 
     const article = container.querySelector("article")
     expect(article).toHaveAttribute("data-color-preset", "rose")
@@ -125,9 +121,7 @@ describe("BoardRow", () => {
     const frame = container.querySelector(".board-row__frame")
     expect(frame).toHaveAttribute("id", "drag-handle")
     // The heading is a sibling of the drag frame, not nested inside it, so the body text sits outside the draggable surface and stays selectable.
-    expect(frame?.contains(screen.getByRole("heading", { name: "UTC" }))).toBe(
-      false
-    )
+    expect(frame?.contains(screen.getByRole("heading", { name: "UTC" }))).toBe(false)
   })
 
   it("renders a due countdown without time-zone text", () => {
@@ -150,7 +144,6 @@ describe("BoardRow", () => {
     expect(screen.queryByText(/UTC|GMT/)).not.toBeInTheDocument()
     // "right now" already says everything; a "from now" or "ago" line under it would only contradict itself.
     expect(container.querySelector(".board-row__meta")).toBeNull()
-
 
     const article = container.querySelector("article")
     expect(article).toHaveAttribute("data-color-preset", "amber")
@@ -191,9 +184,7 @@ describe("BoardRow", () => {
       }
     }
 
-    render(
-      <BoardRow item={item} now={new Date("2026-08-04T18:25:00.000Z")} />
-    )
+    render(<BoardRow item={item} now={new Date("2026-08-04T18:25:00.000Z")} />)
 
     expect(screen.getByText("99%")).toBeInTheDocument()
     expect(screen.getByText("5 hours, 35 minutes left")).toBeInTheDocument()
@@ -233,13 +224,12 @@ describe("BoardRow", () => {
     )
 
     expect(screen.getByText("100%")).toBeInTheDocument()
-    expect(
-      screen.getByRole("progressbar", { name: "Sprint progress" })
-    ).toHaveAttribute("aria-valuenow", "100")
-    // A full bar has its own closing word, so the line does not fall through to "21 days ago".
-    expect(container.querySelector(".board-row__meta")).toHaveTextContent(
-      "Complete"
+    expect(screen.getByRole("progressbar", { name: "Sprint progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "100"
     )
+    // A full bar has its own closing word, so the line does not fall through to "21 days ago".
+    expect(container.querySelector(".board-row__meta")).toHaveTextContent("Complete")
   })
 
   it("keeps a repeating bar complete between one span and the next", () => {
@@ -255,14 +245,10 @@ describe("BoardRow", () => {
       }
     }
 
-    const { container } = render(
-      <BoardRow item={item} now={new Date(2026, 5, 19, 22, 0, 0)} />
-    )
+    const { container } = render(<BoardRow item={item} now={new Date(2026, 5, 19, 22, 0, 0)} />)
 
     expect(screen.getByText("100%")).toBeInTheDocument()
-    expect(container.querySelector(".board-row__meta")).toHaveTextContent(
-      "Complete"
-    )
+    expect(container.querySelector(".board-row__meta")).toHaveTextContent("Complete")
   })
 
   it("splits a passed countdown into the span and an ago line", () => {
@@ -279,9 +265,7 @@ describe("BoardRow", () => {
     )
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
-    expect(container.querySelector(".board-row__value")).toHaveTextContent(
-      "2 days"
-    )
+    expect(container.querySelector(".board-row__value")).toHaveTextContent("2 days")
     expect(container.querySelector(".board-row__meta")).toHaveTextContent("ago")
   })
 
@@ -294,9 +278,7 @@ describe("BoardRow", () => {
       settings: { targetAt: new Date(2025, 11, 25).toISOString(), repeat: "yearly" }
     }
 
-    const { container } = render(
-      <BoardRow item={item} now={new Date(2026, 11, 25, 15, 0, 0)} />
-    )
+    const { container } = render(<BoardRow item={item} now={new Date(2026, 11, 25, 15, 0, 0)} />)
 
     expect(container.querySelector(".board-row__value")).toHaveTextContent("Today")
     // "Today" already says everything, so there is no "from now" or "ago" to add.
@@ -315,14 +297,10 @@ describe("BoardRow", () => {
       settings: { targetAt: new Date(2056, 9, 6).toISOString() }
     }
 
-    const { container } = render(
-      <BoardRow item={item} now={new Date(2056, 0, 2, 9, 0, 0)} />
-    )
+    const { container } = render(<BoardRow item={item} now={new Date(2056, 0, 2, 9, 0, 0)} />)
 
     // The card's own now is in 2056, so the year is this one and stays off; read against the real clock it would show.
-    expect(container.querySelector(".board-row__detail")).toHaveTextContent(
-      /^Fri, Oct 6$/
-    )
+    expect(container.querySelector(".board-row__detail")).toHaveTextContent(/^Fri, Oct 6$/)
   })
 
   // The habit tests all want the same card and differ only in which days are already marked; unlike the other kinds, none of them assert on the title or the preset.
@@ -360,12 +338,11 @@ describe("BoardRow", () => {
 
     expect(container.querySelectorAll(".habit-day")).toHaveLength(7)
     expect(container.querySelectorAll(".habit-day--done")).toHaveLength(1)
-    expect(container.querySelector(".habit-day--done")).toHaveClass(
-      "habit-day--today"
+    expect(container.querySelector(".habit-day--done")).toHaveClass("habit-day--today")
+    expect(screen.getByRole("button", { name: "Done today ✓" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
     )
-    expect(
-      screen.getByRole("button", { name: "Done today ✓" })
-    ).toHaveAttribute("aria-pressed", "true")
   })
 
   it("toggles an earlier day from its own dot", () => {
@@ -392,9 +369,7 @@ describe("BoardRow", () => {
     const item = habit()
     const onWidgetChange = vi.fn()
 
-    const { container } = render(
-      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
-    )
+    const { container } = render(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
 
     const tomorrow = screen.getByRole("button", {
       name: formatDayLabel(new Date(2026, 2, 5, 9, 0, 0))
@@ -414,14 +389,13 @@ describe("BoardRow", () => {
 
     render(<BoardRow item={item} now={now} />)
 
-    expect(
-      screen.getByRole("toolbar", { name: "This week" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("toolbar", { name: "This week" })).toBeInTheDocument()
     expect(screen.getByText(/Mar 2\s*–\s*8/)).toBeInTheDocument()
     // Each dot names its own day for a pointer as well as a screen reader.
-    expect(
-      screen.getByRole("button", { name: formatDayLabel(now) })
-    ).toHaveAttribute("title", formatDayLabel(now))
+    expect(screen.getByRole("button", { name: formatDayLabel(now) })).toHaveAttribute(
+      "title",
+      formatDayLabel(now)
+    )
   })
 
   it("walks the habit week with the arrow keys from one tab stop", () => {
@@ -431,8 +405,7 @@ describe("BoardRow", () => {
 
     render(<BoardRow item={item} now={now} />)
 
-    const dot = (date: number) =>
-      screen.getByRole("button", { name: formatDayLabel(dayAt(date)) })
+    const dot = (date: number) => screen.getByRole("button", { name: formatDayLabel(dayAt(date)) })
 
     // Today is the row's only tab stop, so a board of habits stays walkable.
     expect(dot(4)).toHaveAttribute("tabindex", "0")
@@ -525,9 +498,7 @@ describe("BoardRow", () => {
   it("adds a todo task from the card and clears the field", () => {
     const onWidgetChange = vi.fn()
 
-    render(
-      <BoardRow item={todo([])} now={todoAt} onWidgetChange={onWidgetChange} />
-    )
+    render(<BoardRow item={todo([])} now={todoAt} onWidgetChange={onWidgetChange} />)
 
     const field = screen.getByLabelText("Add a task to Today")
 
@@ -576,9 +547,7 @@ describe("BoardRow", () => {
     render(<BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />)
 
     expect(screen.getByRole("heading", { name: "Scratchpad" })).toBeInTheDocument()
-    expect(screen.getByLabelText("Scratchpad note")).toHaveValue(
-      "Call the dentist"
-    )
+    expect(screen.getByLabelText("Scratchpad note")).toHaveValue("Call the dentist")
   })
 
   it("saves note edits on blur", () => {
@@ -655,9 +624,7 @@ describe("BoardRow", () => {
     const now = new Date("2026-01-01T12:30:00.000Z")
     const onWidgetChange = vi.fn(async () => "Couldn’t save")
 
-    const { rerender } = render(
-      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
-    )
+    const { rerender } = render(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
     const field = screen.getByLabelText("Scratchpad note")
     const typed = "Keep me, and the long paste after it"
 
@@ -701,9 +668,7 @@ describe("BoardRow", () => {
       .mockResolvedValueOnce("Couldn’t save")
       .mockResolvedValue(null)
 
-    const { rerender } = render(
-      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
-    )
+    const { rerender } = render(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
     const field = screen.getByLabelText("Scratchpad note")
 
     fireEvent.change(field, { target: { value: "Keep me, and more" } })
@@ -736,13 +701,9 @@ describe("BoardRow", () => {
     }
     const now = new Date("2026-01-01T12:30:00.000Z")
     let land = (_refused: string | null) => {}
-    const onWidgetChange = vi.fn(
-      () => new Promise<string | null>((resolve) => (land = resolve))
-    )
+    const onWidgetChange = vi.fn(() => new Promise<string | null>((resolve) => (land = resolve)))
 
-    const { rerender } = render(
-      <BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />
-    )
+    const { rerender } = render(<BoardRow item={item} now={now} onWidgetChange={onWidgetChange} />)
     const field = screen.getByLabelText("Scratchpad note")
 
     fireEvent.change(field, { target: { value: "Idea" } })
@@ -781,9 +742,7 @@ describe("BoardRow", () => {
     render(<BoardRow item={item} now={now} />)
 
     expect(screen.getByRole("heading", { name: "Daily quote" })).toBeInTheDocument()
-    expect(
-      screen.getByText(quotes[dailyQuoteIndex(now, quotes.length)]!)
-    ).toBeInTheDocument()
+    expect(screen.getByText(quotes[dailyQuoteIndex(now, quotes.length)]!)).toBeInTheDocument()
   })
 
   it("prompts to add quotes when the list is empty", () => {
@@ -1019,9 +978,7 @@ describe("BoardRow", () => {
     }
     const onWidgetChange = vi.fn()
 
-    render(
-      <BoardRow item={item} now={new Date(0)} onWidgetChange={onWidgetChange} />
-    )
+    render(<BoardRow item={item} now={new Date(0)} onWidgetChange={onWidgetChange} />)
 
     expect(screen.getByText("2:14:00")).toBeInTheDocument()
     // Pressing it carries on from the tally rather than starting over, so it says so, the way a paused timer does.
@@ -1444,7 +1401,9 @@ describe("BoardRow", () => {
       rerender(board(teaAgain, finishedAs(eggs)))
       expect(document.title).toBe("Time’s up · Eggs")
 
-      rerender(board(teaAgain, { ...eggs, settings: { ...eggs.settings, running: false, endsAt: null } }))
+      rerender(
+        board(teaAgain, { ...eggs, settings: { ...eggs.settings, running: false, endsAt: null } })
+      )
       expect(document.title).toBe("New Tab")
     })
 
@@ -1460,7 +1419,9 @@ describe("BoardRow", () => {
 
       const { rerender } = render(row(tea))
       await vi.advanceTimersByTimeAsync(60_000)
-      rerender(row({ ...tea, settings: { ...tea.settings, running: false, remainingMs: 0, endsAt: null } }))
+      rerender(
+        row({ ...tea, settings: { ...tea.settings, running: false, remainingMs: 0, endsAt: null } })
+      )
       rerender(row(tea))
       await vi.advanceTimersByTimeAsync(0)
 
@@ -1562,9 +1523,7 @@ describe("BoardRow", () => {
       vi.useFakeTimers()
       const onWidgetChange = vi.fn()
 
-      render(
-        <BoardRow item={scratch} now={new Date()} onWidgetChange={onWidgetChange} />
-      )
+      render(<BoardRow item={scratch} now={new Date()} onWidgetChange={onWidgetChange} />)
       fireEvent.change(screen.getByLabelText("Scratchpad note"), {
         target: { value: "Closing now" }
       })
@@ -1615,9 +1574,7 @@ describe("BoardRow", () => {
 
       // Archived from another tab while the save was still waiting.
       const archived = { ...scratch, archived: true }
-      rerender(
-        <BoardRow item={archived} now={new Date()} onWidgetChange={onWidgetChange} />
-      )
+      rerender(<BoardRow item={archived} now={new Date()} onWidgetChange={onWidgetChange} />)
       vi.advanceTimersByTime(600)
 
       expect(onWidgetChange).toHaveBeenCalledWith({

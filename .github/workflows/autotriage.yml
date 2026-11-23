@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       issues:
-        description: 'Issue or PR numbers (blank = backlog)'
+        description: "Issue or PR numbers (blank = backlog)"
       dry-run:
-        description: 'Plan without applying'
+        description: "Plan without applying"
         type: boolean
         default: true
 

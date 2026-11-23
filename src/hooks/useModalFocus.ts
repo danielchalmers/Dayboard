@@ -28,9 +28,7 @@ export const useModalFocus = (
 
     const opener = document.activeElement as HTMLElement | null
     const getFocusable = () =>
-      Array.from(
-        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      ).filter(
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
         // Skip hidden controls (e.g. the Options dialog's hidden file input).
         (el) => el.getClientRects().length > 0 || el === document.activeElement
       )
