@@ -2,7 +2,7 @@
 
 ## Project
 
-Dayboard is a WXT, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm, responsive board of widgets — live clocks, natural-language countdowns (with optional progress bars and recurrence), sticky notes, rotating quotes, a stopwatch and timer, daily habits, and todo lists — with editing kept on the new tab page itself.
+Dayboard is a Vite, TypeScript, and React Manifest V3 extension for Chrome and Microsoft Edge. It replaces the new tab page with a calm, responsive board of widgets — live clocks, natural-language countdowns (with optional progress bars and recurrence), sticky notes, rotating quotes, a stopwatch and timer, daily habits, and todo lists — with editing kept on the new tab page itself.
 
 The product should feel premium, polished, quiet, and useful at a glance. The whole app "just works" with as few knobs as possible: favor automatic behavior over configuration, and remove an option whenever a good default can replace it.
 
@@ -30,14 +30,13 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 
 ## Architecture
 
-- WXT entrypoints live in `src/entrypoints` (`newtab` for the new tab page; a minimal `background` service worker that exists so MV3 registers one).
-- The root `NewTabPage` component lives in `src/NewTabPage.tsx`; `src/entrypoints/newtab/main.tsx` mounts it.
+- The new tab page is `newtab.html` at the root, and `src/main.tsx` mounts the root `NewTabPage` component from `src/NewTabPage.tsx` into it.
 - Shared logic lives in `src/lib`: time and countdowns (`time`), the page's shared clock (`clock`), stopwatch/timer (`timers`), quotes (`quotes`), habits (`habit`), todo lists (`todo`), the greeting (`greeting`), the optional Web Audio chime (`chime`), colors (`colors`), the widget registry (`widgets`), `types`, `chrome.storage.sync` access (`storage`), and the per-device hidden state (`hidden`).
 - Reusable React components live in `src/components`.
 - Plain CSS lives in `src/styles/global.css`.
 - Do not add Tailwind or a UI component library.
-- The manifest is defined in `wxt.config.ts`, not a root `manifest.json` or `package.json`.
-- Static icons live in `public/` and are copied to the build output as-is.
+- The build is plain Vite. The manifest is a static object in `vite.config.ts`, written into each build, not a root `manifest.json` or `package.json`; Chrome and Edge get the same one. Do not bring back an extension framework (WXT and the like) or web-ext for what a few lines of config do.
+- Static icons and the background service worker (`background.js`, empty, there so MV3 registers one) live in `public/` and are copied to the build output as-is.
 - Storage uses `chrome.storage.sync` with a `chrome.storage.onChanged` watch so open tabs and signed-in browsers stay in sync. Global `settings` are normalized to defaults on read (missing or malformed fields fall back) and widgets keep new fields optional for backward compatibility; there is otherwise no heavy versioning or migration layer. Writes are optimistic and roll back with a notice if the `set` fails (e.g. quota). Typed work is not rolled back with them: an Add or Edit dialog stays open on its draft, and a note or the greeting name keeps refused words on screen with a notice up until they save, so a long paste is trimmed rather than retyped.
 - The page keeps time through one shared clock (`src/lib/clock.ts`, read with `useNow`). Cards subscribe at the granularity they can show (clocks and countdowns by the minute, habits and quotes at local midnight, a stopwatch or timer by the second only while running), the store keeps a single timeout aimed at the next boundary of the finest one wanted, and it stops while the tab is hidden. Nothing above a card renders on a tick; do not reintroduce a page-level interval or pass `now` down as a prop. A running timer is the one exception to "hidden means asleep": it keeps a single timeout aimed at its own finish, so it settles, chimes, and marks the tab's title on time while you are in another tab. The finish only settles the run it was aimed at, checked against the board once the tab has caught up with storage (not the card's copy, and not the localStorage mirror a new tab paints first unless storage can't be read). The chime sounds once across open tabs, and the chime and the title cue only mark a finish near when it happens, never one found long after. The title reads `Time’s up · <title>` from that finish until the tab is looked at again or the timer is started or reset, and never counts down.
 - Keep the extension new-tab-only: no popup and no separate options entrypoint. The Options overlay lives on the new tab page itself, which `options_ui` points at (`newtab.html?view=settings`).
@@ -53,21 +52,22 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 
 ## Commands
 
-- `npm run dev`: start the Chrome MV3 WXT dev server.
-- `npm run dev:edge`: start the Edge MV3 WXT dev server.
+- `npm run dev`: build into `.output/chrome-mv3-dev` on every save and open the installed Chrome with it loaded.
+- `npm run dev:edge`: the same in Edge, from `.output/edge-mv3-dev`.
 - `npm run typecheck`: run TypeScript.
 - `npm test`: run Vitest.
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
 - `npm run e2e`: run Playwright smoke tests.
 - `npm run verify`: run typecheck, unit tests, and Chrome build.
-- `npm run zip`: package the Chrome MV3 production build.
-- `npm run zip:edge`: package the Edge MV3 production build.
+- `npm run zip`: build for Chrome and zip it to `.output/dayboard-chrome.zip`, with `manifest.json` at the zip's root. Needs `zip` on PATH (GitHub's runners have it).
+- `npm run zip:edge`: the same for Edge, to `.output/dayboard-edge.zip`.
 
 ## VS Code Debugging
 
 - F5 uses `.vscode/launch.json` and `.vscode/tasks.json`.
-- The launch configs start the WXT dev server (`npm run dev` / `npm run dev:edge`), which opens a browser with the extension loaded.
+- The launch configs run `npm run dev` / `npm run dev:edge` (`scripts/dev.ts`), which builds in watch mode and opens a browser with the extension loaded and a new tab showing the board. After a rebuild that changed the manifest or the service worker it reloads the whole extension and reopens its tabs; otherwise it reloads the extension's open pages in place. Closing the browser ends the session.
+- The dev browser is the installed Chrome or Edge, opened through Playwright (`scripts/dev-browser.ts`). Chrome no longer loads an unpacked extension from the command line, so the extension is loaded through the DevTools protocol, the same way in both browsers. Teichos's dev browser works the same way.
 - Keep debug browser profiles ignored under `.vscode/`.
 
 ## Testing Expectations
@@ -92,9 +92,9 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - CI uses Node 24 and npm cache.
 - The Playwright job uses the Microsoft Playwright container.
 - Release runs on `vX.Y.Z` tags.
-- The release workflow passes the tag version to the build via the `RELEASE_VERSION` environment variable, which `wxt.config.ts` writes into the manifest.
+- The release workflow passes the tag version to the build via the `RELEASE_VERSION` environment variable, which `vite.config.ts` writes into the manifest.
 - Do not manually bump the checked-in `package.json.version`; the release workflow stamps the manifest version from the tag.
-- Release zips and publishes both browser targets.
+- Release zips and publishes both browser targets through `npm run zip` and `npm run zip:edge`.
 - Prefer descriptive, sentence-style commit subjects without conventional-commit prefixes.
 - Commit bodies should explain the reasoning behind the change.
 

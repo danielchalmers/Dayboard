@@ -61,12 +61,12 @@ See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
 
 ## Development
 
-Dayboard is built with [WXT](https://wxt.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org) as a Manifest V3 extension.
+Dayboard is built with [Vite](https://vite.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org) as a Manifest V3 extension.
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the Chrome development server |
-| `npm run dev:edge` | Start the Edge development server |
+| `npm run dev` | Open Chrome with Dayboard, rebuilding on save |
+| `npm run dev:edge` | Open Edge with Dayboard, rebuilding on save |
 | `npm run build` | Build for Chrome (`.output/chrome-mv3`) |
 | `npm run build:edge` | Build for Edge (`.output/edge-mv3`) |
 | `npm test` | Run unit tests ([Vitest](https://vitest.dev)) |
