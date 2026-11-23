@@ -39,6 +39,10 @@ const toDraft = (item: Widget | null): Widget | null =>
     ? resolveCountdown(item)
     : item
 
+// A date field takes a year of up to six digits unless it is given a latest date, and a stored target is read back as a four-digit one.
+// Left open, a slip to 20260 kept the dialog's old target and saved it without a word; with a limit the field stops at four digits, and a longer year that arrives some other way is held by native validation.
+const LATEST_DATE_TIME = "9999-12-31T23:59"
+
 export const ItemDialog = ({
   isOpen,
   item,
@@ -317,6 +321,7 @@ export const ItemDialog = ({
                 <label className="form-label-group">
                   <span>{widgetDefinition.editor.targetLabel}</span>
                   <input
+                    max={LATEST_DATE_TIME}
                     onChange={(event) => updateTargetAt(event.currentTarget.value)}
                     required
                     type="datetime-local"
@@ -345,6 +350,7 @@ export const ItemDialog = ({
                   <span>Starting from</span>
                   <div className="input-adorned">
                     <input
+                      max={LATEST_DATE_TIME}
                       onChange={(event) =>
                         updateStartAt(event.currentTarget.value)
                       }

@@ -433,6 +433,33 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.targetAt).toBe(countdownItem.settings.targetAt)
   })
 
+  // The field itself stops a typed year at four digits, so this is the year that gets in some other way, which only the form's validation is left to hold.
+  // It was once shown in the field while the save quietly went ahead with the date the dialog opened on.
+  it("will not save a countdown whose year runs past four digits", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: countdownItem, onSave }))
+
+    fireEvent.change(screen.getByLabelText("When"), {
+      target: { value: "20260-12-25T09:00" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("When")).toBeInvalid()
+
+    fireEvent.change(screen.getByLabelText("When"), {
+      target: { value: "2026-12-25T09:00" }
+    })
+    fireEvent.change(screen.getByLabelText("Starting from"), {
+      target: { value: "20250-12-25T09:00" }
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByLabelText("Starting from")).toBeInvalid()
+  })
+
   it("moves a countdown's target without disturbing its repeat or start", () => {
     const onSave = vi.fn()
 
