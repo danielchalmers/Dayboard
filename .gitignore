@@ -2,7 +2,6 @@ node_modules/
 .output/
 .wxt/
 dist/
-coverage/
 playwright-report/
 test-results/
 *.log

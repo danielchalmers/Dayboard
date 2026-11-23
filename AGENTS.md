@@ -57,7 +57,6 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - `npm run dev:edge`: start the Edge MV3 WXT dev server.
 - `npm run typecheck`: run TypeScript.
 - `npm test`: run Vitest.
-- `npm run test:coverage`: run Vitest with a coverage report.
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
 - `npm run e2e`: run Playwright smoke tests.

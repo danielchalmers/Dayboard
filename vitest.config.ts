@@ -1,4 +1,4 @@
-import { coverageConfigDefaults, defineConfig } from "vitest/config"
+import { defineConfig } from "vitest/config"
 
 // The JSX runtime is not set here.
 // Vitest resolves its own Vite, which trails the one WXT builds with, so naming that transform pins this file to whichever of the two is installed today.
@@ -20,14 +20,7 @@ export default defineConfig({
       "**/.claude/**"
     ],
     globals: true,
-    setupFiles: ["./test/setup.ts"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      // Measure the logic and the components; the WXT entrypoints are a few lines of mounting each.
-      include: ["src/**/*.{ts,tsx}"],
-      exclude: [...coverageConfigDefaults.exclude, "src/entrypoints/**"]
-    }
+    setupFiles: ["./test/setup.ts"]
   },
   resolve: {
     alias: {
