@@ -15,8 +15,8 @@ test("ships a minimal, new-tab-only manifest", async ({ page, extensionId }) => 
   )
 
   // Storage is the whole ask. Anything else here is a new store-review conversation.
-  expect(manifest.permissions).toEqual(["storage"])
-  expect(manifest.host_permissions).toBeUndefined()
+  expect(manifest["permissions"]).toEqual(["storage"])
+  expect(manifest["host_permissions"]).toBeUndefined()
 
   expect(manifest).toMatchObject({
     chrome_url_overrides: { newtab: "newtab.html" },
@@ -26,9 +26,9 @@ test("ships a minimal, new-tab-only manifest", async ({ page, extensionId }) => 
     background: { service_worker: "background.js" }
   })
 
-  expect(manifest.options_page).toBeUndefined()
+  expect(manifest["options_page"]).toBeUndefined()
   // Asserting `action` is absent outright is stricter than the written rule, which forbids a popup rather than a toolbar icon. That is deliberate: Dayboard lives on the new tab page and has nothing to put behind a toolbar button.
-  expect(manifest.action).toBeUndefined()
+  expect(manifest["action"]).toBeUndefined()
 })
 
 test("never reaches the network", async ({ page, context, extensionId }) => {

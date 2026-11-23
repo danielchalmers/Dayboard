@@ -75,13 +75,13 @@ export type TimerFinishHandler = (id: string, endsAt: number) => Promise<TimerWi
 interface BoardRowProps {
   item: Widget
   now: Date
-  articleProps?: ComponentPropsWithoutRef<"article">
-  dragHandleProps?: ComponentPropsWithoutRef<"div">
-  menuButtonProps?: ComponentPropsWithoutRef<"button">
-  className?: string
-  style?: CSSProperties
-  onWidgetChange?: WidgetChangeHandler
-  onTimerFinish?: TimerFinishHandler
+  articleProps?: ComponentPropsWithoutRef<"article"> | undefined
+  dragHandleProps?: ComponentPropsWithoutRef<"div"> | undefined
+  menuButtonProps?: ComponentPropsWithoutRef<"button"> | undefined
+  className?: string | undefined
+  style?: CSSProperties | undefined
+  onWidgetChange?: WidgetChangeHandler | undefined
+  onTimerFinish?: TimerFinishHandler | undefined
 }
 
 // Text the card cuts off can still be read whole: pointing at it offers all of it as a tooltip.
@@ -108,7 +108,7 @@ const NoteField = ({
   onWidgetChange
 }: {
   item: NoteWidget
-  onWidgetChange?: WidgetChangeHandler
+  onWidgetChange?: WidgetChangeHandler | undefined
 }) => {
   // Built on the widget as it is when the save runs (see useAutoSave), so a late save cannot undo an archive or rename that landed in between.
   const field = useAutoSave<HTMLTextAreaElement>(item.settings.text, (text) =>
@@ -181,7 +181,7 @@ const StopwatchBody = ({
 }: {
   item: StopwatchWidget
   now: Date
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: ((widget: Widget) => void) | undefined
 }) => {
   const elapsed = stopwatchElapsedMs(item.settings, now.getTime())
   const { running } = item.settings
@@ -269,8 +269,8 @@ const TimerBody = ({
 }: {
   item: TimerWidget
   now: Date
-  onWidgetChange?: (widget: Widget) => void
-  onTimerFinish?: TimerFinishHandler
+  onWidgetChange?: ((widget: Widget) => void) | undefined
+  onTimerFinish?: TimerFinishHandler | undefined
 }) => {
   const { id } = item
   const { running, endsAt, durationMs, chime } = item.settings
@@ -385,7 +385,7 @@ const HabitBody = ({
 }: {
   item: HabitWidget
   now: Date
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: ((widget: Widget) => void) | undefined
 }) => {
   const { history } = item.settings
   const done = isDoneToday(history, now)
@@ -498,7 +498,7 @@ const TodoBody = ({
   onWidgetChange
 }: {
   item: TodoWidget
-  onWidgetChange?: (widget: Widget) => void
+  onWidgetChange?: ((widget: Widget) => void) | undefined
 }) => {
   const [draft, setDraft] = useState("")
   const { tasks } = item.settings
@@ -627,12 +627,12 @@ const TodoBody = ({
 
 interface CardShellProps {
   item: Widget
-  articleProps?: ComponentPropsWithoutRef<"article">
-  dragHandleProps?: ComponentPropsWithoutRef<"div">
-  menuButtonProps?: ComponentPropsWithoutRef<"button">
-  className?: string
-  style?: CSSProperties
-  bodyClassName?: string
+  articleProps?: ComponentPropsWithoutRef<"article"> | undefined
+  dragHandleProps?: ComponentPropsWithoutRef<"div"> | undefined
+  menuButtonProps?: ComponentPropsWithoutRef<"button"> | undefined
+  className?: string | undefined
+  style?: CSSProperties | undefined
+  bodyClassName?: string | undefined
   detail?: ReactNode
   children: ReactNode
 }

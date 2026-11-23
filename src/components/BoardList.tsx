@@ -33,8 +33,8 @@ interface BoardListProps {
   // Something sits in the archive, so an empty board has been tidied away rather than never filled.
   hasArchived?: boolean
   renderItemActions?: (item: Widget, index: number) => ReactNode
-  onWidgetChange?: WidgetChangeHandler
-  onTimerFinish?: TimerFinishHandler
+  onWidgetChange?: WidgetChangeHandler | undefined
+  onTimerFinish?: TimerFinishHandler | undefined
 }
 
 // With no cards on the board there is no slot to aim an archived card at, so the empty-state placeholder itself doubles as the restore target while a drag is under way.
@@ -359,8 +359,8 @@ interface SortableBoardRowProps {
   prefersReducedMotion: boolean
   onCloseMenu: () => void
   onOpenMenu: (id: string, x: number, y: number, align?: MenuAlign) => void
-  onWidgetChange?: WidgetChangeHandler
-  onTimerFinish?: TimerFinishHandler
+  onWidgetChange?: WidgetChangeHandler | undefined
+  onTimerFinish?: TimerFinishHandler | undefined
 }
 
 // Every prop below is stable across a clock tick, so React's shallow compare is the whole memo: a row renders when its own widget, menu state, or callbacks change, and otherwise only when its own clock subscription fires.
@@ -428,7 +428,7 @@ const SortableBoardRow = memo(
     }
 
     const deferToDragKeys = (event: ReactKeyboardEvent<HTMLElement>) => {
-      listeners?.onKeyDown?.(event)
+      listeners?.["onKeyDown"]?.(event)
     }
 
     const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
@@ -475,7 +475,7 @@ const SortableBoardRow = memo(
 
     // Only the pointer activator moves to the frame so dragging starts from the border; keyboard dragging stays on the focusable card via handleKeyDown, which still defers to the sortable's onKeyDown listener.
     // dnd-kit types its listeners loosely as `Function`, so narrow the pointer-down handler here.
-    const onPointerDown = listeners?.onPointerDown as
+    const onPointerDown = listeners?.["onPointerDown"] as
       PointerEventHandler<HTMLDivElement> | undefined
 
     const shared = {

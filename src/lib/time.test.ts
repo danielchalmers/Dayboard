@@ -285,10 +285,10 @@ describe("resolveCountdown", () => {
 
   // In Chile the clocks go straight from midnight to 01:00 on 6 September 2026, so that day starts an hour late, and a date on it with it.
   it("lets a repeating date go at the next midnight when a DST change skipped its own", () => {
-    const zone = process.env.TZ
+    const zone = process.env["TZ"]
 
     try {
-      process.env.TZ = "America/Santiago"
+      process.env["TZ"] = "America/Santiago"
       // The yearly date sits on the day the clocks change, so it falls at 01:00, the first moment that day has.
       const anniversary = new Date(2025, 8, 6).toISOString()
       expect(new Date(2026, 8, 6).getHours()).toBe(1)
@@ -303,9 +303,9 @@ describe("resolveCountdown", () => {
     } finally {
       // Assigning undefined would set the string "undefined", which Node reads as UTC.
       if (zone === undefined) {
-        delete process.env.TZ
+        delete process.env["TZ"]
       } else {
-        process.env.TZ = zone
+        process.env["TZ"] = zone
       }
     }
   })
@@ -530,12 +530,12 @@ describe("localizeCountdown", () => {
     const year = createDefaultWidgets(new Date(2026, 9, 4)).find(
       (widget): widget is CountdownWidget => widget.id === "year-progress"
     )!
-    const zone = process.env.TZ
+    const zone = process.env["TZ"]
 
     expect(year.settings.timeZone).toBe("America/Chicago")
 
     try {
-      process.env.TZ = "Asia/Tokyo"
+      process.env["TZ"] = "Asia/Tokyo"
 
       // Tokyo's own New Year's midnights, not Chicago's, which are 3 PM there.
       expect(localizeCountdown(year).settings).toMatchObject({
@@ -545,33 +545,33 @@ describe("localizeCountdown", () => {
       expect(new Date(localizeCountdown(year).settings.targetAt).getHours()).toBe(0)
     } finally {
       if (zone === undefined) {
-        delete process.env.TZ
+        delete process.env["TZ"]
       } else {
-        process.env.TZ = zone
+        process.env["TZ"] = zone
       }
     }
   })
 
   it("reads a date in the zone the device has moved to", () => {
-    const zone = process.env.TZ
+    const zone = process.env["TZ"]
 
     try {
-      process.env.TZ = "America/Los_Angeles"
+      process.env["TZ"] = "America/Los_Angeles"
 
       expect(localizeCountdown(christmas).settings).toEqual({
         targetAt: "2026-12-25T08:00:00.000Z",
         timeZone: "America/Los_Angeles"
       })
 
-      process.env.TZ = "Asia/Tokyo"
+      process.env["TZ"] = "Asia/Tokyo"
 
       expect(localizeCountdown(christmas).settings.targetAt).toBe("2026-12-24T15:00:00.000Z")
     } finally {
       // Assigning undefined would set the string "undefined", which Node reads as UTC.
       if (zone === undefined) {
-        delete process.env.TZ
+        delete process.env["TZ"]
       } else {
-        process.env.TZ = zone
+        process.env["TZ"] = zone
       }
     }
   })
