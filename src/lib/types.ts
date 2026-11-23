@@ -203,7 +203,9 @@ export const createDefaultWidgets = (now = new Date()): Widget[] => {
       title: "👋 Welcome",
       colorPreset: "emerald",
       settings: {
-        text: "Good to have you here. This is your space for the day. Keep what helps, change what doesn't, and let the rest be quiet."
+        // The one place a new board says how it works, so it names the three things nothing else on the page does.
+        // It is as long as a note can be and still show whole in a 320px window (e2e/dayboard.spec.ts): a longer one scrolls, and the fade at its edge hides the last of it.
+        text: "Good to have you here. A card's icon opens its menu to edit, archive, or delete it. Drag a card to move it, and use + to add one."
       }
     },
     {

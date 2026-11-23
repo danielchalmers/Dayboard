@@ -101,6 +101,38 @@ test("new tab page renders the default widgets and editing controls", async ({
   await expect(cardByTitle(page, "🕒 Local time").getByText("System time zone")).toBeVisible()
 })
 
+// Nothing else on a new board says its cards can be edited, moved, or removed, or where a new one comes from.
+test("the first-run note says how the board works, and shows all of it", async ({
+  page,
+  extensionId
+}) => {
+  await openNewTab(page, extensionId)
+  const note = page.getByLabel("👋 Welcome note")
+
+  await expect(note).toHaveValue(
+    "Good to have you here. A card's icon opens its menu to edit, archive, or delete it. Drag a card to move it, and use + to add one."
+  )
+
+  // A note that holds more than it shows scrolls, and the fade at its edge would hide the last of the three.
+  for (const width of [1920, 1280, 800, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+
+    expect(
+      await note.evaluate((field) => field.scrollHeight <= field.clientHeight),
+      `the note shows whole at ${width}px`
+    ).toBe(true)
+  }
+
+  // What it says is so: the icon opens a menu with those three in it, and the + is there to press.
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole("button", { name: "Actions for 👋 Welcome" }).click()
+  for (const action of ["Edit", "Archive", "Delete"]) {
+    await expect(page.getByRole("menuitem", { name: `${action} 👋 Welcome` })).toBeVisible()
+  }
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
+})
+
 test("centers the board in the viewport with no docking option", async ({ page, extensionId }) => {
   // A tall viewport keeps the short default board well within one screen.
   const viewport = { width: 1280, height: 1000 }
