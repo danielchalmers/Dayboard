@@ -477,8 +477,82 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings).toEqual({
       targetAt: new Date(2026, 0, 3, 9, 0, 0).toISOString(),
       startAt: countdownItem.settings.startAt,
-      repeat: "hourly"
+      repeat: "hourly",
+      // The fields are this device's wall clock, so dates saved from them say which zone that was.
+      timeZone: "America/Chicago"
     })
+  })
+
+  // Christmas set as a date in New York, on a board since opened in Chicago (where the suite runs): the instant stored is 11 PM on the 24th here.
+  describe("a countdown whose date was set in another time zone", () => {
+    const christmas: CountdownWidget = {
+      ...countdownItem,
+      settings: {
+        targetAt: "2026-12-25T05:00:00.000Z",
+        timeZone: "America/New_York"
+      }
+    }
+
+    it("opens on that date, as its card shows it", () => {
+      render(itemDialog({ item: christmas }))
+
+      expect(screen.getByLabelText("When")).toHaveValue("2026-12-25T00:00")
+    })
+
+    it("keeps the date and zone it is stored by when saved with its dates untouched", () => {
+      const onSave = vi.fn()
+
+      render(itemDialog({ item: christmas, onSave }))
+
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Christmas" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      // A rename from somewhere else has not set the date anywhere new, and rewriting it would only pass the card back and forth between devices.
+      expect(saved(onSave).title).toBe("Christmas")
+      expect(saved(onSave).settings).toEqual(christmas.settings)
+    })
+
+    it("saves a date picked here as a date here", () => {
+      const onSave = vi.fn()
+
+      render(itemDialog({ item: christmas, onSave }))
+
+      fireEvent.change(screen.getByLabelText("When"), {
+        target: { value: "2026-12-26T00:00" }
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+      expect(saved(onSave).settings).toEqual({
+        targetAt: new Date(2026, 11, 26).toISOString(),
+        timeZone: "America/Chicago"
+      })
+    })
+
+    it("closes from the backdrop without saving when nothing was changed", () => {
+      const onSave = vi.fn()
+      const onClose = vi.fn()
+
+      render(itemDialog({ item: christmas, onClose, onSave }))
+
+      fireEvent.pointerDown(document.querySelector(".modal-backdrop") as HTMLElement)
+
+      expect(onClose).toHaveBeenCalledTimes(1)
+      expect(onSave).not.toHaveBeenCalled()
+    })
+  })
+
+  // A countdown saved before the zone was recorded has none, and only setting its dates again gives it one.
+  it("leaves a countdown with no time zone without one when its dates are untouched", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: countdownItem, onSave }))
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Liftoff" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.timeZone).toBeUndefined()
   })
 
   describe("a repeating countdown", () => {

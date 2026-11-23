@@ -267,7 +267,8 @@ describe("normalizing widgets read from storage or an import", () => {
       widget("countdown", {
         targetAt: "2026-12-31T00:00:00.000Z",
         startAt: "2026-01-01T00:00:00.000Z",
-        repeat: "yearly"
+        repeat: "yearly",
+        timeZone: "Europe/London"
       }),
       widget("note", { text: "Buy milk" }),
       widget("quote", { quotes: ["One", "Two"], rotation: "open" }),
@@ -283,7 +284,7 @@ describe("normalizing widgets read from storage or an import", () => {
   it("rebuilds each field a card reads when it arrives with the wrong type", async () => {
     const widgets = await parse([
       widget("clock", { timeZone: 5 }),
-      widget("countdown", { targetAt: 123, startAt: 4, repeat: "fortnightly" }),
+      widget("countdown", { targetAt: 123, startAt: 4, repeat: "fortnightly", timeZone: 5 }),
       widget("note", { text: null }),
       widget("quote", { quotes: ["One", 2, "Three"], rotation: "shuffled" }),
       widget("stopwatch", { running: true, elapsedMs: "y", startedAt: "x" }),

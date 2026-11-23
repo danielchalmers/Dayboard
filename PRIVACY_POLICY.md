@@ -10,7 +10,7 @@ Dayboard stores only the widgets you create and their content, including:
 
 - Widget titles, colors, and their order on the board
 - Clock time zones
-- Countdown target dates, times, and recurrence
+- Countdown target dates, times, and recurrence, and the time zone they were set in
 - Note text, curated quote lists, timer durations, stopwatch state, and habit history
 - Your optional greeting name and basic item metadata needed to keep the board working
 

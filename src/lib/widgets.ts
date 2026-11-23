@@ -1,4 +1,5 @@
 import { randomColorPreset } from "./colors"
+import { getSystemTimeZone } from "./time"
 import { resetTimer } from "./timers"
 import {
   type ClockWidget,
@@ -40,6 +41,7 @@ const createClockWidget = (): ClockWidget => ({
 
 // A new countdown has no start, so the card shows the time remaining; setting a start in the dialog is what turns it into a progress bar.
 // The target is the start of tomorrow, a date: the field keeps its time when a day is picked, so picking one leaves a date counted in days, and a time of day is there only once one is set.
+// It carries the zone it was made in, which is what keeps it that date on a device somewhere else.
 const createCountdownWidget = (now = new Date()): CountdownWidget => {
   const target = new Date(now)
   target.setDate(target.getDate() + 1)
@@ -48,7 +50,8 @@ const createCountdownWidget = (now = new Date()): CountdownWidget => {
   return {
     ...createBase("countdown", "New countdown"),
     settings: {
-      targetAt: target.toISOString()
+      targetAt: target.toISOString(),
+      timeZone: getSystemTimeZone()
     }
   }
 }
@@ -161,7 +164,8 @@ const dialogSettings = (draft: Widget): Partial<Widget["settings"]> => {
       return {
         targetAt: draft.settings.targetAt,
         startAt: draft.settings.startAt,
-        repeat: draft.settings.repeat
+        repeat: draft.settings.repeat,
+        timeZone: draft.settings.timeZone
       }
     case "quote":
       return { quotes: draft.settings.quotes, rotation: draft.settings.rotation }

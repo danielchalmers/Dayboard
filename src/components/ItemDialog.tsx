@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useModalFocus } from "~/hooks/useModalFocus"
 import {
   dateTimeInputValueToIsoInstant,
+  getSystemTimeZone,
   isoInstantToDateTimeInputValue,
+  localizeCountdown,
   resolveCountdown
 } from "~/lib/time"
 import { quotesToText, textToQuotes } from "~/lib/quotes"
@@ -32,12 +34,13 @@ interface ItemDialogProps {
 
 // A repeating countdown is stored as the occurrence it was set on, which can be months or years back by now.
 // Open it on the occurrence its card is showing instead, so the fields agree with the card and switching it to Never keeps that date rather than reviving the old one.
+// The same goes for a date set in another time zone, which the card shows on this zone's calendar (resolving does that too).
 const toDraft = (item: Widget | null): Widget | null =>
-  item?.kind === "countdown" &&
-  item.settings.repeat &&
-  item.settings.repeat !== "none"
-    ? resolveCountdown(item)
-    : item
+  item?.kind !== "countdown"
+    ? (item ?? null)
+    : item.settings.repeat && item.settings.repeat !== "none"
+      ? resolveCountdown(item)
+      : localizeCountdown(item)
 
 // A date field takes a year of up to six digits unless it is given a latest date, and a stored target is read back as a four-digit one.
 // Left open, a slip to 20260 kept the dialog's old target and saved it without a word; with a limit the field stops at four digits, and a longer year that arrives some other way is held by native validation.
@@ -163,8 +166,9 @@ export const ItemDialog = ({
     const targetAt = dateTimeInputValueToIsoInstant(value)
 
     // Patching leaves startAt/repeat in place when only the target changes.
+    // The fields read and write this device's wall clock, so a date saved from them is a date in this zone.
     if (targetAt) {
-      patchSettings("countdown", { targetAt })
+      patchSettings("countdown", { targetAt, timeZone: getSystemTimeZone() })
     }
   }
 
@@ -182,11 +186,15 @@ export const ItemDialog = ({
       return
     }
 
-    patchSettings("countdown", { startAt: startAt ?? undefined })
+    patchSettings("countdown", {
+      startAt: startAt ?? undefined,
+      timeZone: getSystemTimeZone()
+    })
   }
 
   // Saved with its dates and repeat untouched, a countdown keeps the occurrence it is stored by rather than the one on show.
   // They read the same today, but a monthly countdown on the 31st shows the 28th in February, and storing that would move it off the 31st for good.
+  // The zone they were set in is kept with them, since a rename from somewhere else has not set them anywhere new.
   const toSaved = (edited: Widget): Widget =>
     edited.kind === "countdown" &&
     item?.kind === "countdown" &&
@@ -198,7 +206,8 @@ export const ItemDialog = ({
           settings: {
             ...edited.settings,
             targetAt: item.settings.targetAt,
-            startAt: item.settings.startAt
+            startAt: item.settings.startAt,
+            timeZone: item.settings.timeZone
           }
         }
       : edited
