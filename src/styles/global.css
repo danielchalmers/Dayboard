@@ -6,9 +6,9 @@
 
   /* Fonts.
      The weight scale across this file tops out at 650 and lives mostly in the 500-600 range: headings that carry by size and letter-spacing rather than by mass.
-     It used to reach 800, which on the system fallback matched the black cut of the family and made the big numbers on the cards look stamped rather than set. */
-  --font-sans:
-    "Outfit", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+     It used to reach 800, which matched the black cut of the system family and made the big numbers on the cards look stamped rather than set.
+     The stack is the system's own and nothing else: no font ships with the extension, and one named ahead of it would change the page only for whoever happens to have it installed. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Warm paper neutrals (light fallbacks): a touch of warmth instead of the flat gray of a stock new tab. */
   --bg: hsl(40, 30%, 97%);
@@ -1134,6 +1134,40 @@ button.board-row__badge:active {
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--card-accent-resolved) 18%, transparent);
 }
 
+/* A contrast theme (forced colors) repaints every background with the page's own and drops every shadow, which is all the dots and the progress bar are drawn with: a done day, an open one and one still to come all came out as nothing at all, and the bar as an empty row.
+   Borders are kept, so each mark gets one, and what is filled is filled with a color the theme picks.
+   The hover rules above are named again because they would otherwise win and blank a done day under the pointer. */
+@media (forced-colors: active) {
+  .habit-day__dot {
+    border: 2px solid ButtonText;
+  }
+
+  .habit-day--done .habit-day__dot,
+  .habit-day--done:hover:not(:disabled) .habit-day__dot {
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  /* Today keeps its ring, drawn as an outline now that the shadow is gone. */
+  .habit-day--today .habit-day__dot {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+
+  .habit-day--future .habit-day__dot {
+    border-color: GrayText;
+    border-style: dotted;
+  }
+
+  .progress-bar {
+    border: 1px solid CanvasText;
+  }
+
+  .progress-bar__fill {
+    background: Highlight;
+  }
+}
+
 /* Todo list: four tasks always fit, so nothing here scrolls.
    The tasks and the field they are typed into sit together under the title, anchored to the top so the tasks stay put when the fourth one takes the field away. */
 .board-row__body--todo {
@@ -1215,6 +1249,19 @@ button.board-row__badge:active {
   -webkit-mask: var(--tick) center / 11px no-repeat;
   mask: var(--tick) center / 11px no-repeat;
   inline-size: 100%;
+}
+
+/* In a contrast theme the fill and the tick would both be repainted as the page's background, and a checked box would look like an empty one. */
+@media (forced-colors: active) {
+  .todo-task__box:checked,
+  .todo-task__check:hover .todo-task__box:checked {
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  .todo-task__box:checked::after {
+    background: HighlightText;
+  }
 }
 
 /* Keyboard focus on a row's controls is a hairline ring in the page's ink rather than the accent glow the page puts on every input: that glow fires on plain clicks too, which on a box this small reads as a smudge, and drawn in the accent it would all but vanish around an already-accent-filled box. */
@@ -1792,6 +1839,14 @@ body:has(.board-row--overlay) .board-notice {
       0 0 0 2px var(--surface),
       0 0 0 4.5px var(--swatch-color-dark);
     transform: scale(1.18);
+  }
+}
+
+/* A contrast theme would repaint all twelve as the same empty ring, and drop the ring that marks the chosen one.
+   The colors are what this control is for, so here they are left as they are. */
+@media (forced-colors: active) {
+  .color-swatch {
+    forced-color-adjust: none;
   }
 }
 

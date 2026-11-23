@@ -235,7 +235,8 @@ export function NewTabPage() {
   // Archiving, restoring, or deleting a card unmounts whatever had focus (the menu item, the dialog's button, the card itself), which drops the keyboard on the page body and sends the next Tab to the far end of the board.
   // So a keyboard action names the card to land on instead, the way the todo list hands focus to the row that takes a removed task's place.
   // No card to land on (the board just emptied) falls back to the archive toggle, the next stop after the board.
-  const focusLanding = useRef<{ id?: string | undefined } | null>(null)
+  // An undo asked for with its key is the exception: nothing unmounts, so focus is still on the card that took the slot, and the card that came back is handed it outright.
+  const focusLanding = useRef<{ id?: string | undefined; fromAnywhere?: boolean } | null>(null)
 
   // A new card joins the end of the board, which on a full board or a short screen is below the fold: the dialog closed on a page that looked the same, with nothing to say the card had been made.
   // Its id waits here from the moment its save lands until the page has drawn it, and then the card is brought into view.
@@ -272,7 +273,11 @@ export function NewTabPage() {
     focusLanding.current = null
 
     // Only a focus that fell to the page is picked back up; one that is somewhere on purpose stays put.
-    if (document.activeElement && document.activeElement !== document.body) {
+    if (
+      !landing.fromAnywhere &&
+      document.activeElement &&
+      document.activeElement !== document.body
+    ) {
       return
     }
 
@@ -816,6 +821,11 @@ export function NewTabPage() {
               key={undoableArchive.id}
               onExpire={expireUndo}
               onUndo={(event) => undoArchive(undoableArchive, isKeyboardAction(event))}
+              onUndoShortcut={() => {
+                closeOpenMenus()
+                undoArchive(undoableArchive, true)
+                focusLanding.current = { id: undoableArchive.id, fromAnywhere: true }
+              }}
               title={undoableItem.title}
             />
           </div>

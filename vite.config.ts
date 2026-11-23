@@ -9,8 +9,11 @@ const manifest = {
   short_name: "Dayboard",
   // The release workflow stamps the tag's version here; the checked-in package.json stays at 0.0.0.
   version: process.env["RELEASE_VERSION"] ?? "0.0.0",
-  description: "A calm new tab board of clocks, countdowns, notes, timers, quotes, and habits.",
-  minimum_chrome_version: "116",
+  description:
+    "A calm new tab board of clocks, countdowns, notes, todo lists, timers, quotes, and habits.",
+  // The time zone list is placed with CSS anchor positioning, and `position-try-fallbacks` is the newest piece of it, in Chrome and Edge 128.
+  // Below that the list opened in the corner of the page, so those browsers stay on the last build that worked for them.
+  minimum_chrome_version: "128",
   permissions: ["storage"],
   icons: {
     16: "icon16.png",

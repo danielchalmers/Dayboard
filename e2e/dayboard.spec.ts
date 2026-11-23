@@ -2030,6 +2030,48 @@ test("an archive can be undone back into the slot it left", async ({ page, exten
   await expect(page.locator(".board-notice")).toHaveCount(0)
 })
 
+// An archive from the keyboard leaves focus on the next card, and Tab reaches Undo only after every card on the board, which the notice's few seconds do not cover.
+test("Ctrl+Z undoes an archive while its notice is showing", async ({ page, extensionId }) => {
+  await page.setViewportSize({ width: 1280, height: 1600 })
+  await openNewTab(page, extensionId)
+  const titles = page.locator(".board-row h2")
+  const undo = page.getByRole("button", { name: "Undo" })
+
+  const welcome = cardByTitle(page, "👋 Welcome")
+  await welcome.focus()
+  await welcome.press("ContextMenu")
+  await page.getByRole("menuitem", { name: "Archive 👋 Welcome" }).press("Enter")
+  await expect(cardByTitle(page, "💬 Today's reminder")).toBeFocused()
+
+  // The card comes back to the place it left, with the focus, as it does from the button.
+  await page.keyboard.press("Control+z")
+  await expect(titles).toHaveText(DEFAULT_BOARD_TITLES)
+  await expect(welcome).toBeFocused()
+  await expect(undo).toHaveCount(0)
+
+  // In a note the key is the note's own: it takes back what was typed there, and the archive stands.
+  await openWidgetMenu(page, "🕒 Local time")
+  await page.getByRole("menuitem", { name: "Archive 🕒 Local time" }).click()
+  await expect(undo).toBeVisible()
+  const note = page.getByLabel("👋 Welcome note")
+  await note.click()
+  await note.press("End")
+  await note.pressSequentially(" Hi")
+  await note.press("Control+z")
+  await expect(undo).toBeVisible()
+  await expect(cardByTitle(page, "🕒 Local time")).toHaveCount(0)
+
+  // Out of the note again, it is the board's.
+  await page.locator(".page-header__greeting").click()
+  await page.keyboard.press("Control+z")
+  await expect(cardByTitle(page, "🕒 Local time")).toBeVisible()
+  await expect(undo).toHaveCount(0)
+
+  // With nothing on offer the key does nothing.
+  await page.keyboard.press("Control+z")
+  await expect(titles).toHaveText(DEFAULT_BOARD_TITLES)
+})
+
 test("archiving or deleting from the keyboard keeps its place on the board", async ({
   page,
   extensionId
@@ -2113,6 +2155,10 @@ test.describe("with the clock paused", () => {
     // The archive zone comes up where the notice sits, so the notice makes way for it instead of showing around the tray's edges.
     await expect(page.locator(".archive-dropzone")).toBeVisible()
     await expect(notice).toBeHidden()
+
+    // With the notice aside there is no Undo on screen, so its key waits too rather than change the board under the card in hand.
+    await page.keyboard.press("Control+z")
+    await expect(cardByTitle(page, "🌅 Morning")).toHaveCount(0)
 
     // Set the card back down where it was, and the notice returns with Undo still on offer.
     await page.mouse.move(grabX, grabY, { steps: 6 })
