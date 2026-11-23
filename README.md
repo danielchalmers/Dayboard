@@ -71,3 +71,8 @@ Dayboard is built with [WXT](https://wxt.dev), [React](https://react.dev), and [
 | `npm test` | Run unit tests ([Vitest](https://vitest.dev)) |
 | `npm run e2e` | Run end-to-end tests ([Playwright](https://playwright.dev)) |
 | `npm run verify` | Typecheck, test, and build |
+
+## Related
+
+- [Teichos](https://github.com/danielchalmers/Teichos): block distracting sites all the time or on a schedule.
+- [Null Tab](https://github.com/danielchalmers/NullTab): a blank new tab page, for when you want no widgets at all.
