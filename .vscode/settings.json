@@ -1,0 +1,12 @@
+{
+  "files.exclude": {
+    "node_modules": true,
+    "dist": true,
+    ".output": true,
+    ".vscode/chrome-debug-profile": true,
+    ".vscode/edge-debug-profile": true
+  },
+  "files.associations": {
+    "*.json": "jsonc"
+  }
+}
