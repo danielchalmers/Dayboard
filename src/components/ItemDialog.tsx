@@ -448,7 +448,9 @@ export const ItemDialog = ({
                           // Typing into a part replaces it, rather than adding digits to what was there and turning 5 minutes and a typed 25 into 525.
                           onFocus={(event) => event.currentTarget.select()}
                           type="number"
-                          value={msToParts(draft.settings.durationMs)[part]}
+                          // Handed over as text, because React leaves a number field alone while what it shows is worth the same number.
+                          // An emptied part reads 0, the next digits land after that 0, and as a number 025 was close enough to 25 to be left on show.
+                          value={String(msToParts(draft.settings.durationMs)[part])}
                         />
                         <span>{label}</span>
                       </label>

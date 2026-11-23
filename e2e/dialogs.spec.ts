@@ -193,6 +193,13 @@ test("typing replaces a timer's length part", async ({ page, extensionId }) => {
   await page.keyboard.press("Tab")
   await page.keyboard.type("30")
   await expect(page.getByLabel("seconds")).toHaveValue("30")
+
+  // Emptying a part first leaves a 0 that is not selected, and the digits typed after it must not keep it in front of them (030).
+  await page.keyboard.press("Backspace")
+  await page.keyboard.press("Backspace")
+  await expect(page.getByLabel("seconds")).toHaveValue("0")
+  await page.keyboard.type("45")
+  await expect(page.getByLabel("seconds")).toHaveValue("45")
 })
 
 test("a countdown's year stops at four digits", async ({ page, extensionId }) => {

@@ -605,6 +605,24 @@ describe("ItemDialog", () => {
     expect(saved(onSave).settings.durationMs).toBe(45_000)
   })
 
+  // An emptied part snaps to 0 with the caret after it, so the digits typed next arrive as 025.
+  // The length was right all along, but the field went on showing the zero.
+  it("drops the zero left in front of a retyped length part", () => {
+    const onSave = vi.fn()
+
+    render(itemDialog({ item: timerItem, onSave }))
+
+    const minutes = screen.getByLabelText<HTMLInputElement>("minutes")
+    fireEvent.change(minutes, { target: { value: "" } })
+    fireEvent.change(minutes, { target: { value: "025" } })
+
+    expect(minutes.value).toBe("25")
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
+
+    expect(saved(onSave).settings.durationMs).toBe(25 * 60_000)
+  })
+
   // Typed digits would otherwise join the ones already there, so a click into 5 minutes and a typed 25 read 525.
   it("selects a length part as it takes focus, so typing replaces it", () => {
     render(itemDialog({ item: timerItem }))
