@@ -58,8 +58,9 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - `npm test`: run Vitest.
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
-- `npm run e2e`: run Playwright smoke tests.
-- `npm run verify`: run typecheck, unit tests, and Chrome build.
+- `npm run test:e2e`: run Playwright smoke tests, after building `.output/chrome-mv3`.
+- `npm run check:fast`: run typecheck and unit tests.
+- `npm run check`: run `check:fast`, then the Playwright tests. Teichos's scripts have the same names.
 - `npm run zip`: build for Chrome and zip it to `.output/dayboard-chrome.zip`, with `manifest.json` at the zip's root. Needs `zip` on PATH (GitHub's runners have it).
 - `npm run zip:edge`: the same for Edge, to `.output/dayboard-edge.zip`.
 
@@ -80,9 +81,8 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - The Playwright context is pinned to `en-US` and `UTC`, so the board's `Intl` output is the same on every machine. Fake a clock with an explicit instant (`new Date("2026-03-04T10:00:00Z")`), never with local components, because Node's time zone is no longer the browser's.
 - Reach for the shared Playwright helpers rather than rebuilding them: `openNewTab`, `addWidget`, `openWidgetMenu`, `liftWithKeyboard`, `settleAfterDrop`, `cardByTitle`, `boxOf`, `readWidgetSettings`, and `DEFAULT_BOARD_TITLES` in `e2e/helpers.ts`, and the spec-local `dragWidget`. A test that needs to assert mid-flow, or that drives the pointer at computed coordinates to check menu placement, should still write its steps out.
 - Before handoff after frontend work, run:
-  - `npm run verify`
+  - `npm run check`
   - `npm run build:edge`
-  - `npm run e2e`
 - For visual revamps, inspect built-page screenshots at desktop and mobile new-tab sizes.
 - Keep a seeded Playwright screenshot story for product-like CI artifacts covering the main board, mobile board, add dialogs, and edit dialogs.
 

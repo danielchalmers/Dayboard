@@ -2,6 +2,16 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Check",
+      "type": "npm",
+      "script": "check",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Build",
       "type": "npm",
       "script": "build",
@@ -12,19 +22,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Verify",
+      "label": "Test E2E",
       "type": "npm",
-      "script": "verify",
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
-      "problemMatcher": "$tsc"
-    },
-    {
-      "label": "E2E",
-      "type": "npm",
-      "script": "e2e",
+      "script": "test:e2e",
       "problemMatcher": []
     }
   ]
