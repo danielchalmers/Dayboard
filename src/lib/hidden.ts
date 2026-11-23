@@ -26,9 +26,7 @@ export const writeBoardHidden = (hidden: boolean) => {
 
 // The other board tabs open on this device hide and show together, so a board hidden in one window is not still on show in the next.
 // The storage event only reaches the tabs that did not make the change, and a cleared localStorage reports no key at all.
-export const watchBoardHidden = (
-  listener: (hidden: boolean) => void
-): (() => void) => {
+export const watchBoardHidden = (listener: (hidden: boolean) => void): (() => void) => {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === HIDDEN_KEY || event.key === null) {
       listener(readBoardHidden())

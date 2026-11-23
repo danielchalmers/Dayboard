@@ -2,12 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  HIDDEN_KEY,
-  readBoardHidden,
-  watchBoardHidden,
-  writeBoardHidden
-} from "./hidden"
+import { HIDDEN_KEY, readBoardHidden, watchBoardHidden, writeBoardHidden } from "./hidden"
 
 // What another board tab's change looks like from this one.
 const storageEvent = (key: string | null) =>

@@ -20,11 +20,7 @@ import { useBoardHidden } from "~/hooks/useBoardHidden"
 import { useDayboardState } from "~/hooks/useDayboardState"
 import { useNow } from "~/hooks/useNow"
 import { getGreeting, getHeaderDate } from "~/lib/greeting"
-import {
-  isSameData,
-  parseDayboardState,
-  serializeDayboardState
-} from "~/lib/storage"
+import { isSameData, parseDayboardState, serializeDayboardState } from "~/lib/storage"
 import {
   applyDialogEdit,
   archiveWidget,
@@ -143,7 +139,12 @@ const HideIcon = ({ hidden }: { hidden: boolean }) => {
         <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.8" />
       </g>
       {struck ? (
-        <path d="M4.2 4.2 19.8 19.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <path
+          d="M4.2 4.2 19.8 19.8"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.8"
+        />
       ) : null}
     </svg>
   )
@@ -244,9 +245,7 @@ export function NewTabPage() {
   // Undo only stands for an archive that is still in place.
   // Once the card is back on the board (restored by hand, or from another tab) or a failed save has rolled the archive back, there is nothing left to undo, and the notice goes rather than waiting to come back later for an archive made somewhere else.
   const undoableItem = undoableArchive
-    ? state?.widgets.find(
-        (widget) => widget.id === undoableArchive.id && widget.archived
-      )
+    ? state?.widgets.find((widget) => widget.id === undoableArchive.id && widget.archived)
     : undefined
 
   // Nor does it outlast the board being hidden: the notice names the card, and an Undo for a board that can't be seen has nothing to point at.
@@ -277,9 +276,9 @@ export function NewTabPage() {
       return
     }
 
-    const card = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-widget-id]")
-    ).find((element) => element.dataset.widgetId === landing.id)
+    const card = Array.from(document.querySelectorAll<HTMLElement>("[data-widget-id]")).find(
+      (element) => element.dataset.widgetId === landing.id
+    )
 
     ;(card ?? archiveToggleRef.current)?.focus()
   })
@@ -298,9 +297,7 @@ export function NewTabPage() {
     Array.from(document.querySelectorAll<HTMLElement>("[data-widget-id]"))
       .find((element) => element.dataset.widgetId === id)
       ?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         block: "nearest"
       })
   })
@@ -310,8 +307,7 @@ export function NewTabPage() {
       closeOpenMenus(event.composedPath())
 
     window.addEventListener("pointerdown", closeMenusAfterOutsidePointerDown)
-    return () =>
-      window.removeEventListener("pointerdown", closeMenusAfterOutsidePointerDown)
+    return () => window.removeEventListener("pointerdown", closeMenusAfterOutsidePointerDown)
   }, [])
 
   // Only the very first run (no cached board yet) waits on storage; a spinner would just flash, so stay blank on the page background until it resolves.
@@ -339,9 +335,7 @@ export function NewTabPage() {
 
     // A save tried again drops the last refusal, so a second one is said, and brought into view, afresh.
     setEditorState((current) =>
-      current?.error && current.item === opened
-        ? { ...current, error: undefined }
-        : current
+      current?.error && current.item === opened ? { ...current, error: undefined } : current
     )
     const refused = nextWidgets ? await setWidgets(nextWidgets) : null
 
@@ -399,11 +393,7 @@ export function NewTabPage() {
     void setWidgets(archiveWidget(state.widgets, id))
   }
 
-  const restore = (
-    id: string,
-    beforeId: string | undefined,
-    fromKeyboard: boolean
-  ) => {
+  const restore = (id: string, beforeId: string | undefined, fromKeyboard: boolean) => {
     if (fromKeyboard) {
       focusLanding.current = { id }
     }
@@ -423,10 +413,7 @@ export function NewTabPage() {
     restore(item.id, undefined, fromKeyboard)
   }
 
-  const undoArchive = (
-    { id, ...neighbors }: UndoableArchive,
-    fromKeyboard: boolean
-  ) => {
+  const undoArchive = ({ id, ...neighbors }: UndoableArchive, fromKeyboard: boolean) => {
     if (fromKeyboard) {
       focusLanding.current = { id }
     }
@@ -483,9 +470,7 @@ export function NewTabPage() {
 
       setIsSettingsOpen(false)
     } catch (cause) {
-      setImportError(
-        cause instanceof Error ? cause.message : "Couldn’t import that file."
-      )
+      setImportError(cause instanceof Error ? cause.message : "Couldn’t import that file.")
     }
   }
 
@@ -496,8 +481,7 @@ export function NewTabPage() {
 
   // The undo is only offered while the board is still exactly what was imported: once anything has changed since, putting the old board back would quietly throw that change away too.
   // The board is compared by what it holds, since a late echo of an earlier write can swap the board object out and back with nothing changed.
-  const canUndoImport =
-    importUndo !== null && isSameData(state, importUndo.imported)
+  const canUndoImport = importUndo !== null && isSameData(state, importUndo.imported)
 
   const undoImport = async () => {
     if (importUndo && (await replaceState(importUndo.previous)) === null) {
@@ -519,7 +503,8 @@ export function NewTabPage() {
               className="icon-button"
               onClick={toggleHidden}
               title={hidden ? "Show board" : "Hide board"}
-              type="button">
+              type="button"
+            >
               <HideIcon hidden={hidden} />
             </button>
             {hidden ? null : (
@@ -529,13 +514,9 @@ export function NewTabPage() {
                   className="icon-button"
                   onClick={openSettings}
                   title="Options"
-                  type="button">
-                  <svg
-                    aria-hidden="true"
-                    fill="none"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    width="24">
+                  type="button"
+                >
+                  <svg aria-hidden="true" fill="none" height="24" viewBox="0 0 24 24" width="24">
                     <circle cx="12" cy="12" r="3.1" stroke="currentColor" strokeWidth="1.8" />
                     <path
                       d="M19.4 12c0-.5-.05-1-.13-1.46l1.9-1.46-1.9-3.29-2.24.9a7.4 7.4 0 0 0-2.53-1.47L12.93 2h-3.8l-.57 2.72a7.4 7.4 0 0 0-2.53 1.47l-2.24-.9-1.9 3.29 1.9 1.46c-.08.47-.13.96-.13 1.46s.05 1 .13 1.46l-1.9 1.46 1.9 3.29 2.24-.9c.74.63 1.6 1.13 2.53 1.47L9.13 22h3.8l.57-2.72a7.4 7.4 0 0 0 2.53-1.47l2.24.9 1.9-3.29-1.9-1.46c.08-.47.13-.96.13-1.46Z"
@@ -554,18 +535,15 @@ export function NewTabPage() {
                     } else if (moveInAddMenu(event.currentTarget, event.key)) {
                       event.preventDefault()
                     }
-                  }}>
+                  }}
+                >
                   <summary
                     aria-label="Add widget"
                     className="icon-button"
                     role="button"
-                    title="Add widget">
-                    <svg
-                      aria-hidden="true"
-                      fill="none"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      width="24">
+                    title="Add widget"
+                  >
+                    <svg aria-hidden="true" fill="none" height="24" viewBox="0 0 24 24" width="24">
                       <path
                         d="M12 5v14M5 12h14"
                         stroke="currentColor"
@@ -590,16 +568,13 @@ export function NewTabPage() {
                           }
                           addItem(kind)
                         }}
-                        type="button">
-                        <span
-                          aria-hidden="true"
-                          className="menu-chip">
+                        type="button"
+                      >
+                        <span aria-hidden="true" className="menu-chip">
                           <WidgetIcon kind={kind} size={18} />
                         </span>
                         <span className="menu-button__text">
-                          <span className="menu-button__label">
-                            Add {label.toLowerCase()}
-                          </span>
+                          <span className="menu-button__label">Add {label.toLowerCase()}</span>
                           <span className="menu-button__hint" id={`add-${kind}-hint`}>
                             {hint}
                           </span>
@@ -620,14 +595,11 @@ export function NewTabPage() {
               widgets={state.widgets}
               onArchive={archive}
               onReorder={reorderList}
-              onRestore={restore}>
+              onRestore={restore}
+            >
               {(displayWidgets) => {
-                const activeWidgets = displayWidgets.filter(
-                  (widget) => !widget.archived
-                )
-                const archivedWidgets = displayWidgets.filter(
-                  (widget) => widget.archived
-                )
+                const activeWidgets = displayWidgets.filter((widget) => !widget.archived)
+                const archivedWidgets = displayWidgets.filter((widget) => widget.archived)
 
                 return (
                   <>
@@ -646,7 +618,8 @@ export function NewTabPage() {
                             disabled={index === 0}
                             onClick={() => reorderItem(item.id, -1)}
                             role="menuitem"
-                            type="button">
+                            type="button"
+                          >
                             <MenuIcon name="moveBack" />
                             Move back
                           </button>
@@ -656,7 +629,8 @@ export function NewTabPage() {
                             disabled={index === activeWidgets.length - 1}
                             onClick={() => reorderItem(item.id, 1)}
                             role="menuitem"
-                            type="button">
+                            type="button"
+                          >
                             <MenuIcon name="moveNext" />
                             Move next
                           </button>
@@ -669,7 +643,8 @@ export function NewTabPage() {
                               setEditorState({ mode: "edit", item })
                             }}
                             role="menuitem"
-                            type="button">
+                            type="button"
+                          >
                             <MenuIcon name="edit" />
                             Edit
                           </button>
@@ -678,7 +653,8 @@ export function NewTabPage() {
                             className="menu-button"
                             onClick={(event) => archiveItem(item, event)}
                             role="menuitem"
-                            type="button">
+                            type="button"
+                          >
                             <MenuIcon name="archive" />
                             Archive
                           </button>
@@ -691,7 +667,8 @@ export function NewTabPage() {
                               setItemPendingDelete(item)
                             }}
                             role="menuitem"
-                            type="button">
+                            type="button"
+                          >
                             <MenuIcon name="del" />
                             Delete
                           </button>
@@ -705,7 +682,8 @@ export function NewTabPage() {
                           className="archive-toggle"
                           onClick={() => setShowArchived((shown) => !shown)}
                           ref={archiveToggleRef}
-                          type="button">
+                          type="button"
+                        >
                           {showArchived ? "Hide archived" : "Show archived"}
                           {/* The chevron says this is a disclosure; flipping it is the open/closed state made visible. */}
                           <svg
@@ -714,7 +692,8 @@ export function NewTabPage() {
                             fill="none"
                             height="14"
                             viewBox="0 0 24 24"
-                            width="14">
+                            width="14"
+                          >
                             <path
                               d="m6 9 6 6 6-6"
                               stroke="currentColor"
@@ -736,7 +715,8 @@ export function NewTabPage() {
                                   className="menu-button"
                                   onClick={(event) => restoreItem(item, event)}
                                   role="menuitem"
-                                  type="button">
+                                  type="button"
+                                >
                                   <MenuIcon name="restore" />
                                   Restore
                                 </button>
@@ -748,7 +728,8 @@ export function NewTabPage() {
                                     setEditorState({ mode: "edit", item })
                                   }}
                                   role="menuitem"
-                                  type="button">
+                                  type="button"
+                                >
                                   <MenuIcon name="edit" />
                                   Edit
                                 </button>
@@ -761,7 +742,8 @@ export function NewTabPage() {
                                     setItemPendingDelete(item)
                                   }}
                                   role="menuitem"
-                                  type="button">
+                                  type="button"
+                                >
                                   <MenuIcon name="del" />
                                   Delete
                                 </button>
@@ -803,9 +785,7 @@ export function NewTabPage() {
         settings={state.settings}
         importError={importError}
         onChange={(settings, isShown) =>
-          nameReplacedRef.current
-            ? Promise.resolve(null)
-            : setSettings(settings, isShown)
+          nameReplacedRef.current ? Promise.resolve(null) : setSettings(settings, isShown)
         }
         onClose={closeSettings}
         onExport={exportBoard}
@@ -820,7 +800,8 @@ export function NewTabPage() {
             aria-label="Dismiss"
             className="board-notice__dismiss"
             onClick={dismissSaveError}
-            type="button">
+            type="button"
+          >
             Dismiss
           </button>
         </div>
@@ -834,9 +815,7 @@ export function NewTabPage() {
             <ArchiveNotice
               key={undoableArchive.id}
               onExpire={expireUndo}
-              onUndo={(event) =>
-                undoArchive(undoableArchive, isKeyboardAction(event))
-              }
+              onUndo={(event) => undoArchive(undoableArchive, isKeyboardAction(event))}
               title={undoableItem.title}
             />
           </div>
@@ -847,13 +826,15 @@ export function NewTabPage() {
               <button
                 className="board-notice__action"
                 onClick={() => void undoImport()}
-                type="button">
+                type="button"
+              >
                 Undo
               </button>
               <button
                 className="board-notice__dismiss"
                 onClick={() => setImportUndo(null)}
-                type="button">
+                type="button"
+              >
                 Dismiss
               </button>
             </span>

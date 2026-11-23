@@ -43,9 +43,9 @@ const RETIRED_SETTINGS = ["dragToMove", "columns", "chimeOnTimerEnd", "dockToBot
 
 // Fill any missing or malformed fields with their defaults so a partial or hand-edited imported board still loads cleanly, and carry the rest through for the version that wrote them.
 const normalizeSettings = (value: unknown): DayboardSettings => {
-  const stored = (typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value
-    : {}) as Partial<DayboardSettings>
+  const stored = (
+    typeof value === "object" && value !== null && !Array.isArray(value) ? value : {}
+  ) as Partial<DayboardSettings>
   const current = Object.fromEntries(
     Object.entries(stored).filter(([key]) => !RETIRED_SETTINGS.includes(key))
   ) as Partial<DayboardSettings>
@@ -61,9 +61,7 @@ const REPEATS: CountdownRepeat[] = ["none", "hourly", "daily", "weekly", "monthl
 const text = (value: unknown): string => (typeof value === "string" ? value : "")
 
 const span = (value: unknown, fallback: number): number =>
-  typeof value === "number" && Number.isFinite(value) && value >= 0
-    ? value
-    : fallback
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : fallback
 
 const instant = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null
@@ -216,10 +214,7 @@ const normalizeWidget = ({ archived, ...widget }: Widget): Widget =>
       ? widget.colorPreset
       : COLOR_PRESETS[0]!.id,
     ...(archived === true ? { archived } : {}),
-    settings: normalizeWidgetSettings(
-      widget.kind,
-      widget.settings as unknown as StoredSettings
-    )
+    settings: normalizeWidgetSettings(widget.kind, widget.settings as unknown as StoredSettings)
   }) as Widget
 
 // A widget whose id repeats one already seen is dropped: the board keys cards and routes edits by id, so a second card under the same one would render twice and take the first one's edits.
@@ -289,9 +284,7 @@ export const isSameData = (a: unknown, b: unknown): boolean => {
 
   return (
     aKeys.length === bKeys.length &&
-    aKeys.every((key) =>
-      isSameData((a as StoredSettings)[key], (b as StoredSettings)[key])
-    )
+    aKeys.every((key) => isSameData((a as StoredSettings)[key], (b as StoredSettings)[key]))
   )
 }
 
@@ -311,9 +304,7 @@ export const shareUnchanged = (
 
     return existing && isSameData(existing, widget) ? existing : widget
   })
-  const settings = isSameData(previous.settings, next.settings)
-    ? previous.settings
-    : next.settings
+  const settings = isSameData(previous.settings, next.settings) ? previous.settings : next.settings
   // A card only a newer build can show still changes when that build edits it, and this tab has to take the change, or its next save would put the old card back.
   const unknownWidgets = isSameData(previous.unknownWidgets, next.unknownWidgets)
     ? previous.unknownWidgets
@@ -387,16 +378,12 @@ export const parseDayboardState = (text: string): DayboardState => {
   return board
 }
 
-export const writeDayboardState = async (
-  state: DayboardState
-): Promise<void> => {
+export const writeDayboardState = async (state: DayboardState): Promise<void> => {
   await chrome.storage.sync.set({ [STORAGE_KEY]: toStoredState(state) })
   cacheDayboardState(state)
 }
 
-export const watchDayboardState = (
-  listener: (state: DayboardState) => void
-): (() => void) => {
+export const watchDayboardState = (listener: (state: DayboardState) => void): (() => void) => {
   const handleStorageChange = (
     changes: Record<string, chrome.storage.StorageChange>,
     areaName: string

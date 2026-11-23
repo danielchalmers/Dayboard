@@ -86,15 +86,13 @@ const openStoryBoard = async (page: Page, extensionId: string) => {
   await page.clock.setFixedTime(STORY_NOW)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto(`chrome-extension://${extensionId}/newtab.html`)
-  await page.evaluate(
-    ({ key, state }) => chrome.storage.sync.set({ [key]: state }),
-    { key: STORAGE_KEY, state: storyState }
-  )
+  await page.evaluate(({ key, state }) => chrome.storage.sync.set({ [key]: state }), {
+    key: STORAGE_KEY,
+    state: storyState
+  })
   await page.reload()
   // The browser is pinned to UTC, so STORY_NOW is a Friday afternoon on every machine and the greeting is a fixed string rather than a pattern.
-  await expect(
-    page.getByRole("heading", { name: "Good afternoon" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Good afternoon" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Austin" })).toBeVisible()
 }
 
@@ -117,10 +115,7 @@ const attachScreenshot = async (
   })
 }
 
-test("captures Dayboard product screenshots", async ({
-  page,
-  extensionId
-}, testInfo) => {
+test("captures Dayboard product screenshots", async ({ page, extensionId }, testInfo) => {
   await openStoryBoard(page, extensionId)
 
   await attachScreenshot(testInfo, page, "dayboard-main-desktop")
@@ -129,9 +124,7 @@ test("captures Dayboard product screenshots", async ({
   await expect(page.getByRole("menuitem", { name: "Edit New York" })).toBeVisible()
   await attachScreenshot(testInfo, page, "dayboard-widget-menu-desktop")
   await page.keyboard.press("Escape")
-  await expect(
-    page.getByRole("menuitem", { name: "Edit New York" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("menuitem", { name: "Edit New York" })).toHaveCount(0)
 
   // The hidden board is shown again straight away: it is remembered in the profile the other tests share.
   await page.getByRole("button", { name: "Hide board" }).click()
@@ -173,9 +166,7 @@ test("captures Dayboard product screenshots", async ({
 
   await openWidgetMenu(page, "Summer vacation")
   await page.getByRole("menuitem", { name: "Edit Summer vacation" }).click()
-  await expect(
-    page.getByRole("dialog", { name: "Edit countdown" })
-  ).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await attachScreenshot(testInfo, page, "dayboard-edit-countdown-dialog")
   await page.getByRole("button", { name: "Cancel" }).click()
 

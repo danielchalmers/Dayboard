@@ -24,12 +24,8 @@ describe("floorToGranularity", () => {
   it("floors to the second and the minute on the epoch grid", () => {
     const at = new Date(2026, 2, 4, 10, 17, 42, 900).getTime()
 
-    expect(floorToGranularity(at, "second")).toBe(
-      new Date(2026, 2, 4, 10, 17, 42).getTime()
-    )
-    expect(floorToGranularity(at, "minute")).toBe(
-      new Date(2026, 2, 4, 10, 17).getTime()
-    )
+    expect(floorToGranularity(at, "second")).toBe(new Date(2026, 2, 4, 10, 17, 42).getTime())
+    expect(floorToGranularity(at, "minute")).toBe(new Date(2026, 2, 4, 10, 17).getTime())
   })
 
   it("floors a day to local midnight, not UTC midnight", () => {

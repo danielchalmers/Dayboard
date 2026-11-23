@@ -41,29 +41,28 @@ const nextCountdownTarget = (
   targetAt: string,
   repeat: CountdownRepeat | undefined,
   now: Date
-): string =>
-  resolveCountdown(countdownWidget(targetAt, { repeat }), now).settings.targetAt
+): string => resolveCountdown(countdownWidget(targetAt, { repeat }), now).settings.targetAt
 
 describe("isSameLocalDay", () => {
   it("is true for two instants on the same local day", () => {
-    expect(
-      isSameLocalDay(new Date(2026, 2, 2, 0, 0, 0), new Date(2026, 2, 2, 23, 59, 59))
-    ).toBe(true)
+    expect(isSameLocalDay(new Date(2026, 2, 2, 0, 0, 0), new Date(2026, 2, 2, 23, 59, 59))).toBe(
+      true
+    )
   })
 
   it("is false a minute either side of local midnight", () => {
-    expect(
-      isSameLocalDay(new Date(2026, 2, 2, 23, 59, 0), new Date(2026, 2, 3, 0, 1, 0))
-    ).toBe(false)
+    expect(isSameLocalDay(new Date(2026, 2, 2, 23, 59, 0), new Date(2026, 2, 3, 0, 1, 0))).toBe(
+      false
+    )
   })
 
   it("separates the same day number in different months and years", () => {
-    expect(
-      isSameLocalDay(new Date(2026, 2, 2, 12, 0, 0), new Date(2026, 3, 2, 12, 0, 0))
-    ).toBe(false)
-    expect(
-      isSameLocalDay(new Date(2025, 2, 2, 12, 0, 0), new Date(2026, 2, 2, 12, 0, 0))
-    ).toBe(false)
+    expect(isSameLocalDay(new Date(2026, 2, 2, 12, 0, 0), new Date(2026, 3, 2, 12, 0, 0))).toBe(
+      false
+    )
+    expect(isSameLocalDay(new Date(2025, 2, 2, 12, 0, 0), new Date(2026, 2, 2, 12, 0, 0))).toBe(
+      false
+    )
   })
 })
 
@@ -89,31 +88,22 @@ describe("clock formatters", () => {
 
   // Intl throws a RangeError on a zone it does not recognize, and all three of these run from a card's render, so an unguarded throw takes the whole board down rather than the one clock.
   it("falls back to local time on a zone the browser does not know", () => {
-    expect(() => new Intl.DateTimeFormat(undefined, { timeZone: UNKNOWN_ZONE }))
-      .toThrow()
+    expect(() => new Intl.DateTimeFormat(undefined, { timeZone: UNKNOWN_ZONE })).toThrow()
 
     expect(formatClockTime(instant, clockWidget(UNKNOWN_ZONE))).toBe(
       formatClockTime(instant, clockWidget(localZone))
     )
-    expect(formatClockDate(instant, UNKNOWN_ZONE)).toBe(
-      formatClockDate(instant, localZone)
-    )
+    expect(formatClockDate(instant, UNKNOWN_ZONE)).toBe(formatClockDate(instant, localZone))
     // The name follows the time: it says where the clock is actually reading from, rather than lending the bad string the look of a real abbreviation.
-    expect(formatTimeZoneName(instant, UNKNOWN_ZONE)).toBe(
-      formatTimeZoneName(instant, localZone)
-    )
+    expect(formatTimeZoneName(instant, UNKNOWN_ZONE)).toBe(formatTimeZoneName(instant, localZone))
   })
 
   it("reads the system clock when the zone is left empty", () => {
     expect(formatClockTime(instant, clockWidget(""))).toBe(
       formatClockTime(instant, clockWidget(localZone))
     )
-    expect(formatClockDate(instant, "")).toBe(
-      formatClockDate(instant, localZone)
-    )
-    expect(formatTimeZoneName(instant, "")).toBe(
-      formatTimeZoneName(instant, localZone)
-    )
+    expect(formatClockDate(instant, "")).toBe(formatClockDate(instant, localZone))
+    expect(formatTimeZoneName(instant, "")).toBe(formatTimeZoneName(instant, localZone))
   })
 
   it("tells a known zone from an unknown one", () => {
@@ -150,9 +140,9 @@ describe("resolveCountdown", () => {
     // America/Chicago springs forward on 2026-03-08, so that day is 23 hours long: stepping by a fixed 24 hours would land the next occurrence at 10am.
     const target = new Date(2026, 2, 7, 9, 0, 0).toISOString()
 
-    expect(
-      nextCountdownTarget(target, "daily", new Date(2026, 2, 9, 12, 0, 0))
-    ).toBe(new Date(2026, 2, 10, 9, 0, 0).toISOString())
+    expect(nextCountdownTarget(target, "daily", new Date(2026, 2, 9, 12, 0, 0))).toBe(
+      new Date(2026, 2, 10, 9, 0, 0).toISOString()
+    )
   })
 
   it("rolls a weekly target to the same weekday within a week", () => {
@@ -216,20 +206,24 @@ describe("resolveCountdown", () => {
   it("keeps a monthly target on its day number through a month too short to hold it", () => {
     // The 31st has no February to land on, and rolling the overflow forward would put this countdown on March 3.
     const target = new Date(2026, 0, 31, 9, 0, 0).toISOString()
-    const february = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "monthly" }),
-      new Date(2026, 1, 15, 12, 0, 0)
-    ).settings.targetAt)
+    const february = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "monthly" }),
+        new Date(2026, 1, 15, 12, 0, 0)
+      ).settings.targetAt
+    )
 
     expect(february.getMonth()).toBe(1)
     expect(february.getDate()).toBe(28)
     expect(february.getHours()).toBe(9)
 
     // The clamp holds for one short month only; the day number comes back the moment a month is long enough.
-    const march = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "monthly" }),
-      new Date(2026, 2, 15, 12, 0, 0)
-    ).settings.targetAt)
+    const march = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "monthly" }),
+        new Date(2026, 2, 15, 12, 0, 0)
+      ).settings.targetAt
+    )
 
     expect(march.getMonth()).toBe(2)
     expect(march.getDate()).toBe(31)
@@ -237,19 +231,23 @@ describe("resolveCountdown", () => {
 
   it("keeps a yearly target on February 29 in February", () => {
     const target = new Date(2024, 1, 29, 9, 0, 0).toISOString()
-    const common = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "yearly" }),
-      new Date(2025, 0, 15, 12, 0, 0)
-    ).settings.targetAt)
+    const common = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "yearly" }),
+        new Date(2025, 0, 15, 12, 0, 0)
+      ).settings.targetAt
+    )
 
     expect(common.getMonth()).toBe(1)
     expect(common.getDate()).toBe(28)
 
     // The next leap year restores the 29th rather than staying clamped.
-    const leap = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "yearly" }),
-      new Date(2028, 0, 15, 12, 0, 0)
-    ).settings.targetAt)
+    const leap = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "yearly" }),
+        new Date(2028, 0, 15, 12, 0, 0)
+      ).settings.targetAt
+    )
 
     expect(leap.getMonth()).toBe(1)
     expect(leap.getDate()).toBe(29)
@@ -258,14 +256,18 @@ describe("resolveCountdown", () => {
   it("keeps hourly occurrences one real hour apart across a DST fall-back", () => {
     // America/Chicago replays 01:00-02:00 on 2026-11-01; stepping the local hour field would never land on the second pass.
     const target = new Date(2026, 10, 1, 0, 30, 0).toISOString()
-    const first = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "hourly" }),
-      new Date(2026, 10, 1, 0, 45, 0)
-    ).settings.targetAt)
-    const second = new Date(resolveCountdown(
-      countdownWidget(target, { repeat: "hourly" }),
-      new Date(first.getTime() + 15 * 60 * 1000)
-    ).settings.targetAt)
+    const first = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "hourly" }),
+        new Date(2026, 10, 1, 0, 45, 0)
+      ).settings.targetAt
+    )
+    const second = new Date(
+      resolveCountdown(
+        countdownWidget(target, { repeat: "hourly" }),
+        new Date(first.getTime() + 15 * 60 * 1000)
+      ).settings.targetAt
+    )
 
     expect(second.getTime() - first.getTime()).toBe(60 * 60 * 1000)
   })
@@ -273,12 +275,12 @@ describe("resolveCountdown", () => {
   it("keeps a repeating date on its day until the day is over", () => {
     const birthday = new Date(2025, 11, 25).toISOString()
 
-    expect(
-      nextCountdownTarget(birthday, "yearly", new Date(2026, 11, 25, 15, 0, 0))
-    ).toBe(new Date(2026, 11, 25).toISOString())
-    expect(
-      nextCountdownTarget(birthday, "yearly", new Date(2026, 11, 26, 0, 0, 0))
-    ).toBe(new Date(2027, 11, 25).toISOString())
+    expect(nextCountdownTarget(birthday, "yearly", new Date(2026, 11, 25, 15, 0, 0))).toBe(
+      new Date(2026, 11, 25).toISOString()
+    )
+    expect(nextCountdownTarget(birthday, "yearly", new Date(2026, 11, 26, 0, 0, 0))).toBe(
+      new Date(2027, 11, 25).toISOString()
+    )
   })
 
   // In Chile the clocks go straight from midnight to 01:00 on 6 September 2026, so that day starts an hour late, and a date on it with it.
@@ -291,13 +293,13 @@ describe("resolveCountdown", () => {
       const anniversary = new Date(2025, 8, 6).toISOString()
       expect(new Date(2026, 8, 6).getHours()).toBe(1)
 
-      expect(
-        nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 6, 23, 0, 0))
-      ).toBe(new Date(2026, 8, 6).toISOString())
+      expect(nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 6, 23, 0, 0))).toBe(
+        new Date(2026, 8, 6).toISOString()
+      )
       // The next day is a full day from its own midnight, not from the 01:00 its predecessor began at.
-      expect(
-        nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 7, 0, 30, 0))
-      ).toBe(new Date(2027, 8, 6).toISOString())
+      expect(nextCountdownTarget(anniversary, "yearly", new Date(2026, 8, 7, 0, 30, 0))).toBe(
+        new Date(2027, 8, 6).toISOString()
+      )
     } finally {
       // Assigning undefined would set the string "undefined", which Node reads as UTC.
       if (zone === undefined) {
@@ -311,13 +313,13 @@ describe("resolveCountdown", () => {
   it("never holds an hourly or daily repeat at midnight, which comes round every day", () => {
     const midnight = new Date(2026, 5, 19, 0, 0, 0).toISOString()
 
-    expect(
-      nextCountdownTarget(midnight, "hourly", new Date(2026, 5, 19, 0, 30, 0))
-    ).toBe(new Date(2026, 5, 19, 1, 0, 0).toISOString())
+    expect(nextCountdownTarget(midnight, "hourly", new Date(2026, 5, 19, 0, 30, 0))).toBe(
+      new Date(2026, 5, 19, 1, 0, 0).toISOString()
+    )
     // Held for its day, a nightly countdown to midnight would read Today all day, every day.
-    expect(
-      nextCountdownTarget(midnight, "daily", new Date(2026, 5, 19, 0, 30, 0))
-    ).toBe(new Date(2026, 5, 20, 0, 0, 0).toISOString())
+    expect(nextCountdownTarget(midnight, "daily", new Date(2026, 5, 19, 0, 30, 0))).toBe(
+      new Date(2026, 5, 20, 0, 0, 0).toISOString()
+    )
   })
 
   it("holds a finished repeating span at complete until the next one starts", () => {
@@ -351,9 +353,9 @@ describe("resolveCountdown", () => {
       repeat: "daily"
     })
 
-    expect(
-      resolveCountdown(overlapping, new Date(2026, 5, 19, 19, 0, 0)).settings.targetAt
-    ).toBe(new Date(2026, 5, 20, 18, 0, 0).toISOString())
+    expect(resolveCountdown(overlapping, new Date(2026, 5, 19, 19, 0, 0)).settings.targetAt).toBe(
+      new Date(2026, 5, 20, 18, 0, 0).toISOString()
+    )
   })
 
   it("rolls a span straight on when the next one starts as it ends", () => {
@@ -463,9 +465,9 @@ describe("localizeCountdown", () => {
       timeZone: "Asia/Tokyo"
     })
 
-    expect(
-      resolveCountdown(birthday, new Date(2027, 1, 20, 12, 0, 0)).settings.targetAt
-    ).toBe(new Date(2027, 2, 14).toISOString())
+    expect(resolveCountdown(birthday, new Date(2027, 1, 20, 12, 0, 0)).settings.targetAt).toBe(
+      new Date(2027, 2, 14).toISOString()
+    )
   })
 
   it("leaves a time of day the moment it is", () => {
@@ -563,9 +565,7 @@ describe("localizeCountdown", () => {
 
       process.env.TZ = "Asia/Tokyo"
 
-      expect(localizeCountdown(christmas).settings.targetAt).toBe(
-        "2026-12-24T15:00:00.000Z"
-      )
+      expect(localizeCountdown(christmas).settings.targetAt).toBe("2026-12-24T15:00:00.000Z")
     } finally {
       // Assigning undefined would set the string "undefined", which Node reads as UTC.
       if (zone === undefined) {
@@ -583,28 +583,20 @@ describe("getCountdownProgress", () => {
   })
 
   it("is the fraction of the span elapsed", () => {
-    expect(
-      getCountdownProgress(progressWidget, new Date("2026-01-06T00:00:00.000Z"))
-    ).toBeCloseTo(0.5)
+    expect(getCountdownProgress(progressWidget, new Date("2026-01-06T00:00:00.000Z"))).toBeCloseTo(
+      0.5
+    )
   })
 
   it("clamps before the start and after the target", () => {
-    expect(
-      getCountdownProgress(progressWidget, new Date("2025-12-01T00:00:00.000Z"))
-    ).toBe(0)
-    expect(
-      getCountdownProgress(progressWidget, new Date("2027-01-01T00:00:00.000Z"))
-    ).toBe(1)
+    expect(getCountdownProgress(progressWidget, new Date("2025-12-01T00:00:00.000Z"))).toBe(0)
+    expect(getCountdownProgress(progressWidget, new Date("2027-01-01T00:00:00.000Z"))).toBe(1)
   })
 
   it("falls back when no start is set", () => {
     const noStart = countdownWidget("2026-01-11T00:00:00.000Z")
-    expect(
-      getCountdownProgress(noStart, new Date("2026-01-01T00:00:00.000Z"))
-    ).toBe(0)
-    expect(
-      getCountdownProgress(noStart, new Date("2026-02-01T00:00:00.000Z"))
-    ).toBe(1)
+    expect(getCountdownProgress(noStart, new Date("2026-01-01T00:00:00.000Z"))).toBe(0)
+    expect(getCountdownProgress(noStart, new Date("2026-02-01T00:00:00.000Z"))).toBe(1)
   })
 
   it("reads an unreadable target as an empty bar however far the start is", () => {
@@ -614,9 +606,7 @@ describe("getCountdownProgress", () => {
       startAt: "2026-01-01T00:00:00.000Z"
     })
 
-    expect(
-      getCountdownProgress(unreadable, new Date("2027-01-01T00:00:00.000Z"))
-    ).toBe(0)
+    expect(getCountdownProgress(unreadable, new Date("2027-01-01T00:00:00.000Z"))).toBe(0)
   })
 })
 
@@ -683,18 +673,14 @@ describe("datetime-local countdown conversions", () => {
 
   it("reads a wall-clock time inside a DST change as the offset in force then", () => {
     // 2026-03-08 in America/Chicago: 01:30 is still CST (UTC-6) and 03:30 is already CDT (UTC-5).
-    expect(dateTimeInputValueToIsoInstant("2026-03-08T01:30")).toBe(
-      "2026-03-08T07:30:00.000Z"
-    )
-    expect(dateTimeInputValueToIsoInstant("2026-03-08T03:30")).toBe(
-      "2026-03-08T08:30:00.000Z"
-    )
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T01:30")).toBe("2026-03-08T07:30:00.000Z")
+    expect(dateTimeInputValueToIsoInstant("2026-03-08T03:30")).toBe("2026-03-08T08:30:00.000Z")
   })
 
   it("converts an ISO instant into a datetime-local value", () => {
-    expect(
-      isoInstantToDateTimeInputValue(new Date(2026, 0, 2, 3, 4, 0, 0).toISOString())
-    ).toBe("2026-01-02T03:04")
+    expect(isoInstantToDateTimeInputValue(new Date(2026, 0, 2, 3, 4, 0, 0).toISOString())).toBe(
+      "2026-01-02T03:04"
+    )
   })
 
   it("round-trips a year under 1000 through the edit field", () => {
@@ -734,10 +720,7 @@ describe("getCountdownParts", () => {
   })
 
   it("reads an unreadable target as due rather than failing", () => {
-    const parts = getCountdownParts(
-      countdownWidget("soon"),
-      new Date("2026-01-01T00:00:00.000Z")
-    )
+    const parts = getCountdownParts(countdownWidget("soon"), new Date("2026-01-01T00:00:00.000Z"))
 
     expect(parts.status).toBe("due")
     expect(parts.label).toBe("less than a minute from now")
@@ -816,33 +799,28 @@ describe("getCountdownParts", () => {
 
     it("reads in years and months", () => {
       expect(
-        getCountdownParts(countdownWidget(new Date(2027, 10, 11, 16, 30).toISOString()), now)
-          .label
+        getCountdownParts(countdownWidget(new Date(2027, 10, 11, 16, 30).toISOString()), now).label
       ).toBe("1 year, 1 month from now")
       expect(
         getCountdownParts(countdownWidget(new Date(2056, 9, 6).toISOString()), now).label
       ).toBe("29 years, 11 months from now")
       expect(
-        getCountdownParts(countdownWidget(new Date(1990, 2, 15, 8, 0).toISOString()), now)
-          .label
+        getCountdownParts(countdownWidget(new Date(1990, 2, 15, 8, 0).toISOString()), now).label
       ).toBe("36 years, 6 months ago")
     })
 
     it("skips an empty month the way it skips any empty unit", () => {
       expect(
-        getCountdownParts(countdownWidget(new Date(2027, 9, 20, 10, 0).toISOString()), now)
-          .label
+        getCountdownParts(countdownWidget(new Date(2027, 9, 20, 10, 0).toISOString()), now).label
       ).toBe("1 year from now")
     })
 
     it("stays in days until a whole year has gone by", () => {
       expect(
-        getCountdownParts(countdownWidget(new Date(2027, 9, 6, 10, 0).toISOString()), now)
-          .label
+        getCountdownParts(countdownWidget(new Date(2027, 9, 6, 10, 0).toISOString()), now).label
       ).toBe("364 days from now")
       expect(
-        getCountdownParts(countdownWidget(new Date(2027, 9, 7, 10, 0).toISOString()), now)
-          .label
+        getCountdownParts(countdownWidget(new Date(2027, 9, 7, 10, 0).toISOString()), now).label
       ).toBe("1 year from now")
     })
 
@@ -874,26 +852,26 @@ describe("formatCountdownTarget", () => {
   })
 
   it("leaves the time off a date", () => {
-    expect(
-      formatCountdownTarget(countdownWidget(new Date(2026, 11, 25).toISOString()), now)
-    ).toBe("Fri, Dec 25")
+    expect(formatCountdownTarget(countdownWidget(new Date(2026, 11, 25).toISOString()), now)).toBe(
+      "Fri, Dec 25"
+    )
   })
 
   it("keeps the time on an hourly or daily repeat at midnight, which comes round every day", () => {
     const midnight = new Date(2026, 9, 8).toISOString()
 
-    expect(
-      formatCountdownTarget(countdownWidget(midnight, { repeat: "daily" }), now)
-    ).toMatch(/^Thu, Oct 8, 12:00\sAM$/)
-    expect(
-      formatCountdownTarget(countdownWidget(midnight, { repeat: "hourly" }), now)
-    ).toMatch(/^Thu, Oct 8, 12:00\sAM$/)
+    expect(formatCountdownTarget(countdownWidget(midnight, { repeat: "daily" }), now)).toMatch(
+      /^Thu, Oct 8, 12:00\sAM$/
+    )
+    expect(formatCountdownTarget(countdownWidget(midnight, { repeat: "hourly" }), now)).toMatch(
+      /^Thu, Oct 8, 12:00\sAM$/
+    )
   })
 
   it("adds the year once the target is in another one", () => {
-    expect(
-      formatCountdownTarget(countdownWidget(new Date(2027, 0, 1).toISOString()), now)
-    ).toBe("Fri, Jan 1, 2027")
+    expect(formatCountdownTarget(countdownWidget(new Date(2027, 0, 1).toISOString()), now)).toBe(
+      "Fri, Jan 1, 2027"
+    )
     expect(
       formatCountdownTarget(countdownWidget(new Date(1990, 2, 15, 8, 0).toISOString()), now)
     ).toMatch(/^Thu, Mar 15, 1990, 8:00\sAM$/)
@@ -917,9 +895,7 @@ describe("formatRelativeCountdown", () => {
   })
 
   it("describes past targets without configuration", () => {
-    expect(formatRelativeCountdown(-(3 * 3_600_000 + 12 * 60_000))).toBe(
-      "3 hours, 12 minutes ago"
-    )
+    expect(formatRelativeCountdown(-(3 * 3_600_000 + 12 * 60_000))).toBe("3 hours, 12 minutes ago")
   })
 
   it("flips to counted minutes exactly at one minute", () => {
@@ -938,8 +914,6 @@ describe("formatRelativeCountdown", () => {
     // Two days and nine minutes has no hours to show, and the minutes take the second
     // slot rather than the card reading "2 days, 0 hours".
     expect(formatRelativeCountdown(2 * 86_400_000)).toBe("2 days from now")
-    expect(formatRelativeCountdown(2 * 86_400_000 + 9 * 60_000)).toBe(
-      "2 days, 9 minutes from now"
-    )
+    expect(formatRelativeCountdown(2 * 86_400_000 + 9 * 60_000)).toBe("2 days, 9 minutes from now")
   })
 })

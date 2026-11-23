@@ -123,9 +123,7 @@ const NoteField = ({
   return (
     <textarea
       aria-label={`${item.title} note`}
-      className={
-        focusedByKeyboard ? "note-field note-field--keyboard-focus" : "note-field"
-      }
+      className={focusedByKeyboard ? "note-field note-field--keyboard-focus" : "note-field"}
       dir="auto"
       onBlur={(event) => {
         // Switching to another window blurs the note but leaves it the active element, and it is focused again on the way back, so how it was reached is kept for that.
@@ -170,10 +168,7 @@ const QuoteField = ({ item, now }: { item: QuoteWidget; now: Date }) => {
       : Math.floor(openSeed * quotes.length) % quotes.length
 
   return (
-    <blockquote
-      className="quote-text"
-      dir="auto"
-      onPointerEnter={offerHiddenText}>
+    <blockquote className="quote-text" dir="auto" onPointerEnter={offerHiddenText}>
       {quotes[index] ?? quotes[0]}
     </blockquote>
   )
@@ -190,14 +185,11 @@ const StopwatchBody = ({
 }) => {
   const elapsed = stopwatchElapsedMs(item.settings, now.getTime())
   const { running } = item.settings
-  const apply = (settings: StopwatchWidget["settings"]) =>
-    onWidgetChange?.({ ...item, settings })
+  const apply = (settings: StopwatchWidget["settings"]) => onWidgetChange?.({ ...item, settings })
 
   return (
     <>
-      <p className="board-row__value board-row__value--timer">
-        {formatDuration(elapsed)}
-      </p>
+      <p className="board-row__value board-row__value--timer">{formatDuration(elapsed)}</p>
       <div className="timer-controls">
         <button
           className="timer-button timer-button--primary"
@@ -208,14 +200,16 @@ const StopwatchBody = ({
                 : startStopwatch(item.settings, Date.now())
             )
           }
-          type="button">
+          type="button"
+        >
           {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
         </button>
         <button
           className="timer-button"
           disabled={!running && elapsed === 0}
           onClick={() => apply(resetStopwatch(item.settings))}
-          type="button">
+          type="button"
+        >
           Reset
         </button>
       </div>
@@ -283,8 +277,7 @@ const TimerBody = ({
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
   const finished = done && !running
-  const apply = (settings: TimerWidget["settings"]) =>
-    onWidgetChange?.({ ...item, settings })
+  const apply = (settings: TimerWidget["settings"]) => onWidgetChange?.({ ...item, settings })
 
   // The title only speaks for a finish the card still shows, so a timer started again or reset from another tab gives it back without waiting for this one to be looked at.
   // A run put back by a refused save hands the title back here, and its finish borrows it again only once the board has answered, which is always after this has run.
@@ -357,9 +350,7 @@ const TimerBody = ({
           Time&rsquo;s up
         </p>
       ) : (
-        <p className="board-row__value board-row__value--timer">
-          {formatDuration(remaining)}
-        </p>
+        <p className="board-row__value board-row__value--timer">{formatDuration(remaining)}</p>
       )}
       {/* A polite live region announces the finish once (the visible text above is decorative for screen readers).
           It stays mounted and empty until the timer is done so the change is what gets read out. */}
@@ -369,17 +360,17 @@ const TimerBody = ({
       <div className="timer-controls">
         <button
           className="timer-button timer-button--primary"
-          onClick={() =>
-            running ? apply(pauseTimer(item.settings, Date.now())) : handleStart()
-          }
-          type="button">
+          onClick={() => (running ? apply(pauseTimer(item.settings, Date.now())) : handleStart())}
+          type="button"
+        >
           {primaryLabel}
         </button>
         <button
           className="timer-button"
           disabled={!running && remaining === durationMs}
           onClick={() => apply(resetTimer(item.settings))}
-          type="button">
+          type="button"
+        >
           Reset
         </button>
       </div>
@@ -449,7 +440,8 @@ const HabitBody = ({
           aria-label="This week"
           aria-orientation="horizontal"
           className="habit-days"
-          role="toolbar">
+          role="toolbar"
+        >
           {week.map((day, index) => {
             const key = toDayKey(day)
             const label = formatDayLabel(day)
@@ -477,7 +469,8 @@ const HabitBody = ({
                 }}
                 tabIndex={index === tabStop ? 0 : -1}
                 title={label}
-                type="button">
+                type="button"
+              >
                 <span className="habit-day__dot" />
               </button>
             )
@@ -490,7 +483,8 @@ const HabitBody = ({
           aria-pressed={done}
           className={`timer-button${done ? "" : " timer-button--primary"}`}
           onClick={() => toggle(now)}
-          type="button">
+          type="button"
+        >
           {done ? "Done today ✓" : "Mark today"}
         </button>
         <p className="board-row__meta">{formatWeekRange(week)}</p>
@@ -564,7 +558,8 @@ const TodoBody = ({
             key={task.id}
             ref={(node) => {
               rows.current[row] = node
-            }}>
+            }}
+          >
             <label className="todo-task__check">
               <input
                 checked={task.done}
@@ -573,11 +568,10 @@ const TodoBody = ({
                 type="checkbox"
               />
               <span
-                className={`todo-task__text${
-                  task.done ? " todo-task__text--done" : ""
-                }`}
+                className={`todo-task__text${task.done ? " todo-task__text--done" : ""}`}
                 dir="auto"
-                onPointerEnter={offerHiddenText}>
+                onPointerEnter={offerHiddenText}
+              >
                 {task.text}
               </span>
             </label>
@@ -585,13 +579,9 @@ const TodoBody = ({
               aria-label={`Remove ${task.text}`}
               className="todo-task__remove"
               onClick={() => remove(row, task.id)}
-              type="button">
-              <svg
-                aria-hidden="true"
-                fill="none"
-                height="15"
-                viewBox="0 0 24 24"
-                width="15">
+              type="button"
+            >
+              <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
                 <path
                   d="M6 6l12 12M18 6 6 18"
                   stroke="currentColor"
@@ -611,7 +601,8 @@ const TodoBody = ({
           onSubmit={(event) => {
             event.preventDefault()
             add()
-          }}>
+          }}
+        >
           <input
             aria-label={`Add a task to ${item.title}`}
             className="todo-add__field"
@@ -662,11 +653,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
   },
   ref
 ) {
-  const rowClassName = [
-    "board-row",
-    `board-row--theme-${item.colorPreset}`,
-    className
-  ]
+  const rowClassName = ["board-row", `board-row--theme-${item.colorPreset}`, className]
     .filter(Boolean)
     .join(" ")
 
@@ -687,7 +674,8 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
       className={rowClassName}
       ref={ref}
       style={combinedStyle}
-      data-color-preset={item.colorPreset}>
+      data-color-preset={item.colorPreset}
+    >
       {frame}
       <div className="board-row__header">
         <div className="board-row__identity">
@@ -695,9 +683,7 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
           <h2 className="board-row__title" dir="auto">
             {item.title}
           </h2>
-          {detail !== undefined ? (
-            <p className="board-row__detail">{detail}</p>
-          ) : null}
+          {detail !== undefined ? <p className="board-row__detail">{detail}</p> : null}
         </div>
         {/* A quiet badge in the card's own accent, so a glance tells the kind apart even when two cards share a color.
             On a card with a menu the badge is also the button that opens it: the one visible way to Edit, Archive and Delete, which are otherwise behind a right-click nothing on the card mentions.
@@ -711,7 +697,8 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
               fill="currentColor"
               height="18"
               viewBox="0 0 24 24"
-              width="18">
+              width="18"
+            >
               <circle cx="6" cy="12" r="1.7" />
               <circle cx="12" cy="12" r="1.7" />
               <circle cx="18" cy="12" r="1.7" />
@@ -723,24 +710,22 @@ const CardShell = forwardRef<HTMLElement, CardShellProps>(function CardShell(
           </span>
         )}
       </div>
-      <div
-        className={`board-row__body${bodyClassName ? ` ${bodyClassName}` : ""}`}>
-        {children}
-      </div>
+      <div className={`board-row__body${bodyClassName ? ` ${bodyClassName}` : ""}`}>{children}</div>
     </article>
   )
 })
 
 // What a card shows when its body threw while rendering: its own frame and title, so it can still be found, dragged, and edited or deleted from its menu, and the rest of the board carries on around it.
-export const BoardRowFallback = forwardRef<HTMLElement, Omit<BoardRowProps, "now" | "onWidgetChange" | "onTimerFinish">>(
-  function BoardRowFallback(props, ref) {
-    return (
-      <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
-        {null}
-      </CardShell>
-    )
-  }
-)
+export const BoardRowFallback = forwardRef<
+  HTMLElement,
+  Omit<BoardRowProps, "now" | "onWidgetChange" | "onTimerFinish">
+>(function BoardRowFallback(props, ref) {
+  return (
+    <CardShell {...props} detail="This card couldn’t be shown" ref={ref}>
+      {null}
+    </CardShell>
+  )
+})
 
 export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow(
   {
@@ -859,21 +844,19 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
   // A start date is the whole switch: with a span to fill, the card is a bar.
   if (countdownItem.settings.startAt) {
     const percent = getCountdownPercent(getCountdownProgress(countdownItem, now))
-    const status =
-      percent >= 100 ? "Complete" : countdown.label.replace(/ from now$/, " left")
+    const status = percent >= 100 ? "Complete" : countdown.label.replace(/ from now$/, " left")
 
     return (
       <CardShell {...shell} detail={countdownDetail} ref={ref}>
-        <p className="board-row__value board-row__value--countdown">
-          {percent}%
-        </p>
+        <p className="board-row__value board-row__value--countdown">{percent}%</p>
         <div
           className="progress-bar"
           role="progressbar"
           aria-label={`${item.title} progress`}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={percent}>
+          aria-valuenow={percent}
+        >
           <div
             className="progress-bar__fill"
             style={{ transform: `translateX(${percent - 100}%)` }}
@@ -886,15 +869,9 @@ export const BoardRow = forwardRef<HTMLElement, BoardRowProps>(function BoardRow
 
   // "right now" and "Today" already say everything, so they go without a "from now" or "ago" line.
   const value =
-    countdown.status === "due"
-      ? "right now"
-      : countdown.label.replace(/ (from now|ago)$/, "")
+    countdown.status === "due" ? "right now" : countdown.label.replace(/ (from now|ago)$/, "")
   const context =
-    countdown.status === "future"
-      ? "from now"
-      : countdown.status === "past"
-        ? "ago"
-        : ""
+    countdown.status === "future" ? "from now" : countdown.status === "past" ? "ago" : ""
 
   return (
     <CardShell {...shell} detail={countdownDetail} ref={ref}>

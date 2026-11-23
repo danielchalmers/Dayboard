@@ -35,18 +35,14 @@ export const liftWithKeyboard = async (page: Page, card: Locator) => {
   await card.focus()
   await page.keyboard.press("Space")
   await page.locator(".board-row--overlay").waitFor()
-  await page.evaluate(
-    () => new Promise<void>((resolve) => window.setTimeout(resolve))
-  )
+  await page.evaluate(() => new Promise<void>((resolve) => window.setTimeout(resolve)))
 }
 
 // Waits out the moment after a pointer drop in which a click goes nowhere.
 // dnd-kit stops every click for 50ms once a pointer drag ends, so the release can't click whatever the card was dropped on, and Playwright reaches for a button sooner than a hand could.
 // A timeout of the same length set after the drop runs out behind dnd-kit's.
 export const settleAfterDrop = (page: Page) =>
-  page.evaluate(
-    () => new Promise<void>((resolve) => window.setTimeout(resolve, 50))
-  )
+  page.evaluate(() => new Promise<void>((resolve) => window.setTimeout(resolve, 50)))
 
 // The whole add flow for the common case: open the menu, pick the kind, name it, save.
 // Anything that needs to assert mid-flow or fill an extra field still writes the steps out.
@@ -68,9 +64,7 @@ export const openWidgetMenu = async (page: Page, title: string) => {
 // A board card, found by the heading it shows.
 // Pass `exact` when a shorter title would otherwise also match a longer one, such as "Today" against "Today's reminder".
 export const cardByTitle = (page: Page, title: string, exact = false): Locator =>
-  page
-    .locator(".board-row")
-    .filter({ has: page.getByRole("heading", { name: title, exact }) })
+  page.locator(".board-row").filter({ has: page.getByRole("heading", { name: title, exact }) })
 
 // A bounding box that is known to exist, so the caller can do arithmetic on it without a null check of its own.
 // `what` names the thing being measured, since a bare "no bounds" failure gives nothing to go on.

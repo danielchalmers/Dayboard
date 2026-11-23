@@ -26,9 +26,7 @@ export const addTask = (tasks: TodoTask[], text: string): TodoTask[] => {
 }
 
 export const toggleTask = (tasks: TodoTask[], id: string): TodoTask[] =>
-  tasks.map((task) =>
-    task.id === id ? { ...task, done: !task.done } : task
-  )
+  tasks.map((task) => (task.id === id ? { ...task, done: !task.done } : task))
 
 export const removeTask = (tasks: TodoTask[], id: string): TodoTask[] =>
   tasks.filter((task) => task.id !== id)

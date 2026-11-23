@@ -12,9 +12,7 @@ export const cleanQuotes = (quotes: string[]): string[] =>
 
 // A whole-day number in local time, so the daily quote is stable across reloads on the same calendar day and advances at local midnight.
 const localDayNumber = (now: Date): number =>
-  Math.floor(
-    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000
-  )
+  Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000)
 
 // Deterministic index into the list for "daily" rotation.
 export const dailyQuoteIndex = (now: Date, length: number): number => {

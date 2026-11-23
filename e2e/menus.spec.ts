@@ -1,11 +1,5 @@
 import { expect, test } from "./fixtures"
-import {
-  boxOf,
-  cardByTitle,
-  liftWithKeyboard,
-  openNewTab,
-  openWidgetMenu
-} from "./helpers"
+import { boxOf, cardByTitle, liftWithKeyboard, openNewTab, openWidgetMenu } from "./helpers"
 
 test("the widget menu closes on scroll and returns focus to its card", async ({
   page,
@@ -16,9 +10,7 @@ test("the widget menu closes on scroll and returns focus to its card", async ({
   await openNewTab(page, extensionId)
 
   const overflows = await page.evaluate(
-    () =>
-      document.documentElement.scrollHeight >
-      document.documentElement.clientHeight
+    () => document.documentElement.scrollHeight > document.documentElement.clientHeight
   )
   // Without a scrollbar there is nothing to scroll, and the assertions below would pass for the wrong reason.
   expect(overflows).toBe(true)
@@ -30,9 +22,7 @@ test("the widget menu closes on scroll and returns focus to its card", async ({
   const menu = page.locator(".card-menu")
   // Focus reaches the first item without scrolling the page: a menu opened this low would otherwise trip the close-on-scroll handler and vanish on the spot.
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 📅 This year back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 📅 This year back" })).toBeFocused()
 
   // The menu is fixed to the viewport, so any scroll drifts it off the card it belongs to and it closes...
   const moved = await page.evaluate(() => {
@@ -75,16 +65,12 @@ test("a menu opened as focus brings its card into view stays open", async ({
 
   // Let the browser deliver that scroll before looking.
   await page.evaluate(
-    () =>
-      new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   )
   await expect(page.locator(".card-menu")).toBeVisible()
 })
 
-test("the menu can't move a card past the ends of the board", async ({
-  page,
-  extensionId
-}) => {
+test("the menu can't move a card past the ends of the board", async ({ page, extensionId }) => {
   // A tall viewport keeps the last card and its menu clear of the fold, since scrolling closes the menu.
   await page.setViewportSize({ width: 1280, height: 1000 })
   await openNewTab(page, extensionId)
@@ -96,12 +82,8 @@ test("the menu can't move a card past the ends of the board", async ({
   await first.focus()
   await first.press("ContextMenu")
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🕒 Local time back" })
-  ).toBeDisabled()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🕒 Local time next" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🕒 Local time back" })).toBeDisabled()
+  await expect(page.getByRole("menuitem", { name: "Move 🕒 Local time next" })).toBeFocused()
 
   await page.keyboard.press("Escape")
   await expect(menu).toHaveCount(0)
@@ -111,18 +93,11 @@ test("the menu can't move a card past the ends of the board", async ({
   await last.focus()
   await last.press("ContextMenu")
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 📅 This year next" })
-  ).toBeDisabled()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 📅 This year back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 📅 This year next" })).toBeDisabled()
+  await expect(page.getByRole("menuitem", { name: "Move 📅 This year back" })).toBeFocused()
 })
 
-test("the widget menu traps Tab inside itself", async ({
-  page,
-  extensionId
-}) => {
+test("the widget menu traps Tab inside itself", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   // "🌅 Morning" sits among other widgets, so every item is enabled and the cycle covers the whole menu.
@@ -133,35 +108,24 @@ test("the widget menu traps Tab inside itself", async ({
 
   const menu = page.locator(".card-menu")
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeFocused()
 
   // The menu renders in the top layer, so the board behind it is still in the page's tab order; trapping Tab is what keeps a stray keypress from stranding focus out there with the menu still up.
   await page.keyboard.press("Tab")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning next" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning next" })).toBeFocused()
 
   await page.keyboard.press("Shift+Tab")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeFocused()
 
   // Shift+Tab from the first item wraps to the last rather than leaving.
   await page.keyboard.press("Shift+Tab")
-  await expect(
-    page.getByRole("menuitem", { name: "Delete 🌅 Morning" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Delete 🌅 Morning" })).toBeFocused()
 
   // Moving the focus around is all that happened; the menu is still open.
   await expect(menu).toBeVisible()
 })
 
-test("clicking between menu items leaves the widget menu open", async ({
-  page,
-  extensionId
-}) => {
+test("clicking between menu items leaves the widget menu open", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🕒 Local time")
@@ -174,9 +138,7 @@ test("clicking between menu items leaves the widget menu open", async ({
   // Let the scale-up animation finish so the gap between the items is measured at full size.
   await menu
     .locator(".card-menu__panel")
-    .evaluate((panel) =>
-      Promise.all(panel.getAnimations().map((animation) => animation.finished))
-    )
+    .evaluate((panel) => Promise.all(panel.getAnimations().map((animation) => animation.finished)))
 
   const archiveBox = await boxOf(archive, "the Archive item")
   const deleteBox = await boxOf(remove, "the Delete item")
@@ -195,18 +157,13 @@ test("clicking between menu items leaves the widget menu open", async ({
   await expect(menu).toHaveCount(0)
 })
 
-test("starting a keyboard drag puts away an open widget menu", async ({
-  page,
-  extensionId
-}) => {
+test("starting a keyboard drag puts away an open widget menu", async ({ page, extensionId }) => {
   // A tall viewport keeps the cards and the menu on screen: focusing a card must not scroll, since a scroll closes the menu on its own and would pass this test for the wrong reason.
   await page.setViewportSize({ width: 1280, height: 1000 })
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🕒 Local time")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🕒 Local time next" })
-  ).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Move 🕒 Local time next" })).toBeVisible()
 
   const menu = page.locator(".card-menu")
 
@@ -236,28 +193,19 @@ test("the kind badge opens the widget menu under itself and closes it again", as
 
   await badge.click()
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Edit 🕒 Local time" })
-  ).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Edit 🕒 Local time" })).toBeVisible()
   await expect(badge).toHaveAttribute("aria-expanded", "true")
   // Pressing the badge is a click on a button, not a grab of the card.
   await expect(page.locator(".archive-dropzone")).toHaveCount(0)
 
   await menu
     .locator(".card-menu__panel")
-    .evaluate((panel) =>
-      Promise.all(panel.getAnimations().map((animation) => animation.finished))
-    )
+    .evaluate((panel) => Promise.all(panel.getAnimations().map((animation) => animation.finished)))
   const badgeBox = await boxOf(badge, "the badge")
-  const menuBox = await boxOf(
-    menu.locator(".card-menu__panel"),
-    "the widget menu"
-  )
+  const menuBox = await boxOf(menu.locator(".card-menu__panel"), "the widget menu")
 
   // The menu hangs from the badge's corner, over its own card, rather than from wherever the pointer was.
-  expect(
-    Math.abs(menuBox.x + menuBox.width - (badgeBox.x + badgeBox.width))
-  ).toBeLessThan(2)
+  expect(Math.abs(menuBox.x + menuBox.width - (badgeBox.x + badgeBox.width))).toBeLessThan(2)
   expect(menuBox.y).toBeGreaterThan(badgeBox.y + badgeBox.height)
   expect(menuBox.y).toBeLessThan(badgeBox.y + badgeBox.height + 16)
 
@@ -279,9 +227,7 @@ test("the kind badge opens the menu from the keyboard and Escape hands focus bac
 
   await badge.focus()
   await page.keyboard.press("Enter")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🕒 Local time next" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🕒 Local time next" })).toBeFocused()
 
   await page.keyboard.press("Escape")
   await expect(page.locator(".card-menu")).toHaveCount(0)
@@ -290,10 +236,7 @@ test("the kind badge opens the menu from the keyboard and Escape hands focus bac
   await expect(page.locator(".archive-dropzone")).toHaveCount(0)
 })
 
-test("right-clicking a second card swaps to that card's menu", async ({
-  page,
-  extensionId
-}) => {
+test("right-clicking a second card swaps to that card's menu", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   // Bottom corners: card background on both, clear of the text and controls.
@@ -303,20 +246,14 @@ test("right-clicking a second card swaps to that card's menu", async ({
   await page.mouse.click(first.x + 14, first.y + first.height - 14, {
     button: "right"
   })
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
-  ).toBeVisible()
+  await expect(page.getByRole("menu", { name: "Actions for 🕒 Local time" })).toBeVisible()
 
   // The correction anyone makes after right-clicking the wrong card.
   await page.mouse.click(second.x + 14, second.y + second.height - 14, {
     button: "right"
   })
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🌅 Morning" })
-  ).toBeVisible()
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("menu", { name: "Actions for 🌅 Morning" })).toBeVisible()
+  await expect(page.getByRole("menu", { name: "Actions for 🕒 Local time" })).toHaveCount(0)
 
   // The same correction, landing before the open menu has reported that it closed.
   // A real right-click can arrive in that window, since the press that dismisses one menu is the press that asks for the next, but a scripted pointer never does, so the order is set by hand: dismiss the menu, then right-click the first card before the "closed" event is delivered.
@@ -336,12 +273,8 @@ test("right-clicking a second card swaps to that card's menu", async ({
     },
     { x: first.x + 14, y: first.y + first.height - 14 }
   )
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
-  ).toBeVisible()
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🌅 Morning" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("menu", { name: "Actions for 🕒 Local time" })).toBeVisible()
+  await expect(page.getByRole("menu", { name: "Actions for 🌅 Morning" })).toHaveCount(0)
 })
 
 test("a double-click on a card's background leaves its menu a right-click away", async ({
@@ -358,15 +291,10 @@ test("a double-click on a card's background leaves its menu a right-click away",
   // On blank background Chrome selects a lone line break there, never highlighted, and the next right-click must not mistake it for text to copy.
   await page.mouse.dblclick(x, y)
   await page.mouse.click(x, y, { button: "right" })
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
-  ).toBeVisible()
+  await expect(page.getByRole("menu", { name: "Actions for 🕒 Local time" })).toBeVisible()
 })
 
-test("the add menu takes the same arrow keys as a card's menu", async ({
-  page,
-  extensionId
-}) => {
+test("the add menu takes the same arrow keys as a card's menu", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const trigger = page.getByRole("button", { name: "Add widget" })

@@ -53,22 +53,14 @@ const countdownItem: CountdownWidget = {
 
 // An open clock in edit mode with inert callbacks, so each test names only the props it actually cares about.
 const itemDialog = (props: Partial<ComponentProps<typeof ItemDialog>> = {}) => (
-  <ItemDialog
-    isOpen
-    item={clockItem}
-    mode="edit"
-    onClose={() => {}}
-    onSave={() => {}}
-    {...props}
-  />
+  <ItemDialog isOpen item={clockItem} mode="edit" onClose={() => {}} onSave={() => {}} {...props} />
 )
 
 const saved = (onSave: ReturnType<typeof vi.fn>) => onSave.mock.calls[0]![0]
 
 // Fields are labelled either by the span inside their wrapping label or by an aria-label, and this test cares about the roster of fields rather than any one of them.
 const fieldName = (field: Element) =>
-  field.getAttribute("aria-label") ??
-  field.closest("label")?.querySelector("span")?.textContent
+  field.getAttribute("aria-label") ?? field.closest("label")?.querySelector("span")?.textContent
 
 describe("ItemDialog", () => {
   it("saves the current edit when the backdrop is clicked", () => {
@@ -278,9 +270,7 @@ describe("ItemDialog", () => {
 
     expect(screen.getAllByRole("textbox").map(fieldName)).toEqual(["Name"])
     // A native select would answer to combobox too, which is how an hour-format dropdown would show up here.
-    expect(screen.getAllByRole("combobox").map(fieldName)).toEqual([
-      "Time zone"
-    ])
+    expect(screen.getAllByRole("combobox").map(fieldName)).toEqual(["Time zone"])
     expect(screen.queryByRole("switch")).not.toBeInTheDocument()
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
   })
@@ -294,9 +284,7 @@ describe("ItemDialog", () => {
     expect(within(group).getByRole("radio", { name: "Slate" })).toBeChecked()
 
     // The curated swatches are the whole color surface: no free color input and no hex box beside them.
-    expect(
-      screen.getByRole("dialog").querySelector('input[type="color"]')
-    ).toBeNull()
+    expect(screen.getByRole("dialog").querySelector('input[type="color"]')).toBeNull()
     expect(screen.queryByRole("textbox", { name: /colou?r|hex/i })).toBeNull()
 
     fireEvent.click(within(group).getByRole("radio", { name: "Rose" }))
@@ -422,9 +410,7 @@ describe("ItemDialog", () => {
 
     expect(screen.getByLabelText("Starting from")).toHaveValue("")
     // With nothing left to clear, the button steps out of the way.
-    expect(
-      screen.queryByRole("button", { name: "Clear starting from" })
-    ).toBeNull()
+    expect(screen.queryByRole("button", { name: "Clear starting from" })).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }))
 

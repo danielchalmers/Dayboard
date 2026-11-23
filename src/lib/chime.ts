@@ -12,8 +12,7 @@ const getContext = (): AudioContext | null => {
 
   const Ctor: AudioContextCtor | undefined =
     window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: AudioContextCtor })
-      .webkitAudioContext
+    (window as unknown as { webkitAudioContext?: AudioContextCtor }).webkitAudioContext
 
   if (!Ctor) {
     return null

@@ -25,9 +25,7 @@ const stopwatch = (
   ...settings
 })
 
-const timer = (
-  settings: Partial<TimerWidget["settings"]> = {}
-): TimerWidget["settings"] => ({
+const timer = (settings: Partial<TimerWidget["settings"]> = {}): TimerWidget["settings"] => ({
   durationMs: 300_000,
   running: false,
   remainingMs: 300_000,
@@ -62,10 +60,7 @@ describe("stopwatch", () => {
   it("reports banked time while paused and live time while running", () => {
     expect(stopwatchElapsedMs(stopwatch({ elapsedMs: 5_000 }), 10_000)).toBe(5_000)
     expect(
-      stopwatchElapsedMs(
-        stopwatch({ running: true, elapsedMs: 5_000, startedAt: 10_000 }),
-        13_000
-      )
+      stopwatchElapsedMs(stopwatch({ running: true, elapsedMs: 5_000, startedAt: 10_000 }), 13_000)
     ).toBe(8_000)
   })
 
@@ -98,12 +93,8 @@ describe("stopwatch", () => {
 describe("timer", () => {
   it("reports remaining time while paused and running", () => {
     expect(timerRemainingMs(timer({ remainingMs: 60_000 }), 0)).toBe(60_000)
-    expect(
-      timerRemainingMs(timer({ running: true, endsAt: 70_000 }), 65_000)
-    ).toBe(5_000)
-    expect(
-      timerRemainingMs(timer({ running: true, endsAt: 70_000 }), 999_999)
-    ).toBe(0)
+    expect(timerRemainingMs(timer({ running: true, endsAt: 70_000 }), 65_000)).toBe(5_000)
+    expect(timerRemainingMs(timer({ running: true, endsAt: 70_000 }), 999_999)).toBe(0)
   })
 
   it("starts from the remaining time and sets an end stamp", () => {

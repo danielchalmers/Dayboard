@@ -227,11 +227,7 @@ export const moveWidgetToIndex = (
 // Move an active (non-archived) widget one step up or down relative to the other active widgets.
 // The board only shows active widgets, and archived ones are not guaranteed to sit after them in storage, since a widget added once something is archived lands past it.
 // So the menu's Move back/next must act on the visible neighbor rather than the raw array neighbor, which could be a hidden archived widget, making the move a silent no-op.
-export const moveActiveWidget = (
-  widgets: Widget[],
-  id: string,
-  direction: -1 | 1
-): Widget[] => {
+export const moveActiveWidget = (widgets: Widget[], id: string, direction: -1 | 1): Widget[] => {
   const active = widgets.filter((widget) => !widget.archived)
   const fromIndex = active.findIndex((widget) => widget.id === id)
 
@@ -248,11 +244,7 @@ export const moveActiveWidget = (
   return reorderWidgets(widgets, id, neighbor.id)
 }
 
-export const reorderWidgets = (
-  widgets: Widget[],
-  activeId: string,
-  overId: string
-): Widget[] => {
+export const reorderWidgets = (widgets: Widget[], activeId: string, overId: string): Widget[] => {
   if (activeId === overId) {
     return widgets
   }
@@ -272,19 +264,12 @@ export const archiveWidget = (widgets: Widget[], id: string): Widget[] => {
     return widgets
   }
 
-  return [
-    ...widgets.filter((widget) => widget.id !== id),
-    { ...target, archived: true }
-  ]
+  return [...widgets.filter((widget) => widget.id !== id), { ...target, archived: true }]
 }
 
 // Restoring drops the widget back in just after the last active widget, so it rejoins the bottom of the board rather than the top.
 // When `beforeId` names an active widget (the board card an archived one was dropped onto) the widget takes that card's slot instead, pushing it and everything after one step down.
-export const restoreWidget = (
-  widgets: Widget[],
-  id: string,
-  beforeId?: string
-): Widget[] => {
+export const restoreWidget = (widgets: Widget[], id: string, beforeId?: string): Widget[] => {
   const target = widgets.find((widget) => widget.id === id)
 
   if (!target || !target.archived) {
@@ -322,9 +307,7 @@ export const neighborsOf = (
     return {}
   }
 
-  const list = widgets.filter(
-    (widget) => Boolean(widget.archived) === Boolean(target.archived)
-  )
+  const list = widgets.filter((widget) => Boolean(widget.archived) === Boolean(target.archived))
   const index = list.indexOf(target)
 
   return { previous: list[index - 1], next: list[index + 1] }
@@ -338,8 +321,7 @@ export const undoArchiveWidget = (
   { previousId, nextId }: { previousId?: string; nextId?: string }
 ): Widget[] => {
   const board = widgets.filter((widget) => !widget.archived)
-  const boardIndexOf = (anchorId?: string) =>
-    board.findIndex((widget) => widget.id === anchorId)
+  const boardIndexOf = (anchorId?: string) => board.findIndex((widget) => widget.id === anchorId)
 
   if (nextId && boardIndexOf(nextId) !== -1) {
     return restoreWidget(widgets, id, nextId)

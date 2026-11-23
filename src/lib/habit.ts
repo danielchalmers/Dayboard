@@ -25,18 +25,14 @@ const prune = (dayKeys: string[]): string[] =>
   // YYYY-MM-DD keys sort chronologically as strings.
   [...new Set(dayKeys)].sort().slice(-STORED_DAYS)
 
-export const isDoneOn = (history: string[], date: Date): boolean =>
-  history.includes(toDayKey(date))
+export const isDoneOn = (history: string[], date: Date): boolean => history.includes(toDayKey(date))
 
-export const isDoneToday = (history: string[], now: Date): boolean =>
-  isDoneOn(history, now)
+export const isDoneToday = (history: string[], now: Date): boolean => isDoneOn(history, now)
 
 // Mark or unmark a single day: today from the card's button, any earlier day from its own dot.
 export const toggleDay = (history: string[], date: Date): string[] => {
   const key = toDayKey(date)
-  const next = history.includes(key)
-    ? history.filter((entry) => entry !== key)
-    : [...history, key]
+  const next = history.includes(key) ? history.filter((entry) => entry !== key) : [...history, key]
 
   return prune(next)
 }
@@ -46,8 +42,7 @@ export const normalizeHistory = (value: unknown): string[] =>
   Array.isArray(value)
     ? prune(
         value.filter(
-          (entry): entry is string =>
-            typeof entry === "string" && DAY_KEY_PATTERN.test(entry)
+          (entry): entry is string => typeof entry === "string" && DAY_KEY_PATTERN.test(entry)
         )
       )
     : []

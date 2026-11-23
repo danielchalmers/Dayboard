@@ -48,10 +48,12 @@ export const ColorPresetPicker = ({ value, onChange }: ColorPresetPickerProps) =
               onClick={() => onChange(preset.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               tabIndex={isSelected ? 0 : -1}
-              style={{
-                "--swatch-color-light": preset.light.accent,
-                "--swatch-color-dark": preset.dark.accent
-              } as React.CSSProperties}
+              style={
+                {
+                  "--swatch-color-light": preset.light.accent,
+                  "--swatch-color-dark": preset.dark.accent
+                } as React.CSSProperties
+              }
             />
           )
         })}

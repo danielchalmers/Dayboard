@@ -16,16 +16,8 @@ const noteItem: Widget = {
 }
 
 // An open dialog over an active note with inert callbacks, so each test names only the props it actually cares about.
-const deleteDialog = (
-  props: Partial<ComponentProps<typeof DeleteDialog>> = {}
-) => (
-  <DeleteDialog
-    isOpen
-    item={noteItem}
-    onCancel={() => {}}
-    onConfirm={() => {}}
-    {...props}
-  />
+const deleteDialog = (props: Partial<ComponentProps<typeof DeleteDialog>> = {}) => (
+  <DeleteDialog isOpen item={noteItem} onCancel={() => {}} onConfirm={() => {}} {...props} />
 )
 
 describe("DeleteDialog", () => {
@@ -41,9 +33,7 @@ describe("DeleteDialog", () => {
   it("names the action and the kind rather than the widget", () => {
     render(deleteDialog())
 
-    expect(
-      screen.getByRole("heading", { name: "Delete note?" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Delete note?" })).toBeInTheDocument()
   })
 
   it("points at archiving as the gentler option for a widget still on the board", () => {

@@ -7,7 +7,8 @@
   /* Fonts.
      The weight scale across this file tops out at 650 and lives mostly in the 500-600 range: headings that carry by size and letter-spacing rather than by mass.
      It used to reach 800, which on the system fallback matched the black cut of the family and made the big numbers on the cards look stamped rather than set. */
-  --font-sans: "Outfit", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans:
+    "Outfit", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Warm paper neutrals (light fallbacks): a touch of warmth instead of the flat gray of a stock new tab. */
   --bg: hsl(40, 30%, 97%);
@@ -551,7 +552,10 @@ details > summary::-webkit-details-marker {
    A column there is half the board less half the gap (and a pixel spare for rounding), so two always fit and three never do; once two full columns fit, 380px wins and nothing changes. */
 @media (min-width: 721px) {
   .board-list {
-    grid-template-columns: repeat(auto-fill, minmax(min(380px, calc(50% - var(--board-gap) / 2 - 1px)), 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(min(380px, calc(50% - var(--board-gap) / 2 - 1px)), 1fr)
+    );
   }
 }
 
@@ -608,7 +612,10 @@ details > summary::-webkit-details-marker {
   justify-self: center;
   min-block-size: 34px;
   padding: 6px 16px;
-  transition: background-color var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
 }
 
 /* Down while the archive is tucked away, up once it is out. */
@@ -633,7 +640,10 @@ details > summary::-webkit-details-marker {
 /* Archived cards sit quietly until you hover them. */
 .archive-section .board-row {
   opacity: 0.78;
-  transition: opacity var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  transition:
+    opacity var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
 }
 
 .archive-section .board-row:hover {
@@ -712,7 +722,11 @@ details > summary::-webkit-details-marker {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--card-accent-resolved) 5%, transparent) 0%, transparent 60%);
+  background: radial-gradient(
+    circle at 10% 10%,
+    color-mix(in srgb, var(--card-accent-resolved) 5%, transparent) 0%,
+    transparent 60%
+  );
   pointer-events: none;
 }
 
@@ -758,7 +772,9 @@ details > summary::-webkit-details-marker {
   inline-size: 32px;
   opacity: 0.9;
   place-items: center;
-  transition: background-color var(--t-fast), opacity var(--t-fast);
+  transition:
+    background-color var(--t-fast),
+    opacity var(--t-fast);
 }
 
 /* On a card with a menu the badge is its button: the kind glyph and a "more" glyph share the one cell, and the more glyph only fades in while the button is pointed at, focused, or has its menu open.
@@ -782,7 +798,8 @@ button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > svg
   opacity: 0;
 }
 
-button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"]) > .board-row__badge-more {
+button.board-row__badge:is(:hover, :focus-visible, [aria-expanded="true"])
+  > .board-row__badge-more {
   opacity: 1;
 }
 
@@ -849,7 +866,13 @@ button.board-row__badge:active {
   }
   10%,
   90% {
-    mask-image: linear-gradient(to bottom, transparent, #000 1.6em, #000 calc(100% - 1.6em), transparent);
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 1.6em,
+      #000 calc(100% - 1.6em),
+      transparent
+    );
   }
   to {
     mask-image: linear-gradient(to bottom, transparent, #000 1.6em);
@@ -982,7 +1005,6 @@ button.board-row__badge:active {
   margin-block-start: 14px;
 }
 
-
 .timer-button {
   align-items: center;
   background: color-mix(in srgb, var(--card-bg-resolved) 50%, var(--surface));
@@ -1109,8 +1131,7 @@ button.board-row__badge:active {
 
 .habit-day--future .habit-day__dot {
   background: none;
-  box-shadow: inset 0 0 0 1.5px
-    color-mix(in srgb, var(--card-accent-resolved) 18%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--card-accent-resolved) 18%, transparent);
 }
 
 /* Todo list: four tasks always fit, so nothing here scrolls.
@@ -1167,7 +1188,9 @@ button.board-row__badge:active {
   margin: 0;
   min-block-size: 0;
   padding: 0;
-  transition: background-color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .todo-task__check:hover .todo-task__box {
@@ -1225,7 +1248,9 @@ button.board-row__badge:active {
   display: inline-flex;
   inline-size: 24px;
   justify-content: center;
-  transition: background-color var(--t-fast), color var(--t-fast);
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast);
 }
 
 .todo-task__remove:hover {
@@ -1451,7 +1476,9 @@ select {
   inline-size: 100%;
   min-block-size: 46px;
   padding: 10px 16px;
-  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
 }
 
 input:hover,
@@ -1561,7 +1588,9 @@ input[type="datetime-local"] {
   justify-content: center;
   position: absolute;
   transform: translateY(-50%);
-  transition: background-color var(--t-micro), color var(--t-fast);
+  transition:
+    background-color var(--t-micro),
+    color var(--t-fast);
 }
 
 .input-adorned__clear:hover {
@@ -1602,7 +1631,9 @@ input[type="datetime-local"] {
   padding: 12px 16px;
   position: fixed;
   z-index: 400;
-  transition: opacity var(--t-fast), visibility var(--t-fast);
+  transition:
+    opacity var(--t-fast),
+    visibility var(--t-fast);
   animation: fade-in var(--t-fast);
 }
 
@@ -1675,7 +1706,9 @@ body:has(.board-row--overlay) .board-notice {
   line-height: 1.5;
   padding: 12px 16px;
   resize: vertical;
-  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
 }
 
 .quote-list-input:hover {
@@ -1721,7 +1754,9 @@ body:has(.board-row--overlay) .board-notice {
   border: 2px solid transparent;
   cursor: pointer;
   position: relative;
-  transition: transform 200ms var(--ease-out), box-shadow var(--t-micro);
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow var(--t-micro);
   padding: 0;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 }
@@ -1736,7 +1771,9 @@ body:has(.board-row--overlay) .board-notice {
   }
   .color-swatch--selected,
   .color-swatch--selected:hover {
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-light);
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4.5px var(--swatch-color-light);
     transform: scale(1.18);
   }
 }
@@ -1751,14 +1788,18 @@ body:has(.board-row--overlay) .board-notice {
   }
   .color-swatch--selected,
   .color-swatch--selected:hover {
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--swatch-color-dark);
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4.5px var(--swatch-color-dark);
     transform: scale(1.18);
   }
 }
 
 .color-swatch:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--accent);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4.5px var(--accent);
 }
 
 /* Twelve swatches in one row need about 470px. On a narrower dialog they used to shrink to fit, down to 17px dots at phone width, which is a small thing to aim a thumb at.
@@ -1788,8 +1829,12 @@ body:has(.board-row--overlay) .board-notice {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-dialog {
@@ -2048,7 +2093,9 @@ body:has(.board-row--overlay) .board-notice {
   block-size: 28px;
   inline-size: 48px;
   position: relative;
-  transition: background-color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .switch__track::after {

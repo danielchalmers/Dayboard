@@ -66,15 +66,11 @@ describe("normalizeHistory", () => {
 
     const result = normalizeHistory(years)
 
-    expect(result).toEqual(
-      Array.from({ length: STORED_DAYS }, (_, i) => key(i - STORED_DAYS + 1))
-    )
+    expect(result).toEqual(Array.from({ length: STORED_DAYS }, (_, i) => key(i - STORED_DAYS + 1)))
   })
 
   it("drops entries that are not day keys and deduplicates", () => {
-    expect(normalizeHistory([42, "junk", key(0), key(0), "2026-1-2"])).toEqual([
-      key(0)
-    ])
+    expect(normalizeHistory([42, "junk", key(0), key(0), "2026-1-2"])).toEqual([key(0)])
   })
 
   it("normalizes junk to an empty history", () => {
@@ -117,18 +113,14 @@ describe("weekDays", () => {
   })
 
   it("never draws a day the history has already pruned", () => {
-    expect(normalizeHistory(weekDays(now).map(toDayKey))).toHaveLength(
-      STORED_DAYS
-    )
+    expect(normalizeHistory(weekDays(now).map(toDayKey))).toHaveLength(STORED_DAYS)
   })
 })
 
 describe("formatWeekRange", () => {
   it("reads as a date range and folds a shared month", () => {
     expect(formatWeekRange(weekDays(now))).toMatch(/Jun 15\s*–\s*21/)
-    expect(formatWeekRange(weekDays(new Date(2026, 6, 1)))).toMatch(
-      /Jun 29\s*–\s*Jul 5/
-    )
+    expect(formatWeekRange(weekDays(new Date(2026, 6, 1)))).toMatch(/Jun 29\s*–\s*Jul 5/)
     expect(formatWeekRange([])).toBe("")
   })
 })

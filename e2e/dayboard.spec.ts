@@ -23,10 +23,8 @@ const dragWidget = async (page: Page, sourceTitle: string, targetTitle: string) 
   // Move by the center-to-center delta so the card still lands on the target's position regardless of where it was grabbed.
   const grabX = sourceBox.x + sourceBox.width / 2
   const grabY = sourceBox.y + 12
-  const deltaX =
-    targetBox.x + targetBox.width / 2 - (sourceBox.x + sourceBox.width / 2)
-  const deltaY =
-    targetBox.y + targetBox.height / 2 - (sourceBox.y + sourceBox.height / 2)
+  const deltaX = targetBox.x + targetBox.width / 2 - (sourceBox.x + sourceBox.width / 2)
+  const deltaY = targetBox.y + targetBox.height / 2 - (sourceBox.y + sourceBox.height / 2)
 
   await page.mouse.move(grabX, grabY)
   await page.mouse.down()
@@ -43,7 +41,10 @@ const deleteWidget = async (page: Page, title: string) => {
   await card.focus()
   await card.press("ContextMenu")
   await page.getByRole("menuitem", { name: `Delete ${title}` }).click()
-  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .click()
   await expect(card).toHaveCount(0)
 }
 
@@ -53,19 +54,14 @@ test("new tab page renders the default widgets and editing controls", async ({
 }) => {
   await openNewTab(page, extensionId)
 
-  await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
-    "href",
-    /icon32\.png$/
-  )
+  await expect(page.locator('head link[rel="icon"]')).toHaveAttribute("href", /icon32\.png$/)
   await expect(
     page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
   ).toBeVisible()
   await expect(page.getByText("🕒 Local time")).toBeVisible()
   await expect(page.getByText("🌅 Morning")).toBeVisible()
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
-  await expect(
-    page.getByRole("menu", { name: "Actions for 🕒 Local time" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("menu", { name: "Actions for 🕒 Local time" })).toHaveCount(0)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
@@ -74,9 +70,7 @@ test("new tab page renders the default widgets and editing controls", async ({
   expect(
     await page
       .locator(".add-menu__panel > button")
-      .evaluateAll((buttons) =>
-        buttons.map((button) => button.getAttribute("aria-label"))
-      )
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))
   ).toEqual([
     "Add clock",
     "Add countdown",
@@ -88,35 +82,26 @@ test("new tab page renders the default widgets and editing controls", async ({
     "Add quote"
   ])
   // A countdown runs to a date and a timer through a length of time, and their lines say which is which.
-  await expect(
-    page.getByRole("button", { name: "Add countdown" })
-  ).toHaveAccessibleDescription("Time left until a date")
-  await expect(
-    page.getByRole("button", { name: "Add timer" })
-  ).toHaveAccessibleDescription("A length of time, counted down")
+  await expect(page.getByRole("button", { name: "Add countdown" })).toHaveAccessibleDescription(
+    "Time left until a date"
+  )
+  await expect(page.getByRole("button", { name: "Add timer" })).toHaveAccessibleDescription(
+    "A length of time, counted down"
+  )
 
   await openWidgetMenu(page, "🌅 Morning")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: "Reorder 🌅 Morning" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Reorder 🌅 Morning" })).toHaveCount(0)
 
   const titles = page.locator(".board-row h2")
   await expect(titles).toHaveText(DEFAULT_BOARD_TITLES)
 
   // The first-run clock pins no zone: it follows the system clock, so it stays right when the device changes zones.
   // (The card's detail line is the observable truth here; a fresh board lives in memory until the first edit writes it to storage.)
-  await expect(
-    cardByTitle(page, "🕒 Local time").getByText("System time zone")
-  ).toBeVisible()
+  await expect(cardByTitle(page, "🕒 Local time").getByText("System time zone")).toBeVisible()
 })
 
-test("centers the board in the viewport with no docking option", async ({
-  page,
-  extensionId
-}) => {
+test("centers the board in the viewport with no docking option", async ({ page, extensionId }) => {
   // A tall viewport keeps the short default board well within one screen.
   const viewport = { width: 1280, height: 1000 }
   await page.setViewportSize(viewport)
@@ -165,10 +150,7 @@ test("keeps two columns between the phone layout and full-width ones", async ({
   expect(second.y).toBeGreaterThan(first.y + first.height)
 })
 
-test("fits the first-run board on a short laptop screen", async ({
-  page,
-  extensionId
-}) => {
+test("fits the first-run board on a short laptop screen", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
   const cards = page.locator(".board-list .board-row")
   await expect(cards).toHaveCount(DEFAULT_BOARD_TITLES.length)
@@ -177,9 +159,7 @@ test("fits the first-run board on a short laptop screen", async ({
   await page.setViewportSize({ width: 1536, height: 714 })
   expect(
     await page.evaluate(
-      () =>
-        document.documentElement.scrollHeight <=
-        document.documentElement.clientHeight
+      () => document.documentElement.scrollHeight <= document.documentElement.clientHeight
     )
   ).toBe(true)
 
@@ -210,10 +190,7 @@ test("fits the first-run board on a short laptop screen", async ({
   expect(shortPhone.y).toBeCloseTo(tallPhone.y, 0)
 })
 
-test("keeps the board from shifting when a scrollbar appears", async ({
-  page,
-  extensionId
-}) => {
+test("keeps the board from shifting when a scrollbar appears", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   // A tall viewport: the short default board fits with no vertical scrollbar.
@@ -223,9 +200,7 @@ test("keeps the board from shifting when a scrollbar appears", async ({
   // A short viewport: the same board now overflows and a scrollbar appears.
   await page.setViewportSize({ width: 1000, height: 400 })
   const overflows = await page.evaluate(
-    () =>
-      document.documentElement.scrollHeight >
-      document.documentElement.clientHeight
+    () => document.documentElement.scrollHeight > document.documentElement.clientHeight
   )
   expect(overflows).toBe(true)
   const scrolled = await boxOf(page.locator(".page"), "the page once it scrolls")
@@ -235,10 +210,7 @@ test("keeps the board from shifting when a scrollbar appears", async ({
   expect(scrolled.x).toBeCloseTo(roomy.x, 0)
 })
 
-test("shows a time-aware greeting that can be personalized", async ({
-  page,
-  extensionId
-}) => {
+test("shows a time-aware greeting that can be personalized", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const greeting = page.locator(".page-header__greeting")
@@ -287,8 +259,7 @@ test("the greeting shrinks with a window too narrow to hold it beside the button
   await openNewTab(page, extensionId)
 
   const greeting = page.locator(".page-header__greeting")
-  const fontSize = () =>
-    greeting.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
+  const fontSize = () => greeting.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))
 
   // The narrowest window a browser makes still gets the greeting at 2.1rem.
   expect(await fontSize()).toBeCloseTo(33.6, 1)
@@ -345,10 +316,7 @@ test("says good evening through the small hours until the morning", async ({
   await expect(greeting).toHaveText("Good morning")
 })
 
-test("exports the board to a file and imports one back", async ({
-  page,
-  extensionId
-}) => {
+test("exports the board to a file and imports one back", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
   await page.getByRole("button", { name: "Options" }).click()
 
@@ -380,17 +348,12 @@ test("exports the board to a file and imports one back", async ({
     buffer: Buffer.from(JSON.stringify(board))
   })
 
-  await expect(
-    page.getByRole("heading", { name: "Imported City" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Imported City" })).toBeVisible()
   await expect(page.getByText("🕒 Local time")).toHaveCount(0)
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
 })
 
-test("an import can be taken back until the board moves on", async ({
-  page,
-  extensionId
-}) => {
+test("an import can be taken back until the board moves on", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   // A file with an empty board replaces everything, the exact case an undo is for.
@@ -481,9 +444,7 @@ test("an import keeps its Undo through the late echo of an earlier write", async
   // The name's echo still carries the board from before the import, and the import's own echo follows it.
   await expect
     .poll(() =>
-      page.evaluate(
-        () => (window as typeof window & { pendingEchoes: number }).pendingEchoes
-      )
+      page.evaluate(() => (window as typeof window & { pendingEchoes: number }).pendingEchoes)
     )
     .toBe(0)
 
@@ -492,10 +453,7 @@ test("an import keeps its Undo through the late echo of an earlier write", async
   await expect(notice.getByRole("button", { name: "Undo" })).toBeVisible()
 })
 
-test("a bad import shows an error and leaves the board intact", async ({
-  page,
-  extensionId
-}) => {
+test("a bad import shows an error and leaves the board intact", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
   await page.getByRole("button", { name: "Options" }).click()
 
@@ -506,9 +464,7 @@ test("a bad import shows an error and leaves the board intact", async ({
     buffer: Buffer.from(JSON.stringify({ nope: true }))
   })
 
-  await expect(
-    page.getByText("That file is not a Dayboard board.")
-  ).toBeVisible()
+  await expect(page.getByText("That file is not a Dayboard board.")).toBeVisible()
   // The dialog stays open and the existing board is untouched.
   await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
   await expect(page.getByText("🕒 Local time")).toBeVisible()
@@ -535,10 +491,7 @@ test("the board just works: drag handles on, responsive grid, knob-free options"
   await expect(page.getByRole("dialog", { name: "Options" })).toHaveCount(0)
 })
 
-test("the options dialog moves, traps, and restores focus", async ({
-  page,
-  extensionId
-}) => {
+test("the options dialog moves, traps, and restores focus", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const gear = page.getByRole("button", { name: "Options" })
@@ -563,10 +516,7 @@ test("the options dialog moves, traps, and restores focus", async ({
   await expect(gear).toBeFocused()
 })
 
-test("opening the page as the options view shows the overlay", async ({
-  page,
-  extensionId
-}) => {
+test("opening the page as the options view shows the overlay", async ({ page, extensionId }) => {
   await page.goto(`chrome-extension://${extensionId}/newtab.html?view=settings`)
 
   await expect(page.getByRole("dialog", { name: "Options" })).toBeVisible()
@@ -590,9 +540,7 @@ test("widget menu spawns under the cursor and breaks free of the card", async ({
 
   const menu = page.locator(".card-menu")
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Edit 🕒 Local time" })
-  ).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Edit 🕒 Local time" })).toBeVisible()
 
   const menuBox = await boxOf(menu, "the widget menu")
 
@@ -627,9 +575,7 @@ test("widget menu stays within the viewport when opened near the screen edge", a
   // Wait for the scale-up animation to settle so we measure the menu at full size.
   await menu
     .locator(".card-menu__panel")
-    .evaluate((panel) =>
-      Promise.all(panel.getAnimations().map((animation) => animation.finished))
-    )
+    .evaluate((panel) => Promise.all(panel.getAnimations().map((animation) => animation.finished)))
 
   const menuBox = await boxOf(menu, "the widget menu")
 
@@ -641,10 +587,7 @@ test("widget menu stays within the viewport when opened near the screen edge", a
   expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(viewport.height)
 })
 
-test("widget menu supports keyboard navigation", async ({
-  page,
-  extensionId
-}) => {
+test("widget menu supports keyboard navigation", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const card = cardByTitle(page, "🌅 Morning")
@@ -658,29 +601,19 @@ test("widget menu supports keyboard navigation", async ({
 
   // Focus lands on the first enabled item, and arrow keys move between items.
   // "🌅 Morning" sits among other widgets, so both Move back and Move next are enabled and arrow keys step through every item in turn.
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeFocused()
 
   await page.keyboard.press("ArrowDown")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning next" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning next" })).toBeFocused()
 
   await page.keyboard.press("ArrowDown")
-  await expect(
-    page.getByRole("menuitem", { name: "Edit 🌅 Morning" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Edit 🌅 Morning" })).toBeFocused()
 
   await page.keyboard.press("End")
-  await expect(
-    page.getByRole("menuitem", { name: "Delete 🌅 Morning" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Delete 🌅 Morning" })).toBeFocused()
 
   await page.keyboard.press("ArrowDown")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeFocused() // wraps back to the first item
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeFocused() // wraps back to the first item
 
   // Escape closes the menu and returns focus to the card that opened it.
   await page.keyboard.press("Escape")
@@ -701,9 +634,7 @@ test("widget menu closes on resize and returns focus to its card", async ({
 
   const menu = page.locator(".card-menu")
   await expect(menu).toBeVisible()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeFocused()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeFocused()
 
   // The menu is pinned to the cursor, so a resize closes it...
   await page.setViewportSize({ width: 900, height: 700 })
@@ -809,16 +740,11 @@ test("dragging across a widget body selects text instead of reordering", async (
   await expect(titles).toHaveText(DEFAULT_BOARD_TITLES)
 
   // ...and dragging over the text selects it instead.
-  const selection = await page.evaluate(
-    () => window.getSelection()?.toString() ?? ""
-  )
+  const selection = await page.evaluate(() => window.getSelection()?.toString() ?? "")
   expect(selection.length).toBeGreaterThan(0)
 })
 
-test("the empty middle of a card is a drag handle too", async ({
-  page,
-  extensionId
-}) => {
+test("the empty middle of a card is a drag handle too", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const titles = page.locator(".board-row h2")
@@ -845,10 +771,7 @@ test("the empty middle of a card is a drag handle too", async ({
   await expect(titles).toHaveText(DEFAULT_BOARD_TITLES)
 })
 
-test("only the draggable frame lights the card up on hover", async ({
-  page,
-  extensionId
-}) => {
+test("only the draggable frame lights the card up on hover", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const card = page.locator(".board-row--draggable").first()
@@ -875,29 +798,18 @@ test("only the draggable frame lights the card up on hover", async ({
   await expect.poll(() => readStyle()).toBe(calm)
 })
 
-test("dropdowns close when clicking outside them", async ({
-  page,
-  extensionId
-}) => {
+test("dropdowns close when clicking outside them", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).toBeVisible()
-  await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
-    .click()
+  await page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ }).click()
   await expect(page.getByRole("button", { name: "Add clock" })).not.toBeVisible()
 
   await openWidgetMenu(page, "🌅 Morning")
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).toBeVisible()
-  await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
-    .click()
-  await expect(
-    page.getByRole("menuitem", { name: "Move 🌅 Morning back" })
-  ).not.toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).toBeVisible()
+  await page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ }).click()
+  await expect(page.getByRole("menuitem", { name: "Move 🌅 Morning back" })).not.toBeVisible()
 })
 
 test("the add menu closes on Escape and returns focus to its button", async ({
@@ -930,9 +842,7 @@ test("clicking the time zone box offers every zone, not just matches", async ({
   // The whole list opens on a plain click: the system option leads it, and zones from anywhere are on offer rather than only ones matching the box's contents.
   const listbox = page.locator(".tz-field__listbox")
   await expect(listbox).toBeVisible()
-  await expect(
-    listbox.getByRole("option", { name: "System time zone" })
-  ).toBeVisible()
+  await expect(listbox.getByRole("option", { name: "System time zone" })).toBeVisible()
   await expect(listbox.getByRole("option", { name: "Asia/Tokyo" })).toHaveCount(1)
   await expect(listbox.getByRole("option", { name: "Europe/Berlin" })).toHaveCount(1)
 
@@ -945,9 +855,7 @@ test("clicking the time zone box offers every zone, not just matches", async ({
 
   // Clicking the filled box brings back the whole list, with the current zone marked.
   await field.click()
-  await expect(
-    listbox.getByRole("option", { name: "Europe/Berlin" })
-  ).toHaveCount(1)
+  await expect(listbox.getByRole("option", { name: "Europe/Berlin" })).toHaveCount(1)
   await expect(listbox.getByRole("option", { name: "Asia/Tokyo" })).toHaveAttribute(
     "aria-selected",
     "true"
@@ -965,11 +873,7 @@ test("clicking the time zone box offers every zone, not just matches", async ({
   })
 })
 
-test("multiple open tabs stay synchronized", async ({
-  context,
-  page,
-  extensionId
-}) => {
+test("multiple open tabs stay synchronized", async ({ context, page, extensionId }) => {
   // A tall viewport keeps the whole board (the default widgets plus the clock added below) and its context menus on screen, so clicking a menu item never has to scroll; scrolling intentionally dismisses an open widget menu.
   const tall = { width: 1280, height: 1600 }
   await page.setViewportSize(tall)
@@ -1004,7 +908,10 @@ test("multiple open tabs stay synchronized", async ({
 
   await openWidgetMenu(thirdPage, "Tokyo")
   await thirdPage.getByRole("menuitem", { name: "Delete Tokyo" }).click()
-  await thirdPage.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
+  await thirdPage
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .click()
 
   await expect(page.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
   await expect(secondPage.getByRole("heading", { name: "Tokyo" })).toHaveCount(0)
@@ -1060,9 +967,7 @@ test("add note flow saves typed text and persists across reloads", async ({
   const field = page.getByLabel("Reminders note")
   await field.fill("Buy milk")
   // Blurring flushes the debounced auto-save.
-  await page
-    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
-    .click()
+  await page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ }).click()
 
   await page.reload()
   await expect(page.getByLabel("Reminders note")).toHaveValue("Buy milk")
@@ -1105,7 +1010,10 @@ test("a note that holds more than it shows fades at the edge the rest is behind"
         if (color === "transparent") {
           return true
         }
-        const parts = color.slice(color.indexOf("(") + 1, -1).split(/[\s,/]+/).filter(Boolean)
+        const parts = color
+          .slice(color.indexOf("(") + 1, -1)
+          .split(/[\s,/]+/)
+          .filter(Boolean)
         return parts.length === 4 && Number(parts[3]) === 0
       }
       const top = clear(colors[0])
@@ -1241,10 +1149,7 @@ test("add quote flow shows a quote and keeps the daily pick across reloads", asy
   await expect(mantras.locator(".quote-text")).toHaveText(shown)
 })
 
-test("all widgets share one card size, even with a long quote", async ({
-  page,
-  extensionId
-}) => {
+test("all widgets share one card size, even with a long quote", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   // A quote long enough to overflow the old content-driven sizing.
@@ -1306,10 +1211,7 @@ test("stopwatch counts up, keeps running across a reload, and resets", async ({
   await expect(reloaded.getByRole("button", { name: "Start" })).toBeVisible()
 })
 
-test("timer counts down to a finished state and resets", async ({
-  page,
-  extensionId
-}) => {
+test("timer counts down to a finished state and resets", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -1357,9 +1259,7 @@ test("a finished timer with a two-line title keeps its buttons on the card", asy
 
   // The card is a fixed size, so anything that adds a line pushes the buttons through its bottom padding.
   const cardBox = await boxOf(card, "the timer card")
-  const padding = await card.evaluate((node) =>
-    parseFloat(getComputedStyle(node).paddingBottom)
-  )
+  const padding = await card.evaluate((node) => parseFloat(getComputedStyle(node).paddingBottom))
   const reset = await boxOf(card.getByRole("button", { name: "Reset" }), "the Reset button")
   expect(reset.y + reset.height).toBeLessThanOrEqual(cardBox.y + cardBox.height - padding + 0.5)
 })
@@ -1535,9 +1435,7 @@ test("a timer's per-widget chime is opt-in, persists, and still finishes", async
   await page.getByLabel("minutes").fill("0")
   await page.getByLabel("seconds").fill("1")
   // Opt this timer into the chime.
-  await expect(
-    page.getByRole("switch", { name: "Chime when it ends" })
-  ).not.toBeChecked()
+  await expect(page.getByRole("switch", { name: "Chime when it ends" })).not.toBeChecked()
   await page.getByRole("switch", { name: "Chime when it ends" }).click()
   await page.getByRole("button", { name: "Save timer" }).click()
 
@@ -1549,15 +1447,10 @@ test("a timer's per-widget chime is opt-in, persists, and still finishes", async
   await page.reload()
   await openWidgetMenu(page, "Steep")
   await page.getByRole("menuitem", { name: "Edit Steep" }).click()
-  await expect(
-    page.getByRole("switch", { name: "Chime when it ends" })
-  ).toBeChecked()
+  await expect(page.getByRole("switch", { name: "Chime when it ends" })).toBeChecked()
 })
 
-test("add habit flow marks today and persists", async ({
-  page,
-  extensionId
-}) => {
+test("add habit flow marks today and persists", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await addWidget(page, "habit", "Read")
@@ -1576,16 +1469,10 @@ test("add habit flow marks today and persists", async ({
   // The marked day persists across a reload.
   await page.reload()
   const reloaded = cardByTitle(page, "Read")
-  await expect(reloaded.locator(".habit-day--today")).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  )
+  await expect(reloaded.locator(".habit-day--today")).toHaveAttribute("aria-pressed", "true")
 })
 
-test("a habit dot fills in a day that was missed", async ({
-  page,
-  extensionId
-}) => {
+test("a habit dot fills in a day that was missed", async ({ page, extensionId }) => {
   // Wednesday, so the week has days behind today to go back and fill in.
   await page.clock.install({ time: new Date("2026-03-04T10:00:00Z") })
   await openNewTab(page, extensionId)
@@ -1595,15 +1482,14 @@ test("a habit dot fills in a day that was missed", async ({
   const card = cardByTitle(page, "Read")
 
   await card.getByRole("button", { name: "Monday, March 2" }).click()
-  await expect(
-    card.getByRole("button", { name: "Monday, March 2" })
-  ).toHaveAttribute("aria-pressed", "true")
+  await expect(card.getByRole("button", { name: "Monday, March 2" })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  )
 
   // Today stays untouched, and a day that hasn't arrived can't be marked.
   await expect(card.getByRole("button", { name: "Mark today" })).toBeVisible()
-  await expect(
-    card.getByRole("button", { name: "Thursday, March 5" })
-  ).toBeDisabled()
+  await expect(card.getByRole("button", { name: "Thursday, March 5" })).toBeDisabled()
 
   // Arrows walk the row and mark a day without waking the card's own keyboard drag, which listens for the same keys one level up.
   await card.getByRole("button", { name: "Wednesday, March 4" }).focus()
@@ -1626,8 +1512,7 @@ test("a todo list fills up on the card, persists, and clears again", async ({
   await addWidget(page, "todo", "Today")
 
   // Exact, or this also picks up the default board's "Today's reminder" quote.
-  const todoCard = () =>
-    cardByTitle(page, "Today", true)
+  const todoCard = () => cardByTitle(page, "Today", true)
   const card = todoCard()
 
   // Tasks are written on the card itself, so Enter is the whole interaction.
@@ -1646,8 +1531,7 @@ test("a todo list fills up on the card, persists, and clears again", async ({
 
     return (
       tasks.length === 4 &&
-      tasks.at(-1)!.getBoundingClientRect().bottom <
-        node.getBoundingClientRect().bottom
+      tasks.at(-1)!.getBoundingClientRect().bottom < node.getBoundingClientRect().bottom
     )
   })
   expect(fits).toBe(true)
@@ -1655,15 +1539,11 @@ test("a todo list fills up on the card, persists, and clears again", async ({
   // The list and what is checked both survive a reload.
   await page.reload()
   await expect(todoCard().getByRole("checkbox")).toHaveCount(4)
-  await expect(
-    todoCard().getByRole("checkbox", { name: "Buy milk" })
-  ).toBeChecked()
+  await expect(todoCard().getByRole("checkbox", { name: "Buy milk" })).toBeChecked()
 
   // Clearing a task leaves the rest alone and brings the field back with it.
   await todoCard().getByRole("button", { name: "Remove Buy milk" }).click()
-  await expect(
-    todoCard().getByRole("checkbox", { name: "Buy milk" })
-  ).toHaveCount(0)
+  await expect(todoCard().getByRole("checkbox", { name: "Buy milk" })).toHaveCount(0)
   await expect(todoCard().getByLabel("Add a task to Today")).toBeVisible()
 })
 
@@ -1699,10 +1579,7 @@ test("a todo card keeps the keyboard's place as tasks come and go", async ({
   await expect(field()).toBeFocused()
 })
 
-test("a habit marked after midnight credits the new day", async ({
-  page,
-  extensionId
-}) => {
+test("a habit marked after midnight credits the new day", async ({ page, extensionId }) => {
   // A new tab commonly sits open overnight, so the board has to roll over on its own: marking the habit must credit the day the user is actually in.
   await page.clock.install({ time: new Date("2026-03-02T23:59:00Z") })
   await openNewTab(page, extensionId)
@@ -1723,10 +1600,7 @@ test("a habit marked after midnight credits the new day", async ({
   expect(await readWidgetSettings(page, "Read")).toEqual({ history: ["2026-03-03"] })
 })
 
-test("add and edit countdown works without a time-zone field", async ({
-  page,
-  extensionId
-}) => {
+test("add and edit countdown works without a time-zone field", async ({ page, extensionId }) => {
   // A tall viewport keeps the appended widget and its context menu on screen, so editing it never has to scroll (scrolling dismisses an open widget menu).
   await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
@@ -1768,17 +1642,12 @@ test("a countdown's start is empty by default and setting one makes a bar", asyn
 
   const card = cardByTitle(page, "Project")
 
-  await expect(
-    card.getByRole("progressbar", { name: "Project progress" })
-  ).toBeVisible()
+  await expect(card.getByRole("progressbar", { name: "Project progress" })).toBeVisible()
   await expect(card.locator(".board-row__value")).toContainText("%")
 
   // The progress display persists across a reload.
   await page.reload()
-  await expect(
-    cardByTitle(page, "Project")
-      .getByRole("progressbar")
-  ).toBeVisible()
+  await expect(cardByTitle(page, "Project").getByRole("progressbar")).toBeVisible()
 })
 
 test("the clear button empties a countdown's start and goes back to the time remaining", async ({
@@ -1794,9 +1663,7 @@ test("the clear button empties a countdown's start and goes back to the time rem
   await page.getByLabel("Name").fill("Project")
   await page.getByLabel("When").fill("2099-12-31T00:00")
   // An empty start has no clear button to press; it appears once there is something to clear.
-  await expect(
-    page.getByRole("button", { name: "Clear starting from" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Clear starting from" })).toHaveCount(0)
   await page.getByLabel("Starting from").fill("2020-01-01T00:00")
   await page.getByRole("button", { name: "Save countdown" }).click()
 
@@ -1839,10 +1706,7 @@ test("a recurring countdown rolls forward to its next occurrence", async ({
   )
 })
 
-test("an hourly countdown rolls forward within the hour", async ({
-  page,
-  extensionId
-}) => {
+test("an hourly countdown rolls forward within the hour", async ({ page, extensionId }) => {
   await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
   await openNewTab(page, extensionId)
 
@@ -1863,10 +1727,7 @@ test("an hourly countdown rolls forward within the hour", async ({
   )
 })
 
-test("a yearly date counts in days", async ({
-  page,
-  extensionId
-}) => {
+test("a yearly date counts in days", async ({ page, extensionId }) => {
   await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
   await openNewTab(page, extensionId)
 
@@ -1884,15 +1745,10 @@ test("a yearly date counts in days", async ({
   // Whole days, with no hours left over and no "12:00 AM" under the title.
   await expect(card.locator(".board-row__value")).toHaveText("10 days")
   await expect(card.locator(".board-row__meta")).toHaveText("from now")
-  await expect(card.locator(".board-row__detail")).toHaveText(
-    "Sat, Mar 14 · repeats yearly"
-  )
+  await expect(card.locator(".board-row__detail")).toHaveText("Sat, Mar 14 · repeats yearly")
 })
 
-test("a date set in another time zone stays that date", async ({
-  page,
-  extensionId
-}) => {
+test("a date set in another time zone stays that date", async ({ page, extensionId }) => {
   await page.clock.setFixedTime(new Date("2026-03-04T10:00:00Z"))
   await openNewTab(page, extensionId)
 
@@ -1906,16 +1762,13 @@ test("a date set in another time zone stays that date", async ({
     settings: { targetAt: "2026-03-14T04:00:00.000Z", ...settings }
   })
 
-  await page.evaluate(
-    (board) => chrome.storage.sync.set({ "dayboard-state": board }),
-    {
-      widgets: [
-        countdown("trip", "Trip", { timeZone: "America/New_York" }),
-        countdown("conference", "Conference", {})
-      ],
-      settings: { name: "" }
-    }
-  )
+  await page.evaluate((board) => chrome.storage.sync.set({ "dayboard-state": board }), {
+    widgets: [
+      countdown("trip", "Trip", { timeZone: "America/New_York" }),
+      countdown("conference", "Conference", {})
+    ],
+    settings: { name: "" }
+  })
 
   // Whole days to a date, with no time of day under the title.
   const trip = cardByTitle(page, "Trip", true)
@@ -1923,9 +1776,9 @@ test("a date set in another time zone stays that date", async ({
   await expect(trip.locator(".board-row__detail")).toHaveText("Sat, Mar 14")
 
   // With no zone there is no telling the date from 4 AM, so that card reads as it always has.
-  await expect(
-    cardByTitle(page, "Conference").locator(".board-row__detail")
-  ).toHaveText(/^Sat, Mar 14, 4:00\sAM$/)
+  await expect(cardByTitle(page, "Conference").locator(".board-row__detail")).toHaveText(
+    /^Sat, Mar 14, 4:00\sAM$/
+  )
 
   // The dialog opens on the date the card shows, and a rename leaves what is stored as New York set it.
   await openWidgetMenu(page, "Trip")
@@ -1945,9 +1798,7 @@ test("a date set in another time zone stays that date", async ({
   await page.getByRole("menuitem", { name: "Edit Holiday" }).click()
   await page.getByLabel("When").fill("2026-03-20T00:00")
   await page.getByRole("button", { name: "Save changes" }).click()
-  await expect(
-    cardByTitle(page, "Holiday").locator(".board-row__detail")
-  ).toHaveText("Fri, Mar 20")
+  await expect(cardByTitle(page, "Holiday").locator(".board-row__detail")).toHaveText("Fri, Mar 20")
   expect(await readWidgetSettings(page, "Holiday")).toEqual({
     targetAt: "2026-03-20T00:00:00.000Z",
     timeZone: "UTC"
@@ -1982,9 +1833,7 @@ test("a repeating countdown edits from the occurrence on its card", async ({
   const card = cardByTitle(page, "Standup")
   await expect(card.locator(".board-row__value")).toHaveText("4 days, 23 hours")
   await expect(card.locator(".board-row__meta")).toHaveText("from now")
-  await expect(card.locator(".board-row__detail")).toHaveText(
-    /^Mon, Mar 9, 9:00\sAM$/
-  )
+  await expect(card.locator(".board-row__detail")).toHaveText(/^Mon, Mar 9, 9:00\sAM$/)
 })
 
 test("editing a recurring countdown's time keeps its other settings", async ({
@@ -2011,16 +1860,12 @@ test("editing a recurring countdown's time keeps its other settings", async ({
   await page.getByLabel("When").fill("2020-01-07T08:30")
   await page.getByRole("button", { name: "Save changes" }).click()
 
-  await expect(
-    cardByTitle(page, "Standup")
-      .locator(".board-row__detail")
-  ).toContainText("repeats weekly")
+  await expect(cardByTitle(page, "Standup").locator(".board-row__detail")).toContainText(
+    "repeats weekly"
+  )
 })
 
-test("clicking the backdrop saves the edit dialog", async ({
-  page,
-  extensionId
-}) => {
+test("clicking the backdrop saves the edit dialog", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🕒 Local time")
@@ -2058,9 +1903,7 @@ test("pressing Escape closes the edit dialog and discards changes", async ({
 
   // The dialog closes and the edit is thrown away.
   await expect(page.getByRole("dialog", { name: "Edit clock" })).toHaveCount(0)
-  await expect(
-    page.getByRole("heading", { name: "Should not stick" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Should not stick" })).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "🕒 Local time" })).toBeVisible()
 })
 
@@ -2069,10 +1912,11 @@ test("delete flow removes an existing widget", async ({ page, extensionId }) => 
 
   await openWidgetMenu(page, "🌅 Morning")
   await page.getByRole("menuitem", { name: "Delete 🌅 Morning" }).click()
-  await expect(
-    page.getByRole("dialog", { name: "Delete countdown?" })
-  ).toBeVisible()
-  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
+  await expect(page.getByRole("dialog", { name: "Delete countdown?" })).toBeVisible()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .click()
 
   await expect(page.getByText("🌅 Morning")).toHaveCount(0)
 })
@@ -2091,9 +1935,7 @@ test("deleting the last widget hands the board over to the empty state", async (
 
   // The board goes from one card to none while the list stays mounted, which is the render that used to take the whole page down with it.
   await expect(page.locator(".board-row")).toHaveCount(0)
-  await expect(
-    page.getByRole("heading", { name: "A fresh start" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "A fresh start" })).toBeVisible()
   await expect(page.getByText("The + button up top has them all")).toBeVisible()
   // And the page is still around the empty state, rather than the blank body React leaves behind when a render throws.
   await expect(page.getByRole("button", { name: "Add widget" })).toBeVisible()
@@ -2109,17 +1951,11 @@ test("archiving from the menu hides a widget and it can be restored", async ({
 
   // Archive from the keyboard-accessible context menu.
   await openWidgetMenu(page, "🌅 Morning")
-  await page
-    .getByRole("menuitem", { name: "Archive 🌅 Morning" })
-    .click()
+  await page.getByRole("menuitem", { name: "Archive 🌅 Morning" }).click()
 
   // It leaves the board, says where it went, and the archived section stays collapsed by default.
-  await expect(
-    page.locator(".board-list").first().getByText("🌅 Morning")
-  ).toHaveCount(0)
-  await expect(
-    page.getByRole("status").getByText("Archived 🌅 Morning")
-  ).toBeVisible()
+  await expect(page.locator(".board-list").first().getByText("🌅 Morning")).toHaveCount(0)
+  await expect(page.getByRole("status").getByText("Archived 🌅 Morning")).toBeVisible()
   // A pointer user has no place on the board to keep, so no card is handed a focus that the next Space would turn into a drag.
   await expect(page.locator(".board-row:focus")).toHaveCount(0)
   const toggle = page.getByRole("button", { name: "Show archived" })
@@ -2131,35 +1967,24 @@ test("archiving from the menu hides a widget and it can be restored", async ({
   await expect(archived).toBeVisible()
   await archived.focus()
   await archived.press("ContextMenu")
-  await page
-    .getByRole("menuitem", { name: "Restore 🌅 Morning" })
-    .press("Enter")
+  await page.getByRole("menuitem", { name: "Restore 🌅 Morning" }).press("Enter")
 
-  await expect(
-    page.locator(".board-list").first().getByText("🌅 Morning")
-  ).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: /Show archived/ })
-  ).toHaveCount(0)
+  await expect(page.locator(".board-list").first().getByText("🌅 Morning")).toBeVisible()
+  await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
   // Focus follows the card home instead of falling to the page with the menu that had it.
   await expect(cardByTitle(page, "🌅 Morning")).toBeFocused()
   // With the card back on the board there is no archive left to undo.
   await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0)
 })
 
-test("an archive can be undone back into the slot it left", async ({
-  page,
-  extensionId
-}) => {
+test("an archive can be undone back into the slot it left", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🌅 Morning")
   await page.getByRole("menuitem", { name: "Archive 🌅 Morning" }).click()
 
   const titles = page.locator(".board-list").first().locator("h2")
-  await expect(titles).toHaveText(
-    DEFAULT_BOARD_TITLES.filter((title) => title !== "🌅 Morning")
-  )
+  await expect(titles).toHaveText(DEFAULT_BOARD_TITLES.filter((title) => title !== "🌅 Morning"))
 
   // Restoring from the archive puts a card at the end of the board; Undo puts it back where it was.
   await page.getByRole("button", { name: "Undo" }).click()
@@ -2193,7 +2018,10 @@ test("archiving or deleting from the keyboard keeps its place on the board", asy
   await year.focus()
   await year.press("ContextMenu")
   await page.getByRole("menuitem", { name: "Delete 📅 This year" }).press("Enter")
-  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).press("Enter")
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .press("Enter")
 
   await expect(cardByTitle(page, "🚶 Daily walk")).toBeFocused()
 })
@@ -2224,10 +2052,7 @@ test.describe("with the clock paused", () => {
   // A paused clock holds for the whole browser context, so this test takes a browser of its own rather than stopping time for the tests after it.
   test.use({ ownBrowser: true })
 
-  test("the archive notice steps aside while a card is dragged", async ({
-    page,
-    extensionId
-  }) => {
+  test("the archive notice steps aside while a card is dragged", async ({ page, extensionId }) => {
     await page.setViewportSize({ width: 1280, height: 1000 })
     await page.clock.install({ time: new Date("2026-03-04T10:00:00Z") })
     await openNewTab(page, extensionId)
@@ -2260,14 +2085,12 @@ test.describe("with the clock paused", () => {
   })
 })
 
-test("a long title keeps the archive notice to one line", async ({
-  page,
-  extensionId
-}) => {
+test("a long title keeps the archive notice to one line", async ({ page, extensionId }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openNewTab(page, extensionId)
 
-  const title = "A rather long title for a card, the kind that names a whole plan rather than a thing"
+  const title =
+    "A rather long title for a card, the kind that names a whole plan rather than a thing"
   await addWidget(page, "note", title)
 
   // A note's middle is its text field, which keeps a menu of its own, so the card's menu comes from the keyboard.
@@ -2281,8 +2104,7 @@ test("a long title keeps the archive notice to one line", async ({
   await expect(text).toBeVisible()
   const layout = await text.evaluate((element) => ({
     lines: Math.round(
-      element.getBoundingClientRect().height /
-        parseFloat(getComputedStyle(element).lineHeight)
+      element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight)
     ),
     clipped: element.scrollWidth > element.clientWidth
   }))
@@ -2295,10 +2117,7 @@ test("a long title keeps the archive notice to one line", async ({
   expect(toggle.y + toggle.height).toBeLessThanOrEqual(notice.y)
 })
 
-test("a keyboard drag is released by reaching for the mouse", async ({
-  page,
-  extensionId
-}) => {
+test("a keyboard drag is released by reaching for the mouse", async ({ page, extensionId }) => {
   await page.setViewportSize({ width: 1280, height: 1000 })
   await openNewTab(page, extensionId)
 
@@ -2315,15 +2134,10 @@ test("a keyboard drag is released by reaching for the mouse", async ({
 
   // And dragging works straight afterwards, which it would not if the keyboard drag were still the active one.
   await dragWidget(page, "🌅 Morning", "🕒 Local time")
-  await expect(page.locator(".board-row h2").first()).toHaveText(
-    "🌅 Morning"
-  )
+  await expect(page.locator(".board-row h2").first()).toHaveText("🌅 Morning")
 })
 
-test("dragging a widget onto the archive zone archives it", async ({
-  page,
-  extensionId
-}) => {
+test("dragging a widget onto the archive zone archives it", async ({ page, extensionId }) => {
   await page.setViewportSize({ width: 1280, height: 1000 })
   await openNewTab(page, extensionId)
 
@@ -2349,22 +2163,17 @@ test("dragging a widget onto the archive zone archives it", async ({
   await expect(page.locator(".archive-dropzone--over")).toBeVisible()
 
   // The zone is drawn over the lifted card, so "Release to archive" is there to read at the moment it applies instead of hidden under the card.
-  await expect(
-    page.locator(".archive-dropzone").getByText("Release to archive")
-  ).toBeVisible()
+  await expect(page.locator(".archive-dropzone").getByText("Release to archive")).toBeVisible()
   expect(
     await page.evaluate(
-      ({ x, y }) =>
-        Boolean(document.elementFromPoint(x, y)?.closest(".archive-dropzone")),
+      ({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest(".archive-dropzone")),
       zoneCenter
     )
   ).toBe(true)
   await page.mouse.up()
   await settleAfterDrop(page)
 
-  await expect(
-    page.locator(".board-list").first().getByText("🕒 Local time")
-  ).toHaveCount(0)
+  await expect(page.locator(".board-list").first().getByText("🕒 Local time")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Show archived" })).toBeVisible()
   // A pointer drag leaves no focus behind on the board for the next Space to pick up as a drag.
   await expect(page.locator(".board-row:focus")).toHaveCount(0)
@@ -2391,11 +2200,7 @@ test("a card carried onto the bottom row by its top edge moves there instead of 
   const grabY = source.y + 12
   await page.mouse.move(grabX, grabY)
   await page.mouse.down()
-  await page.mouse.move(
-    target.x + target.width / 2,
-    target.y + target.height / 2,
-    { steps: 20 }
-  )
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 20 })
   await expect(page.locator(".archive-dropzone")).toBeVisible()
   await expect(page.locator(".archive-dropzone--over")).toHaveCount(0)
   await page.mouse.up()
@@ -2443,15 +2248,10 @@ test("a card dragged toward the archive follows the cursor instead of snapping b
   expect(overlayBox.y).toBeGreaterThan(box.y + 120)
 
   await page.mouse.up()
-  await expect(
-    page.locator(".board-list").first().getByText("🕒 Local time")
-  ).toHaveCount(0)
+  await expect(page.locator(".board-list").first().getByText("🕒 Local time")).toHaveCount(0)
 })
 
-test("dropping a board card among the archived ones archives it", async ({
-  page,
-  extensionId
-}) => {
+test("dropping a board card among the archived ones archives it", async ({ page, extensionId }) => {
   // A tall viewport keeps the board and the revealed archive on one screen, so the drag never has to scroll.
   await page.setViewportSize({ width: 1280, height: 1600 })
   await openNewTab(page, extensionId)
@@ -2489,14 +2289,9 @@ test("dropping a board card among the archived ones archives it", async ({
     page.locator(".archive-section .board-list")
   ]
   await expect(board.locator("h2")).toHaveText(
-    DEFAULT_BOARD_TITLES.filter(
-      (title) => title !== "🕒 Local time" && title !== "🌅 Morning"
-    )
+    DEFAULT_BOARD_TITLES.filter((title) => title !== "🕒 Local time" && title !== "🌅 Morning")
   )
-  await expect(archive.locator("h2")).toHaveText([
-    "🌅 Morning",
-    "🕒 Local time"
-  ])
+  await expect(archive.locator("h2")).toHaveText(["🌅 Morning", "🕒 Local time"])
 })
 
 test("dragging an archived widget onto a board card restores it into that slot", async ({
@@ -2515,7 +2310,10 @@ test("dragging an archived widget onto a board card restores it into that slot",
   const box = await boxOf(cardByTitle(page, "🌅 Morning"), "the archived card")
 
   // Aim for the first board card: dropping there must restore into slot one, not just back onto the board somewhere.
-  const targetBox = await boxOf(cardByTitle(page, "🕒 Local time"), "the board card it is dropped onto")
+  const targetBox = await boxOf(
+    cardByTitle(page, "🕒 Local time"),
+    "the board card it is dropped onto"
+  )
 
   // Grab the archived card by its frame and nudge it to start the drag.
   await page.mouse.move(box.x + box.width / 2, box.y + 12)
@@ -2526,11 +2324,9 @@ test("dragging an archived widget onto a board card restores it into that slot",
   await expect(page.locator(".board-list--restore-target")).toBeVisible()
 
   // Carry the card up over the first board card, whose slot the drop will take.
-  await page.mouse.move(
-    targetBox.x + targetBox.width / 2,
-    targetBox.y + targetBox.height / 2,
-    { steps: 20 }
-  )
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
+    steps: 20
+  })
 
   // The board makes room mid-drag: the card claims a slot in the board grid (leaving the archived list) while the lifted copy follows the cursor, the same gap preview a normal reorder shows.
   // The slot holds the space but is transparent, so this checks that it is there rather than that it shows.
@@ -2545,12 +2341,8 @@ test("dragging an archived widget onto a board card restores it into that slot",
   await page.mouse.up()
 
   // It is back on the board in the exact slot it was dropped on, ahead of "🕒 Local time", and the archived section is gone.
-  await expect(page.locator(".board-row h2").first()).toHaveText(
-    "🌅 Morning"
-  )
-  await expect(
-    page.getByRole("button", { name: /Show archived/ })
-  ).toHaveCount(0)
+  await expect(page.locator(".board-row h2").first()).toHaveText("🌅 Morning")
+  await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
 })
 
 test("dragging an archived widget onto an empty board restores it", async ({
@@ -2576,9 +2368,7 @@ test("dragging an archived widget onto an empty board restores it", async ({
 
   // The board was tidied away rather than never filled, so the empty state points at the archive, and focus lands on the way into it.
   await expect(page.locator(".board-row")).toHaveCount(0)
-  await expect(
-    page.getByRole("heading", { name: "All tucked away" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "All tucked away" })).toBeVisible()
   const toggle = page.getByRole("button", { name: "Show archived" })
   await expect(toggle).toBeFocused()
 
@@ -2594,16 +2384,12 @@ test("dragging an archived widget onto an empty board restores it", async ({
   // With no board card left to aim at, the empty state is the drop target itself, and it changes what it says to offer the landing.
   const emptyState = page.locator(".empty-state")
   await expect(emptyState).toHaveClass(/empty-state--restore/)
-  await expect(
-    emptyState.getByRole("heading", { name: "Drop it here to restore" })
-  ).toBeVisible()
+  await expect(emptyState.getByRole("heading", { name: "Drop it here to restore" })).toBeVisible()
 
   const emptyBox = await boxOf(emptyState, "the empty board drop target")
-  await page.mouse.move(
-    emptyBox.x + emptyBox.width / 2,
-    emptyBox.y + emptyBox.height / 2,
-    { steps: 20 }
-  )
+  await page.mouse.move(emptyBox.x + emptyBox.width / 2, emptyBox.y + emptyBox.height / 2, {
+    steps: 20
+  })
 
   await page.mouse.up()
 
@@ -2612,9 +2398,7 @@ test("dragging an archived widget onto an empty board restores it", async ({
     page.locator(".board-list").first().getByRole("heading", { name: last! })
   ).toBeVisible()
   await expect(page.locator(".empty-state")).toHaveCount(0)
-  await expect(
-    page.getByRole("button", { name: /Show archived/ })
-  ).toHaveCount(0)
+  await expect(page.getByRole("button", { name: /Show archived/ })).toHaveCount(0)
 })
 
 test("the empty board takes one of several archived cards without losing the page", async ({
@@ -2637,12 +2421,7 @@ test("the empty board takes one of several archived cards without losing the pag
 
     return chrome.storage.sync.set({
       "dayboard-state": {
-        widgets: [
-          note("a", "Alpha"),
-          note("b", "Bravo"),
-          note("c", "Charlie"),
-          note("d", "Delta")
-        ],
+        widgets: [note("a", "Alpha"), note("b", "Bravo"), note("c", "Charlie"), note("d", "Delta")],
         settings: { name: "" }
       }
     })
@@ -2657,17 +2436,13 @@ test("the empty board takes one of several archived cards without losing the pag
 
   const emptyState = page.locator(".empty-state")
   const emptyBox = await boxOf(emptyState, "the empty board drop target")
-  await page.mouse.move(
-    emptyBox.x + emptyBox.width / 2,
-    emptyBox.y + emptyBox.height / 2,
-    { steps: 20 }
-  )
+  await page.mouse.move(emptyBox.x + emptyBox.width / 2, emptyBox.y + emptyBox.height / 2, {
+    steps: 20
+  })
 
   // A preview here put the card on the board, the archive closed up under the pointer, and the two traded places until React blanked the page.
   // The empty board answers the card itself instead.
-  await expect(
-    emptyState.getByRole("heading", { name: "Release to restore" })
-  ).toBeVisible()
+  await expect(emptyState.getByRole("heading", { name: "Release to restore" })).toBeVisible()
 
   await page.mouse.up()
 
@@ -2678,10 +2453,7 @@ test("the empty board takes one of several archived cards without losing the pag
   await expect(page.locator(".board-row")).toHaveCount(4)
 })
 
-test("edit and delete controls still work after reordering", async ({
-  page,
-  extensionId
-}) => {
+test("edit and delete controls still work after reordering", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await dragWidget(page, "🌅 Morning", "🕒 Local time")
@@ -2692,9 +2464,7 @@ test("edit and delete controls still work after reordering", async ({
 
   await openWidgetMenu(page, "🌅 Morning")
   await page.getByRole("menuitem", { name: "Edit 🌅 Morning" }).click()
-  await expect(
-    page.getByRole("dialog", { name: "Edit countdown" })
-  ).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Edit countdown" })).toBeVisible()
   await page.getByLabel("Name").fill("Morning plans")
   await page.getByRole("button", { name: "Save changes" }).click()
 
@@ -2702,7 +2472,10 @@ test("edit and delete controls still work after reordering", async ({
 
   await openWidgetMenu(page, "Morning plans")
   await page.getByRole("menuitem", { name: "Delete Morning plans" }).click()
-  await page.getByRole("dialog").getByRole("button", { name: /^Delete \w+$/ }).click()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Delete \w+$/ })
+    .click()
 
   await expect(page.getByText("Morning plans")).toHaveCount(0)
 })

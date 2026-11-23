@@ -39,15 +39,9 @@ const renderActions = (item: Widget) => (
   </>
 )
 
-const renderBoard = () =>
-  render(
-    <BoardList items={widgets} renderItemActions={renderActions} />
-  )
+const renderBoard = () => render(<BoardList items={widgets} renderItemActions={renderActions} />)
 
-const openMenu = (
-  container: HTMLElement,
-  coordinates: { clientX: number; clientY: number }
-) => {
+const openMenu = (container: HTMLElement, coordinates: { clientX: number; clientY: number }) => {
   const card = container.querySelector(".board-row--draggable") as HTMLElement
   card.focus()
   fireEvent.contextMenu(card, coordinates)
@@ -158,9 +152,7 @@ describe("BoardList", () => {
   it("shows a kind-agnostic empty state when there are no widgets", () => {
     render(<BoardList items={[]} />)
 
-    expect(
-      screen.getByRole("heading", { name: "A fresh start" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "A fresh start" })).toBeInTheDocument()
     expect(screen.getByText(/add a clock, a countdown, a note/i)).toBeInTheDocument()
   })
 
@@ -168,40 +160,26 @@ describe("BoardList", () => {
   it("points to the archive when the board is empty because everything was archived", () => {
     render(<BoardList hasArchived items={[]} restoreTarget />)
 
-    expect(
-      screen.getByRole("heading", { name: "All tucked away" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "All tucked away" })).toBeInTheDocument()
     expect(screen.getByText(/archived cards are just below/i)).toBeInTheDocument()
-    expect(
-      screen.queryByRole("heading", { name: "A fresh start" })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "A fresh start" })).not.toBeInTheDocument()
   })
 
   // Deleting the last card, or archiving it, empties the board while the component stays mounted.
   // Every hook has to run on that render too: one declared past the empty-state return is a hook fewer than the render before it, and React throws instead of showing the empty state.
   it("swaps to the empty state when the last card goes", () => {
-    const { rerender } = render(
-      <BoardList items={widgets} renderItemActions={renderActions} />
-    )
+    const { rerender } = render(<BoardList items={widgets} renderItemActions={renderActions} />)
 
-    expect(() =>
-      rerender(
-        <BoardList items={[]} renderItemActions={renderActions} />
-      )
-    ).not.toThrow()
+    expect(() => rerender(<BoardList items={[]} renderItemActions={renderActions} />)).not.toThrow()
 
-    expect(
-      screen.getByRole("heading", { name: "A fresh start" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "A fresh start" })).toBeInTheDocument()
   })
 
   it("makes each widget card draggable by its frame", () => {
     const { container } = render(<BoardList items={widgets} />)
 
     const frames = container.querySelectorAll(".board-row__frame")
-    const cards = new Set(
-      [...frames].map((frame) => frame.closest(".board-row--draggable"))
-    )
+    const cards = new Set([...frames].map((frame) => frame.closest(".board-row--draggable")))
 
     expect(frames).toHaveLength(2)
     // One draggable card per frame, so neither card is left without a handle of its own.
@@ -252,8 +230,14 @@ describe("BoardList", () => {
     const innerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth")
     const innerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight")
 
-    Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get: () => 300 })
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 200 })
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get: () => 300
+    })
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get: () => 200
+    })
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 500 })
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 })
 
@@ -388,9 +372,7 @@ describe("BoardList", () => {
   it("focuses the card its menu opens from, without scrolling to it", () => {
     const { container } = renderBoard()
 
-    const [card, other] = container.querySelectorAll<HTMLElement>(
-      ".board-row--draggable"
-    )
+    const [card, other] = container.querySelectorAll<HTMLElement>(".board-row--draggable")
     other!.focus()
     const focus = vi.spyOn(card!, "focus")
 
@@ -404,10 +386,7 @@ describe("BoardList", () => {
     const { container } = renderBoard()
 
     openMenu(container, { clientX: 10, clientY: 10 })
-    const hidePopover = vi.spyOn(
-      document.querySelector<HTMLElement>(".card-menu")!,
-      "hidePopover"
-    )
+    const hidePopover = vi.spyOn(document.querySelector<HTMLElement>(".card-menu")!, "hidePopover")
 
     fireEvent.scroll(document)
     expect(hidePopover).not.toHaveBeenCalled()
@@ -442,11 +421,12 @@ describe("BoardList", () => {
     const { container } = renderBoard()
     // jsdom matches :focus-visible on any focused element, while a browser leaves it off the focus a mouse click places, so stand in for the browser here.
     const matches = Element.prototype.matches
-    const focusVisible = vi
-      .spyOn(Element.prototype, "matches")
-      .mockImplementation(function (this: Element, selector: string) {
-        return selector === ":focus-visible" ? false : matches.call(this, selector)
-      })
+    const focusVisible = vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string
+    ) {
+      return selector === ":focus-visible" ? false : matches.call(this, selector)
+    })
     onTestFinished(() => focusVisible.mockRestore())
 
     const chooseEdit = (detail: number) => {
@@ -474,18 +454,14 @@ describe("BoardList", () => {
 
     fireEvent.click(badge)
 
-    expect(
-      screen.getByRole("menu", { name: "Actions for Local time" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
     expect(badge).toHaveAttribute("aria-expanded", "true")
 
     // The press that lands on the badge of an open menu puts it away rather than opening it again.
     fireEvent.pointerDown(badge)
     fireEvent.click(badge)
 
-    expect(
-      screen.queryByRole("menu", { name: "Actions for Local time" })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("menu", { name: "Actions for Local time" })).not.toBeInTheDocument()
     expect(badge).toHaveAttribute("aria-expanded", "false")
   })
 
@@ -493,12 +469,8 @@ describe("BoardList", () => {
     renderBoard()
 
     const badge = screen.getByRole("button", { name: "Actions for Local time" })
-    vi.spyOn(badge, "getBoundingClientRect").mockReturnValue(
-      new DOMRect(300, 40, 32, 32)
-    )
-    const offsetWidth = vi
-      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
-      .mockReturnValue(236)
+    vi.spyOn(badge, "getBoundingClientRect").mockReturnValue(new DOMRect(300, 40, 32, 32))
+    const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(236)
     onTestFinished(() => offsetWidth.mockRestore())
 
     fireEvent.click(badge)
@@ -520,24 +492,18 @@ describe("BoardList", () => {
     fireEvent(badge, rightClick)
 
     expect(rightClick.defaultPrevented).toBe(true)
-    expect(
-      screen.getByRole("menu", { name: "Actions for Local time" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
 
     fireEvent.keyDown(badge, { key: "Escape" })
     fireEvent.keyDown(badge, { key: "F10", shiftKey: true })
 
-    expect(
-      screen.getByRole("menu", { name: "Actions for Local time" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
   })
 
   it("leaves the badge a plain mark on a card with no menu", () => {
     render(<BoardList items={widgets} />)
 
-    expect(
-      screen.queryByRole("button", { name: "Actions for Local time" })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Actions for Local time" })).not.toBeInTheDocument()
   })
 
   // A double-click on blank card background selects a lone line break, which is nothing to copy.
@@ -556,8 +522,6 @@ describe("BoardList", () => {
 
     openMenu(container, { clientX: 10, clientY: 10 })
 
-    expect(
-      screen.getByRole("menu", { name: "Actions for Local time" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("menu", { name: "Actions for Local time" })).toBeInTheDocument()
   })
 })

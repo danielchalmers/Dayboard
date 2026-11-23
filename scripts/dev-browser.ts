@@ -45,7 +45,9 @@ export const openDevBrowser = async (
   // The browser reloads an unpacked extension into a disabled state unless developer mode is on, and the dev script reloads it whenever the service worker changes.
   await page.goto("chrome://extensions/")
   await page.evaluate(() =>
-    (chrome as unknown as { developerPrivate: DeveloperPrivate }).developerPrivate.updateProfileConfiguration({
+    (
+      chrome as unknown as { developerPrivate: DeveloperPrivate }
+    ).developerPrivate.updateProfileConfiguration({
       inDeveloperMode: true
     })
   )
@@ -54,7 +56,8 @@ export const openDevBrowser = async (
   return { context, extensionOrigin }
 }
 
-const isExtensionPage = (url: string, extensionOrigin: string) => url.startsWith(`${extensionOrigin}/`)
+const isExtensionPage = (url: string, extensionOrigin: string) =>
+  url.startsWith(`${extensionOrigin}/`)
 
 // An unpacked extension's pages read its files from disk, so reloading them picks up a rebuild that left the service worker alone. Returns how many reloaded.
 export const reloadPages = async ({ context, extensionOrigin }: DevBrowser): Promise<number> => {
@@ -66,7 +69,10 @@ export const reloadPages = async ({ context, extensionOrigin }: DevBrowser): Pro
 
 // A running service worker keeps the code it started with, so when a rebuild changes it the whole extension reloads, which restarts the worker on the new files.
 // The browser closes the extension's tabs when it reloads, so the ones that were open are opened again. Returns how many.
-export const reloadExtension = async ({ context, extensionOrigin }: DevBrowser): Promise<number> => {
+export const reloadExtension = async ({
+  context,
+  extensionOrigin
+}: DevBrowser): Promise<number> => {
   const openUrls = context
     .pages()
     .map((page) => page.url())
@@ -76,7 +82,9 @@ export const reloadExtension = async ({ context, extensionOrigin }: DevBrowser):
   })
 
   // Any of the extension's own contexts can reload it. The board's worker is empty and may be asleep, so a page of the extension does the job when there's no worker to ask.
-  const worker = context.serviceWorkers().find((candidate) => isExtensionPage(candidate.url(), extensionOrigin))
+  const worker = context
+    .serviceWorkers()
+    .find((candidate) => isExtensionPage(candidate.url(), extensionOrigin))
   if (worker) {
     await worker.evaluate(() => chrome.runtime.reload())
   } else {

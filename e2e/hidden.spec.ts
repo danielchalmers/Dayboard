@@ -59,8 +59,7 @@ test("hiding the board covers every tab here, and the next one opened, until it 
 
   // The icon is of what a press will do, like the label: the eye is struck through on the button that hides, and open on the one that shows.
   // The stroke is the one path drawn straight onto the icon; the eye's own outline sits in a group under it.
-  const strokeOn = (name: string) =>
-    page.getByRole("button", { name }).locator("svg > path")
+  const strokeOn = (name: string) => page.getByRole("button", { name }).locator("svg > path")
   await expect(strokeOn("Hide board")).toHaveCount(1)
 
   // From the keyboard, the button that hid the board is the one that shows it, so focus is already on the way back.
@@ -203,10 +202,7 @@ test("hiding the board takes a finished timer's name out of a background tab's t
   await expect.poll(() => page.title()).toBe("New Tab")
 })
 
-test("hiding the board lets an archive's Undo go with it", async ({
-  page,
-  extensionId
-}) => {
+test("hiding the board lets an archive's Undo go with it", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🌅 Morning")

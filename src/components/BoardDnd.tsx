@@ -58,9 +58,7 @@ export const boardCollision: CollisionDetection = (args) => {
 
   return closestCenter({
     ...args,
-    droppableContainers: args.droppableContainers.filter(
-      (container) => !isArchiveZone(container)
-    )
+    droppableContainers: args.droppableContainers.filter((container) => !isArchiveZone(container))
   })
 }
 
@@ -73,7 +71,8 @@ const ArchiveDropZone = () => {
     <div
       ref={setNodeRef}
       className={`archive-dropzone${isOver ? " archive-dropzone--over" : ""}`}
-      aria-hidden="true">
+      aria-hidden="true"
+    >
       <svg fill="none" height="22" viewBox="0 0 24 24" width="22">
         <path
           d={ARCHIVE_ICON_PATH}
@@ -93,8 +92,7 @@ const ArchiveDropZone = () => {
 // Put the card down as soon as attention moves elsewhere.
 const EndStrandedKeyboardDrag = () => {
   const { active, activatorEvent } = useDndContext()
-  const isKeyboardDrag =
-    Boolean(active) && activatorEvent instanceof KeyboardEvent
+  const isKeyboardDrag = Boolean(active) && activatorEvent instanceof KeyboardEvent
 
   useEffect(() => {
     if (!isKeyboardDrag) {
@@ -142,7 +140,8 @@ const OverlayRow = ({ item }: { item: Widget }) => {
   return (
     <CardBoundary
       fallback={<BoardRowFallback className="board-row--overlay" item={item} />}
-      item={item}>
+      item={item}
+    >
       <BoardRow className="board-row--overlay" item={item} now={now} />
     </CardBoundary>
   )
@@ -161,13 +160,7 @@ interface BoardDndProps {
 }
 
 // One drag context shared by the active board and the archived list, so a card can travel between them: an archived card drops onto a specific board slot to restore there, while an active card drops onto the floating archive zone.
-export const BoardDnd = ({
-  widgets,
-  onReorder,
-  onArchive,
-  onRestore,
-  children
-}: BoardDndProps) => {
+export const BoardDnd = ({ widgets, onReorder, onArchive, onRestore, children }: BoardDndProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   // While an archived card hovers over the board, this holds the widgets as if the restore already happened: the card joins the board's sortable list as a placeholder, so the other cards part to make room exactly like a native reorder.
@@ -186,9 +179,7 @@ export const BoardDnd = ({
     })
   )
 
-  const activeItem = activeId
-    ? widgets.find((widget) => widget.id === activeId) ?? null
-    : null
+  const activeItem = activeId ? (widgets.find((widget) => widget.id === activeId) ?? null) : null
 
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(String(active.id))
@@ -210,9 +201,7 @@ export const BoardDnd = ({
       return
     }
 
-    const target = over
-      ? widgets.find((widget) => widget.id === over.id)
-      : undefined
+    const target = over ? widgets.find((widget) => widget.id === over.id) : undefined
 
     if (!target || target.archived) {
       // Back over the archive (or nowhere), so the card returns to its origin.
@@ -222,24 +211,14 @@ export const BoardDnd = ({
 
     // Entering the board: slot the card in before the hovered one.
     // Once it is a member of the board's sortable list, dnd-kit's own sort transforms track the cursor, so the preview must not be rebuilt on every hover.
-    setRestorePreview(
-      (preview) => preview ?? restoreWidget(widgets, dragged.id, target.id)
-    )
+    setRestorePreview((preview) => preview ?? restoreWidget(widgets, dragged.id, target.id))
   }
 
   // The preview already encodes the final order; persistence still goes through restoreWidget, so hand back the card in front of which it was dropped.
-  const commitRestore = (
-    finalOrder: Widget[],
-    draggedId: string,
-    fromKeyboard: boolean
-  ) => {
+  const commitRestore = (finalOrder: Widget[], draggedId: string, fromKeyboard: boolean) => {
     const board = finalOrder.filter((widget) => !widget.archived)
     const index = board.findIndex((widget) => widget.id === draggedId)
-    onRestore?.(
-      draggedId,
-      index === -1 ? undefined : board[index + 1]?.id,
-      fromKeyboard
-    )
+    onRestore?.(draggedId, index === -1 ? undefined : board[index + 1]?.id, fromKeyboard)
   }
 
   const handleDragEnd = ({ active, over, activatorEvent }: DragEndEvent) => {
@@ -282,11 +261,7 @@ export const BoardDnd = ({
       }
 
       if (target && !target.archived) {
-        commitRestore(
-          reorderWidgets(preview, dragged.id, target.id),
-          dragged.id,
-          fromKeyboard
-        )
+        commitRestore(reorderWidgets(preview, dragged.id, target.id), dragged.id, fromKeyboard)
         return
       }
     }
@@ -319,17 +294,14 @@ export const BoardDnd = ({
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
       onDragStart={handleDragStart}
-      sensors={sensors}>
+      sensors={sensors}
+    >
       <EndStrandedKeyboardDrag />
       {children(restorePreview ?? widgets)}
-      {activeItem && !activeItem.archived && onArchive ? (
-        <ArchiveDropZone />
-      ) : null}
+      {activeItem && !activeItem.archived && onArchive ? <ArchiveDropZone /> : null}
       {/* The lifted card follows the cursor in a portal, so it keeps tracking the pointer even over the archive zone and the other list (which sit outside its own sortable context) instead of snapping back to its slot. */}
       <DragOverlay dropAnimation={null}>
-        {activeItem ? (
-          <OverlayRow item={activeItem} />
-        ) : null}
+        {activeItem ? <OverlayRow item={activeItem} /> : null}
       </DragOverlay>
     </DndContext>
   )

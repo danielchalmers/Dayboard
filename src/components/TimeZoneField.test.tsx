@@ -33,9 +33,7 @@ describe("TimeZoneField", () => {
     const options = screen.getAllByRole("option")
     expect(options.length).toBe(getTimeZoneOptions().length + 1)
     expect(options[0]).toHaveTextContent("System time zone")
-    expect(
-      screen.getByRole("option", { name: "Europe/Berlin" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Europe/Berlin" })).toBeInTheDocument()
     // The current zone is the one marked selected.
     expect(screen.getByRole("option", { name: "Asia/Tokyo" })).toHaveAttribute(
       "aria-selected",
@@ -157,8 +155,6 @@ describe("TimeZoneField", () => {
     fireEvent.change(field, { target: { value: "Lond" } })
 
     expect(screen.queryByRole("status")).toBeNull()
-    expect(
-      screen.getByRole("option", { name: "Europe/London" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Europe/London" })).toBeInTheDocument()
   })
 })

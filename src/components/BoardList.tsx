@@ -1,9 +1,5 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core"
-import {
-  SortableContext,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable"
+import { SortableContext, rectSortingStrategy, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
   memo,
@@ -76,20 +72,21 @@ const EmptyState = ({
         // Archiving every card is a tidy-up, not a first run, so point at where the cards went before pointing at +.
         // A no-break space keeps the + with its "button", since a line that ends on a lone + reads as a stray symbol.
         <>
-          <span aria-hidden="true" className="empty-state__glyph">✦</span>
+          <span aria-hidden="true" className="empty-state__glyph">
+            ✦
+          </span>
           <h2>All tucked away</h2>
-          <p>
-            Your archived cards are just below. The +&nbsp;button up top adds
-            something new.
-          </p>
+          <p>Your archived cards are just below. The +&nbsp;button up top adds something new.</p>
         </>
       ) : (
         <>
-          <span aria-hidden="true" className="empty-state__glyph">✦</span>
+          <span aria-hidden="true" className="empty-state__glyph">
+            ✦
+          </span>
           <h2>A fresh start</h2>
           <p>
-            Add a clock, a countdown, a note — whatever your day needs. The
-            +&nbsp;button up top has them all.
+            Add a clock, a countdown, a note — whatever your day needs. The +&nbsp;button up top has
+            them all.
           </p>
         </>
       )}
@@ -98,8 +95,7 @@ const EmptyState = ({
 }
 
 // Interactive widgets (a note's textarea, a timer's buttons) own their key and right-click behavior, so the card must not hijack those events for dragging or its context menu when they originate inside such a control.
-const FORM_FIELD_SELECTOR =
-  "input, textarea, select, button, [contenteditable='true']"
+const FORM_FIELD_SELECTOR = "input, textarea, select, button, [contenteditable='true']"
 
 const isFromInteractiveControl = (event: { target: EventTarget | null }) =>
   Boolean((event.target as HTMLElement | null)?.closest(FORM_FIELD_SELECTOR))
@@ -108,9 +104,7 @@ const isFromInteractiveControl = (event: { target: EventTarget | null }) =>
 const MENU_BUTTON_SELECTOR = "button.board-row__badge"
 
 const menuButtonOf = (event: { target: EventTarget | null }) =>
-  (event.target as HTMLElement | null)?.closest<HTMLElement>(
-    MENU_BUTTON_SELECTOR
-  ) ?? null
+  (event.target as HTMLElement | null)?.closest<HTMLElement>(MENU_BUTTON_SELECTOR) ?? null
 
 // Right-clicking a stretch of selected text is a reach for Copy, not for the card's own menu, so the card steps aside and lets the browser's menu through.
 // Only a selection touching this card counts; a leftover highlight elsewhere on the page should not disarm the menu here.
@@ -141,8 +135,7 @@ export const hasSelectionWithin = (card: HTMLElement): boolean => {
 // A pointer user has no place on the board to keep, and a card left focused without a ring would take their next Space as the start of a drag.
 // A click made by a key or a screen reader carries no click count, and a focus the keyboard placed matches :focus-visible.
 export const isKeyboardAction = (event?: { detail: number }) =>
-  event?.detail === 0 ||
-  Boolean(document.activeElement?.matches(":focus-visible"))
+  event?.detail === 0 || Boolean(document.activeElement?.matches(":focus-visible"))
 
 // Where a menu hangs from: its top-left corner under the cursor, or its top-right corner under the menu button, which sits in the card's corner and would otherwise send the menu out over the next card.
 type MenuAlign = "start" | "end"
@@ -191,14 +184,7 @@ const getMenuItems = (panel: HTMLElement) =>
 
 // A free-form context menu that spawns under the cursor.
 // It uses the native Popover API so it renders in the top layer, escaping the card's clipped, overflow-hidden bounds, and gets light-dismiss + Escape handling for free.
-const WidgetContextMenu = ({
-  x,
-  y,
-  align,
-  label,
-  onClose,
-  children
-}: WidgetContextMenuProps) => {
+const WidgetContextMenu = ({ x, y, align, label, onClose, children }: WidgetContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: x, top: y })
@@ -334,22 +320,13 @@ const WidgetContextMenu = ({
         break
       case "Tab":
         event.preventDefault()
-        focusItem(
-          event.shiftKey
-            ? current < 0
-              ? items.length - 1
-              : current - 1
-            : current + 1
-        )
+        focusItem(event.shiftKey ? (current < 0 ? items.length - 1 : current - 1) : current + 1)
         break
     }
   }
 
   return (
-    <div
-      className="card-menu"
-      ref={menuRef}
-      style={{ left: position.left, top: position.top }}>
+    <div className="card-menu" ref={menuRef} style={{ left: position.left, top: position.top }}>
       <div
         aria-label={label}
         className="card-menu__panel"
@@ -366,7 +343,8 @@ const WidgetContextMenu = ({
         }}
         onKeyDown={handleKeyDown}
         ref={panelRef}
-        role="menu">
+        role="menu"
+      >
         {children}
       </div>
     </div>
@@ -386,186 +364,173 @@ interface SortableBoardRowProps {
 }
 
 // Every prop below is stable across a clock tick, so React's shallow compare is the whole memo: a row renders when its own widget, menu state, or callbacks change, and otherwise only when its own clock subscription fires.
-const SortableBoardRow = memo(({
-  item,
-  isMenuOpen,
-  hasActions,
-  animateEnter,
-  prefersReducedMotion,
-  onCloseMenu,
-  onOpenMenu,
-  onWidgetChange,
-  onTimerFinish
-}: SortableBoardRowProps) => {
-  // Each card keeps its own time at the coarsest step it can show, so a note never wakes for a clock and a clock never wakes for a running stopwatch.
-  const now = useNow(widgetClockGranularity(item))
-  const {
-    listeners,
-    isDragging,
-    setNodeRef,
-    transform,
-    transition
-  } = useSortable({
-    id: item.id
-  })
+const SortableBoardRow = memo(
+  ({
+    item,
+    isMenuOpen,
+    hasActions,
+    animateEnter,
+    prefersReducedMotion,
+    onCloseMenu,
+    onOpenMenu,
+    onWidgetChange,
+    onTimerFinish
+  }: SortableBoardRowProps) => {
+    // Each card keeps its own time at the coarsest step it can show, so a note never wakes for a clock and a clock never wakes for a running stopwatch.
+    const now = useNow(widgetClockGranularity(item))
+    const { listeners, isDragging, setNodeRef, transform, transition } = useSortable({
+      id: item.id
+    })
 
-  // Whether the menu was already up when the badge was pressed.
-  // The popover's light dismiss puts an open menu away on the press itself, so by the time the click arrives there is no telling a second click (close it) from a first one (open it) without this.
-  const menuWasOpen = useRef(false)
+    // Whether the menu was already up when the badge was pressed.
+    // The popover's light dismiss puts an open menu away on the press itself, so by the time the click arrives there is no telling a second click (close it) from a first one (open it) without this.
+    const menuWasOpen = useRef(false)
 
-  const className = [
-    "board-row--sortable",
-    "board-row--draggable",
-    animateEnter ? "board-row--enter" : "",
-    isMenuOpen ? "board-row--menu-open" : "",
-    isDragging ? "board-row--dragging" : ""
-  ]
-    .filter(Boolean)
-    .join(" ")
+    const className = [
+      "board-row--sortable",
+      "board-row--draggable",
+      animateEnter ? "board-row--enter" : "",
+      isMenuOpen ? "board-row--menu-open" : "",
+      isDragging ? "board-row--dragging" : ""
+    ]
+      .filter(Boolean)
+      .join(" ")
 
-  // The menu hangs from the badge however it was asked for there, so it always opens in the same place under the button that owns it.
-  const openUnder = (menuButton: HTMLElement) => {
-    const rect = menuButton.getBoundingClientRect()
-    onOpenMenu(item.id, rect.right, rect.bottom + MENU_BUTTON_GAP, "end")
-  }
-
-  const handleContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
-    if (!hasActions) {
-      return
+    // The menu hangs from the badge however it was asked for there, so it always opens in the same place under the button that owns it.
+    const openUnder = (menuButton: HTMLElement) => {
+      const rect = menuButton.getBoundingClientRect()
+      onOpenMenu(item.id, rect.right, rect.bottom + MENU_BUTTON_GAP, "end")
     }
 
-    const menuButton = menuButtonOf(event)
+    const handleContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+      if (!hasActions) {
+        return
+      }
 
-    if (menuButton) {
+      const menuButton = menuButtonOf(event)
+
+      if (menuButton) {
+        event.preventDefault()
+        openUnder(menuButton)
+        return
+      }
+
+      // Let a note's textarea (etc.) keep its native copy/paste menu, and step aside entirely when there is text selected on this card to copy.
+      if (isFromInteractiveControl(event) || hasSelectionWithin(event.currentTarget)) {
+        return
+      }
+
       event.preventDefault()
-      openUnder(menuButton)
-      return
+      // A touch long-press opens the menu without moving focus, and the menu hands focus back to whatever held it when it opened.
+      // Taking focus here makes that this card; otherwise a field left focused on another card would get it back, off screen and with the soft keyboard up.
+      event.currentTarget.focus({ preventScroll: true })
+      onOpenMenu(item.id, event.clientX, event.clientY)
     }
 
-    // Let a note's textarea (etc.) keep its native copy/paste menu, and step aside entirely when there is text selected on this card to copy.
-    if (
-      isFromInteractiveControl(event) ||
-      hasSelectionWithin(event.currentTarget)
-    ) {
-      return
+    const deferToDragKeys = (event: ReactKeyboardEvent<HTMLElement>) => {
+      listeners?.onKeyDown?.(event)
     }
 
-    event.preventDefault()
-    // A touch long-press opens the menu without moving focus, and the menu hands focus back to whatever held it when it opened.
-    // Taking focus here makes that this card; otherwise a field left focused on another card would get it back, off screen and with the soft keyboard up.
-    event.currentTarget.focus({ preventScroll: true })
-    onOpenMenu(item.id, event.clientX, event.clientY)
-  }
+    const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+      const isMenuKey = event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")
+      const menuButton = menuButtonOf(event)
 
-  const deferToDragKeys = (event: ReactKeyboardEvent<HTMLElement>) => {
-    listeners?.onKeyDown?.(event)
-  }
+      // The menu keys on the badge open the menu it owns, under it, as a click would.
+      if (hasActions && isMenuKey && menuButton) {
+        event.preventDefault()
+        openUnder(menuButton)
+        return
+      }
 
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-    const isMenuKey =
-      event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")
-    const menuButton = menuButtonOf(event)
+      // Keys typed into an interactive control (a note's textarea, a button) stay with that control and never start a drag or open the menu, except Escape, which still closes an open menu.
+      if (isFromInteractiveControl(event) && event.key !== "Escape") {
+        return
+      }
 
-    // The menu keys on the badge open the menu it owns, under it, as a click would.
-    if (hasActions && isMenuKey && menuButton) {
-      event.preventDefault()
-      openUnder(menuButton)
-      return
-    }
+      if (!hasActions) {
+        deferToDragKeys(event)
+        return
+      }
 
-    // Keys typed into an interactive control (a note's textarea, a button) stay with that control and never start a drag or open the menu, except Escape, which still closes an open menu.
-    if (isFromInteractiveControl(event) && event.key !== "Escape") {
-      return
-    }
+      if (isMenuKey) {
+        event.preventDefault()
+        // Keyboard activation has no cursor, so anchor near the card's corner.
+        const rect = event.currentTarget.getBoundingClientRect()
+        onOpenMenu(item.id, rect.left + MENU_KEYBOARD_OFFSET, rect.top + MENU_KEYBOARD_OFFSET)
+        return
+      }
 
-    if (!hasActions) {
+      if (event.key === "Escape" && isMenuOpen) {
+        event.preventDefault()
+        onCloseMenu()
+        return
+      }
+
+      if (isMenuOpen) {
+        return
+      }
+
       deferToDragKeys(event)
-      return
     }
 
-    if (isMenuKey) {
-      event.preventDefault()
-      // Keyboard activation has no cursor, so anchor near the card's corner.
-      const rect = event.currentTarget.getBoundingClientRect()
-      onOpenMenu(
-        item.id,
-        rect.left + MENU_KEYBOARD_OFFSET,
-        rect.top + MENU_KEYBOARD_OFFSET
-      )
-      return
-    }
+    // Only the pointer activator moves to the frame so dragging starts from the border; keyboard dragging stays on the focusable card via handleKeyDown, which still defers to the sortable's onKeyDown listener.
+    // dnd-kit types its listeners loosely as `Function`, so narrow the pointer-down handler here.
+    const onPointerDown = listeners?.onPointerDown as
+      PointerEventHandler<HTMLDivElement> | undefined
 
-    if (event.key === "Escape" && isMenuOpen) {
-      event.preventDefault()
-      onCloseMenu()
-      return
-    }
+    const shared = {
+      articleProps: {
+        "aria-haspopup": hasActions ? ("menu" as const) : undefined,
+        // Lets the page hand focus back to a card by id after the one that had it leaves the board.
+        "data-widget-id": item.id,
+        onContextMenu: handleContextMenu,
+        onKeyDown: handleKeyDown,
+        tabIndex: 0
+      },
+      dragHandleProps: { onPointerDown },
+      menuButtonProps: hasActions
+        ? {
+            "aria-expanded": isMenuOpen,
+            "aria-haspopup": "menu" as const,
+            "aria-label": `Actions for ${item.title}`,
+            onPointerDown: () => {
+              menuWasOpen.current = isMenuOpen
+            },
+            onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
+              const wasOpen = menuWasOpen.current
+              menuWasOpen.current = false
 
-    if (isMenuOpen) {
-      return
-    }
-
-    deferToDragKeys(event)
-  }
-
-  // Only the pointer activator moves to the frame so dragging starts from the border; keyboard dragging stays on the focusable card via handleKeyDown, which still defers to the sortable's onKeyDown listener.
-  // dnd-kit types its listeners loosely as `Function`, so narrow the pointer-down handler here.
-  const onPointerDown = listeners?.onPointerDown as
-    | PointerEventHandler<HTMLDivElement>
-    | undefined
-
-  const shared = {
-    articleProps: {
-      "aria-haspopup": hasActions ? ("menu" as const) : undefined,
-      // Lets the page hand focus back to a card by id after the one that had it leaves the board.
-      "data-widget-id": item.id,
-      onContextMenu: handleContextMenu,
-      onKeyDown: handleKeyDown,
-      tabIndex: 0
-    },
-    dragHandleProps: { onPointerDown },
-    menuButtonProps: hasActions
-      ? {
-          "aria-expanded": isMenuOpen,
-          "aria-haspopup": "menu" as const,
-          "aria-label": `Actions for ${item.title}`,
-          onPointerDown: () => {
-            menuWasOpen.current = isMenuOpen
-          },
-          onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
-            const wasOpen = menuWasOpen.current
-            menuWasOpen.current = false
-
-            if (wasOpen) {
-              onCloseMenu()
-            } else {
-              openUnder(event.currentTarget)
+              if (wasOpen) {
+                onCloseMenu()
+              } else {
+                openUnder(event.currentTarget)
+              }
             }
           }
-        }
-      : undefined,
-    className,
-    item,
-    ref: setNodeRef,
-    style: {
-      // The drag overlay renders the lifted card that follows the cursor, so the in-list item stays in place as a dimmed placeholder.
-      // Translating it here is what previously made it snap back to its slot when dragged over the archive zone (a droppable outside the sortable list).
-      transform: isDragging ? undefined : CSS.Transform.toString(transform),
-      transition: prefersReducedMotion ? undefined : transition
+        : undefined,
+      className,
+      item,
+      ref: setNodeRef,
+      style: {
+        // The drag overlay renders the lifted card that follows the cursor, so the in-list item stays in place as a dimmed placeholder.
+        // Translating it here is what previously made it snap back to its slot when dragged over the archive zone (a droppable outside the sortable list).
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
+        transition: prefersReducedMotion ? undefined : transition
+      }
     }
-  }
 
-  return (
-    <CardBoundary fallback={<BoardRowFallback {...shared} />} item={item}>
-      <BoardRow
-        {...shared}
-        now={now}
-        onTimerFinish={onTimerFinish}
-        onWidgetChange={onWidgetChange}
-      />
-    </CardBoundary>
-  )
-})
+    return (
+      <CardBoundary fallback={<BoardRowFallback {...shared} />} item={item}>
+        <BoardRow
+          {...shared}
+          now={now}
+          onTimerFinish={onTimerFinish}
+          onWidgetChange={onWidgetChange}
+        />
+      </CardBoundary>
+    )
+  }
+)
 
 export const BoardList = ({
   items,
@@ -620,13 +585,9 @@ export const BoardList = ({
   const hasActions = Boolean(renderItemActions)
 
   // A card lifted from the other list: for the board that means an archived card is in flight, and this whole grid is where it can land.
-  const isForeignDrag = Boolean(
-    activeId && !items.some((item) => item.id === activeId)
-  )
+  const isForeignDrag = Boolean(activeId && !items.some((item) => item.id === activeId))
 
-  const activeMenuItem = openMenu
-    ? items.find((item) => item.id === openMenu.id) ?? null
-    : null
+  const activeMenuItem = openMenu ? (items.find((item) => item.id === openMenu.id) ?? null) : null
   const activeMenuIndex = activeMenuItem ? items.indexOf(activeMenuItem) : -1
 
   const sectionClassName = [
@@ -667,7 +628,8 @@ export const BoardList = ({
           label={`Actions for ${activeMenuItem.title}`}
           onClose={closeMenu}
           x={openMenu.x}
-          y={openMenu.y}>
+          y={openMenu.y}
+        >
           {renderItemActions(activeMenuItem, activeMenuIndex)}
         </WidgetContextMenu>
       ) : null}

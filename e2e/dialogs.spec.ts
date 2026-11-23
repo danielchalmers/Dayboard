@@ -8,10 +8,7 @@ import {
   openWidgetMenu
 } from "./helpers"
 
-test("canceling the delete dialog keeps the widget", async ({
-  page,
-  extensionId
-}) => {
+test("canceling the delete dialog keeps the widget", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   const dialog = page.getByRole("dialog", { name: "Delete countdown?" })
@@ -54,10 +51,7 @@ test("canceling the delete dialog from the keyboard goes back to the card", asyn
   await expect(card).toBeFocused()
 })
 
-test("the delete dialog wraps a title that is one long word", async ({
-  page,
-  extensionId
-}) => {
+test("the delete dialog wraps a title that is one long word", async ({ page, extensionId }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openNewTab(page, extensionId)
 
@@ -311,17 +305,12 @@ test("Save stays in reach when a laptop screen is too short for the form", async
   )
 
   // The countdown form is taller than this dialog can be, so it scrolls; Save has to stay on screen at the top of that scroll as well as the bottom.
-  expect(
-    await dialog.evaluate((el) => el.scrollHeight > el.clientHeight)
-  ).toBe(true)
+  expect(await dialog.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
 
   const save = page.getByRole("button", { name: "Save countdown" })
 
   for (const scrollTo of ["top", "end"] as const) {
-    await dialog.evaluate(
-      (el, to) => (el.scrollTop = to === "top" ? 0 : el.scrollHeight),
-      scrollTo
-    )
+    await dialog.evaluate((el, to) => (el.scrollTop = to === "top" ? 0 : el.scrollHeight), scrollTo)
     const box = await boxOf(dialog, "the countdown dialog")
     const saveBox = await boxOf(save, `Save at the ${scrollTo} of the scroll`)
     expect(saveBox.y).toBeGreaterThanOrEqual(box.y)
@@ -336,10 +325,7 @@ test("Save stays in reach when a laptop screen is too short for the form", async
   await expect(start).toBeFocused()
 
   const startBox = await boxOf(start, "the Starting from field")
-  const actionsBox = await boxOf(
-    dialog.locator(".modal-dialog__actions"),
-    "the pinned actions row"
-  )
+  const actionsBox = await boxOf(dialog.locator(".modal-dialog__actions"), "the pinned actions row")
   expect(startBox.y + startBox.height).toBeLessThanOrEqual(actionsBox.y)
 })
 
@@ -354,26 +340,18 @@ test("picking a color repaints the card and it survives a reload", async ({
   await page.getByLabel("Name").fill("Scratch")
 
   // Per-item color is limited to the curated presets, so this picker is the only way a user sets one.
-  await expect(
-    page.getByRole("radiogroup", { name: "Widget color" })
-  ).toBeVisible()
+  await expect(page.getByRole("radiogroup", { name: "Widget color" })).toBeVisible()
   const rose = page.getByRole("radio", { name: "Rose" })
   await rose.click()
   await expect(rose).toHaveAttribute("aria-checked", "true")
 
   await page.getByRole("button", { name: "Save note" }).click()
 
-  await expect(cardByTitle(page, "Scratch")).toHaveAttribute(
-    "data-color-preset",
-    "rose"
-  )
+  await expect(cardByTitle(page, "Scratch")).toHaveAttribute("data-color-preset", "rose")
 
   // The choice belongs to the widget rather than to the open dialog, so it comes back with the board.
   await page.reload()
-  await expect(cardByTitle(page, "Scratch")).toHaveAttribute(
-    "data-color-preset",
-    "rose"
-  )
+  await expect(cardByTitle(page, "Scratch")).toHaveAttribute("data-color-preset", "rose")
 })
 
 test("the archived toggle flips its label and tucks the list away again", async ({
@@ -385,9 +363,7 @@ test("the archived toggle flips its label and tucks the list away again", async 
   await openNewTab(page, extensionId)
 
   await openWidgetMenu(page, "🌅 Morning")
-  await page
-    .getByRole("menuitem", { name: "Archive 🌅 Morning" })
-    .click()
+  await page.getByRole("menuitem", { name: "Archive 🌅 Morning" }).click()
 
   // One locator for both states, since the label is the thing under test and an exact name would stop matching the moment it flips.
   const toggle = page.getByRole("button", { name: /archived/ })
@@ -445,17 +421,12 @@ test("the time zone list floats over the dialog instead of scrolling it", async 
   expect(Math.abs(listBox.width - fieldBox.width)).toBeLessThan(1)
   expect(listBox.y).toBeGreaterThan(fieldBox.y + fieldBox.height)
   expect(listBox.height).toBeGreaterThan(250)
-  expect(listBox.y + listBox.height).toBeGreaterThan(
-    dialogBox.y + dialogBox.height
-  )
+  expect(listBox.y + listBox.height).toBeGreaterThan(dialogBox.y + dialogBox.height)
 
   // Nothing of the dialog is drawn over the list: its last visible row is the list's own.
   const coversList = await listbox.evaluate((element) => {
     const box = element.getBoundingClientRect()
-    const top = document.elementFromPoint(
-      box.left + box.width / 2,
-      box.bottom - 12
-    )
+    const top = document.elementFromPoint(box.left + box.width / 2, box.bottom - 12)
 
     return element.contains(top)
   })
@@ -489,10 +460,7 @@ test("the time zone list opens above the field when the window leaves no room be
   expect(listBox.y + listBox.height).toBeLessThan(fieldBox.y)
 })
 
-test("the time zone list says so when nothing matches", async ({
-  page,
-  extensionId
-}) => {
+test("the time zone list says so when nothing matches", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -523,8 +491,7 @@ test("the dialogs fit a phone-width window without scrolling sideways", async ({
     dialog.evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished))
     )
-  const overflow = () =>
-    dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
+  const overflow = () => dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
 
   // The timer's three length fields used to hold their desktop width, which pushed "sec" and the Save button past the dialog's edge.
   for (const kind of ["timer", "countdown", "clock", "quote"]) {
@@ -536,28 +503,20 @@ test("the dialogs fit a phone-width window without scrolling sideways", async ({
 
     if (kind === "timer") {
       const dialogBox = await boxOf(dialog, "the timer dialog")
-      const seconds = await boxOf(
-        page.getByLabel("seconds"),
-        "the seconds field"
-      )
-      const save = await boxOf(
-        page.getByRole("button", { name: "Save timer" }),
-        "the Save button"
-      )
+      const seconds = await boxOf(page.getByLabel("seconds"), "the seconds field")
+      const save = await boxOf(page.getByRole("button", { name: "Save timer" }), "the Save button")
       expect(seconds.x + seconds.width).toBeLessThan(dialogBox.x + dialogBox.width)
       expect(save.x + save.width).toBeLessThan(dialogBox.x + dialogBox.width)
 
       // Twelve swatches no longer shrink to fit one row: two rows of six, each at its full size.
       // Read from layout rather than from bounding boxes, which the chosen swatch's scale (a random one on a new card) would throw off.
-      const swatches = await page
-        .getByRole("radio")
-        .evaluateAll((elements) =>
-          elements.map((element) => ({
-            left: (element as HTMLElement).offsetLeft,
-            size: (element as HTMLElement).offsetWidth,
-            top: (element as HTMLElement).offsetTop
-          }))
-        )
+      const swatches = await page.getByRole("radio").evaluateAll((elements) =>
+        elements.map((element) => ({
+          left: (element as HTMLElement).offsetLeft,
+          size: (element as HTMLElement).offsetWidth,
+          top: (element as HTMLElement).offsetTop
+        }))
+      )
       const [first, sixth, seventh] = [swatches[0]!, swatches[5]!, swatches[6]!]
       expect(swatches.map((swatch) => swatch.size)).toEqual(Array(12).fill(32))
       expect(sixth.top).toBe(first.top)
@@ -574,18 +533,12 @@ test("the dialogs fit a phone-width window without scrolling sideways", async ({
   await expect(dialog).toBeVisible()
   await settled()
   expect(await overflow(), "options").toBe(0)
-  const done = await boxOf(
-    page.getByRole("button", { name: "Done" }),
-    "the Done button"
-  )
+  const done = await boxOf(page.getByRole("button", { name: "Done" }), "the Done button")
   const name = await boxOf(page.getByLabel("Your name"), "the name field")
   expect(Math.abs(done.x + done.width - (name.x + name.width))).toBeLessThan(1)
 })
 
-test("the dialogs fit a window zoomed down to 320px", async ({
-  page,
-  extensionId
-}) => {
+test("the dialogs fit a window zoomed down to 320px", async ({ page, extensionId }) => {
   // The narrowest a page is expected to reflow to: a small window at a high zoom.
   await page.setViewportSize({ width: 320, height: 900 })
   await openNewTab(page, extensionId)
@@ -595,8 +548,7 @@ test("the dialogs fit a window zoomed down to 320px", async ({
     dialog.evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished))
     )
-  const overflow = () =>
-    dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
+  const overflow = () => dialog.evaluate((element) => element.scrollWidth - element.clientWidth)
 
   for (const kind of ["countdown", "timer", "clock", "quote"]) {
     await page.getByRole("button", { name: "Add widget" }).click()
@@ -608,16 +560,11 @@ test("the dialogs fit a window zoomed down to 320px", async ({
       // A date field will not go narrower than about 250px on its own, and the form's column used to grow to hold it, which took the buttons past the dialog's edge.
       // With a start set, the form is at its widest: the field then carries its Clear button too.
       await page.getByLabel("Starting from").fill("2026-10-28T22:30")
-      await expect(
-        page.getByRole("button", { name: "Clear starting from" })
-      ).toBeVisible()
+      await expect(page.getByRole("button", { name: "Clear starting from" })).toBeVisible()
       expect(await overflow(), kind).toBe(0)
 
       // Cancel stays beside Save rather than wrapping above it.
-      const cancel = await boxOf(
-        page.getByRole("button", { name: "Cancel" }),
-        "the Cancel button"
-      )
+      const cancel = await boxOf(page.getByRole("button", { name: "Cancel" }), "the Cancel button")
       const save = await boxOf(
         page.getByRole("button", { name: "Save countdown" }),
         "the Save button"
@@ -637,9 +584,7 @@ test("the dialogs fit a window zoomed down to 320px", async ({
         const field = page.getByLabel(part)
         await field.fill(value)
         expect(
-          await field.evaluate(
-            (element) => element.scrollWidth - element.clientWidth
-          ),
+          await field.evaluate((element) => element.scrollWidth - element.clientWidth),
           part
         ).toBe(0)
       }
@@ -656,10 +601,7 @@ test("the dialogs fit a window zoomed down to 320px", async ({
   expect(await overflow(), "options").toBe(0)
 })
 
-test("a date field is the same height as the fields around it", async ({
-  page,
-  extensionId
-}) => {
+test("a date field is the same height as the fields around it", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
   await page.getByRole("button", { name: "Add widget" }).click()
   await page.getByRole("button", { name: "Add countdown" }).click()
@@ -671,9 +613,9 @@ test("a date field is the same height as the fields around it", async ({
   )
 
   const heights = await dialog.evaluate((element) =>
-    Array.from(
-      element.querySelectorAll<HTMLElement>("input:not([type=checkbox]), select")
-    ).map((field) => field.getBoundingClientRect().height)
+    Array.from(element.querySelectorAll<HTMLElement>("input:not([type=checkbox]), select")).map(
+      (field) => field.getBoundingClientRect().height
+    )
   )
   expect(heights.length).toBeGreaterThanOrEqual(4)
   expect(new Set(heights).size, heights.join(", ")).toBe(1)

@@ -61,9 +61,11 @@ test.describe("a board too large to sync", () => {
     await field.blur()
 
     await expect(notice).toHaveCount(0)
-    await expect.poll(() => readWidgetSettings(page, "Scratch")).toEqual({
-      text: pasted.slice(0, 2_000)
-    })
+    await expect
+      .poll(() => readWidgetSettings(page, "Scratch"))
+      .toEqual({
+        text: pasted.slice(0, 2_000)
+      })
   })
 
   // A quote list has no length cap either, and it is typed into a dialog that used to close before its write was refused.
@@ -131,10 +133,7 @@ test.describe("a board too large to sync", () => {
     // Scrolled back up and refused again for the same reason, the dialog brings it into view afresh, or the pinned Save would look as if it did nothing.
     // The press lands where the pinned button sits, since a locator click would first scroll the form to its end.
     await dialog.evaluate((el) => (el.scrollTop = 0))
-    const save = await boxOf(
-      dialog.getByRole("button", { name: "Save quote" }),
-      "the pinned Save"
-    )
+    const save = await boxOf(dialog.getByRole("button", { name: "Save quote" }), "the pinned Save")
     await page.mouse.click(save.x + save.width / 2, save.y + save.height / 2)
     await expect
       .poll(async () => {
@@ -145,10 +144,7 @@ test.describe("a board too large to sync", () => {
       .toBe(true)
   })
 
-  test("lets a dialog refused from the backdrop go with Escape", async ({
-    page,
-    extensionId
-  }) => {
+  test("lets a dialog refused from the backdrop go with Escape", async ({ page, extensionId }) => {
     await openNewTab(page, extensionId)
     const dialog = await addLongQuote(page)
 
@@ -271,10 +267,7 @@ test.describe("a board saved too often", () => {
   })
 
   // A refusal is only news until something saves, and an archive that saves is news of its own.
-  test("offers an archive's Undo once its save clears a refusal", async ({
-    page,
-    extensionId
-  }) => {
+  test("offers an archive's Undo once its save clears a refusal", async ({ page, extensionId }) => {
     await openNewTab(page, extensionId)
     await refuseNextWrite(page)
 
@@ -387,9 +380,9 @@ test.describe("a board saved too often", () => {
     const field = page.getByLabel("Your name")
     await field.fill("Dana")
     await field.press("Tab")
-    await expect(
-      page.getByRole("dialog", { name: "Options" }).getByRole("alert")
-    ).toContainText("too many changes in a row")
+    await expect(page.getByRole("dialog", { name: "Options" }).getByRole("alert")).toContainText(
+      "too many changes in a row"
+    )
 
     // Sync takes writes again by the time a board from another browser has been picked.
     await allowWrites()
@@ -429,9 +422,7 @@ test("an edit dialog left open keeps what changed on the card meanwhile", async 
 
   await other.getByLabel("Ideas note").fill("Eggs, milk, bread")
   await other.getByLabel("Ideas note").blur()
-  await expect
-    .poll(() => readWidgetSettings(page, "Ideas"))
-    .toEqual({ text: "Eggs, milk, bread" })
+  await expect.poll(() => readWidgetSettings(page, "Ideas")).toEqual({ text: "Eggs, milk, bread" })
 
   await page.getByRole("dialog").getByLabel("Name").fill("Groceries")
   await page.getByRole("button", { name: "Save changes" }).click()
@@ -445,10 +436,7 @@ test("an edit dialog left open keeps what changed on the card meanwhile", async 
   await other.close()
 })
 
-test("a save that lands late leaves a dialog opened since alone", async ({
-  page,
-  extensionId
-}) => {
+test("a save that lands late leaves a dialog opened since alone", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
   await addWidget(page, "note", "Ideas")
 
@@ -490,9 +478,7 @@ test("a save that lands late leaves a dialog opened since alone", async ({
   await page.evaluate(() =>
     (window as typeof window & { landWrite: () => Promise<void> }).landWrite()
   )
-  await expect
-    .poll(() => readWidgetSettings(page, "Groceries"))
-    .toEqual({ text: "" })
+  await expect.poll(() => readWidgetSettings(page, "Groceries")).toEqual({ text: "" })
   await expect(page.getByRole("dialog").getByLabel("Name")).toHaveValue("Groceries")
 })
 
@@ -534,8 +520,7 @@ test("a board from a newer Dayboard keeps what this one can't show through a sav
     .poll(() => readWidgetSettings(page, "Walk"))
     .toMatchObject({ history: [expect.any(String)], goalPerWeek: 4 })
   const stored = await page.evaluate(
-    async () =>
-      (await chrome.storage.sync.get("dayboard-state"))["dayboard-state"] as DayboardState
+    async () => (await chrome.storage.sync.get("dayboard-state"))["dayboard-state"] as DayboardState
   )
   expect(stored.widgets[1]).toEqual(agenda)
   expect(stored.settings).toEqual({ name: "", theme: "dusk" })
@@ -567,9 +552,7 @@ test("a note keeps what is being typed in it while an idle one adopts the change
   await mirrored.fill("local edit")
 
   // Let the second tab's own debounced save land before tab one writes again, so the two writes queue rather than race.
-  await expect
-    .poll(() => readWidgetSettings(secondPage, "Scratch"))
-    .toEqual({ text: "local edit" })
+  await expect.poll(() => readWidgetSettings(secondPage, "Scratch")).toEqual({ text: "local edit" })
 
   await field.fill("from tab one again")
   await field.blur()
@@ -586,10 +569,7 @@ test("a note keeps what is being typed in it while an idle one adopts the change
   await secondPage.close()
 })
 
-test("a countdown whose span has run out reads as complete", async ({
-  page,
-  extensionId
-}) => {
+test("a countdown whose span has run out reads as complete", async ({ page, extensionId }) => {
   await openNewTab(page, extensionId)
 
   await page.getByRole("button", { name: "Add widget" }).click()
@@ -603,9 +583,10 @@ test("a countdown whose span has run out reads as complete", async ({
   const card = cardByTitle(page, "Sprint")
 
   await expect(card.locator(".board-row__value")).toHaveText("100%")
-  await expect(
-    card.getByRole("progressbar", { name: "Sprint progress" })
-  ).toHaveAttribute("aria-valuenow", "100")
+  await expect(card.getByRole("progressbar", { name: "Sprint progress" })).toHaveAttribute(
+    "aria-valuenow",
+    "100"
+  )
   // The finished branch replaces the remaining-time label outright rather than counting on into "ago".
   await expect(card.getByText("Complete")).toBeVisible()
   await expect(card.getByText(/left|ago/)).toHaveCount(0)
@@ -690,8 +671,7 @@ test("the greeting name saves once typing stops, and keeps its last keystrokes a
       return set(items)
     }) as typeof sync.set
   })
-  const writes = () =>
-    page.evaluate(() => (window as typeof window & { writes: number }).writes)
+  const writes = () => page.evaluate(() => (window as typeof window & { writes: number }).writes)
 
   await page.getByRole("button", { name: "Options" }).click()
   const field = page.getByLabel("Your name")
@@ -751,9 +731,27 @@ test("a card carrying data this version can't read leaves the rest of the board 
     chrome.storage.sync.set({
       "dayboard-state": {
         widgets: [
-          { id: "a", kind: "note", title: "Healthy", colorPreset: "mint", settings: { text: "Still here" } },
-          { id: "b", kind: "countdown", title: "Payday", colorPreset: "sky", settings: { targetAt: "2020-01-01T09:00:00.000Z", repeat: "fortnightly" } },
-          { id: "c", kind: "quote", title: "Words", colorPreset: "rose", settings: { quotes: "not a list", rotation: "daily" } }
+          {
+            id: "a",
+            kind: "note",
+            title: "Healthy",
+            colorPreset: "mint",
+            settings: { text: "Still here" }
+          },
+          {
+            id: "b",
+            kind: "countdown",
+            title: "Payday",
+            colorPreset: "sky",
+            settings: { targetAt: "2020-01-01T09:00:00.000Z", repeat: "fortnightly" }
+          },
+          {
+            id: "c",
+            kind: "quote",
+            title: "Words",
+            colorPreset: "rose",
+            settings: { quotes: "not a list", rotation: "daily" }
+          }
         ],
         settings: { name: "" }
       }
