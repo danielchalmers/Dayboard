@@ -55,12 +55,13 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - `npm run dev`: build into `.output/chrome-mv3-dev` on every save and open the installed Chrome with it loaded.
 - `npm run dev:edge`: the same in Edge, from `.output/edge-mv3-dev`.
 - `npm run format`: format everything with Prettier (`.prettierrc`). `npm run format:check` only checks.
+- `npm run lint`: run type-aware Oxlint (`.oxlintrc.json`), which checks only that promises are awaited or handled.
 - `npm run typecheck`: run TypeScript.
 - `npm test`: run Vitest.
 - `npm run build`: build Chrome MV3 production output to `.output/chrome-mv3`.
 - `npm run build:edge`: build Edge MV3 production output to `.output/edge-mv3`.
 - `npm run test:e2e`: run Playwright smoke tests, after building `.output/chrome-mv3`.
-- `npm run check:fast`: check formatting, then run typecheck and unit tests.
+- `npm run check:fast`: check formatting and lint, then run typecheck and unit tests.
 - `npm run check`: run `check:fast`, then the Playwright tests. Teichos's scripts have the same names.
 - `npm run zip`: build for Chrome and zip it to `.output/dayboard-chrome.zip`, with `manifest.json` at the zip's root. Needs `zip` on PATH (GitHub's runners have it).
 - `npm run zip:edge`: the same for Edge, to `.output/dayboard-edge.zip`.
@@ -103,6 +104,7 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 ## Style Rules
 
 - Prettier owns formatting (`.prettierrc`): run `npm run format` rather than matching whitespace by hand. `AGENTS.md` is left out of it.
+- Oxlint (`.oxlintrc.json`) checks only that promises are awaited or handled; `tsc` does the rest. Mark a promise you mean to drop with `void`.
 - Use React function components and TypeScript.
 - Prefer small, testable helpers.
 - Avoid broad abstractions unless they remove real duplication.
