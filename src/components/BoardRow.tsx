@@ -181,11 +181,13 @@ const StopwatchBody = ({
 }: {
   item: StopwatchWidget
   now: Date
-  onWidgetChange?: ((widget: Widget) => void) | undefined
+  onWidgetChange?: WidgetChangeHandler | undefined
 }) => {
   const elapsed = stopwatchElapsedMs(item.settings, now.getTime())
   const { running } = item.settings
-  const apply = (settings: StopwatchWidget["settings"]) => onWidgetChange?.({ ...item, settings })
+  const apply = (settings: StopwatchWidget["settings"]) => {
+    void onWidgetChange?.({ ...item, settings })
+  }
 
   return (
     <>
@@ -269,7 +271,7 @@ const TimerBody = ({
 }: {
   item: TimerWidget
   now: Date
-  onWidgetChange?: ((widget: Widget) => void) | undefined
+  onWidgetChange?: WidgetChangeHandler | undefined
   onTimerFinish?: TimerFinishHandler | undefined
 }) => {
   const { id } = item
@@ -277,7 +279,9 @@ const TimerBody = ({
   const remaining = timerRemainingMs(item.settings, now.getTime())
   const done = remaining <= 0
   const finished = done && !running
-  const apply = (settings: TimerWidget["settings"]) => onWidgetChange?.({ ...item, settings })
+  const apply = (settings: TimerWidget["settings"]) => {
+    void onWidgetChange?.({ ...item, settings })
+  }
 
   // The title only speaks for a finish the card still shows, so a timer started again or reset from another tab gives it back without waiting for this one to be looked at.
   // A run put back by a refused save hands the title back here, and its finish borrows it again only once the board has answered, which is always after this has run.
@@ -385,7 +389,7 @@ const HabitBody = ({
 }: {
   item: HabitWidget
   now: Date
-  onWidgetChange?: ((widget: Widget) => void) | undefined
+  onWidgetChange?: WidgetChangeHandler | undefined
 }) => {
   const { history } = item.settings
   const done = isDoneToday(history, now)
@@ -401,11 +405,12 @@ const HabitBody = ({
   const [focused, setFocused] = useState<number | null>(null)
   const tabStop = focused ?? lastMarkable
 
-  const toggle = (day: Date) =>
-    onWidgetChange?.({
+  const toggle = (day: Date) => {
+    void onWidgetChange?.({
       ...item,
       settings: { ...item.settings, history: toggleDay(history, day) }
     })
+  }
 
   const moveFocus = (event: KeyboardEvent<HTMLButtonElement>, from: number) => {
     const to = {
@@ -498,7 +503,7 @@ const TodoBody = ({
   onWidgetChange
 }: {
   item: TodoWidget
-  onWidgetChange?: ((widget: Widget) => void) | undefined
+  onWidgetChange?: WidgetChangeHandler | undefined
 }) => {
   const [draft, setDraft] = useState("")
   const { tasks } = item.settings
@@ -522,8 +527,9 @@ const TodoBody = ({
     ;(target ?? fieldRef.current)?.focus()
   }, [tasks])
 
-  const apply = (nextTasks: TodoTask[]) =>
-    onWidgetChange?.({ ...item, settings: { ...item.settings, tasks: nextTasks } })
+  const apply = (nextTasks: TodoTask[]) => {
+    void onWidgetChange?.({ ...item, settings: { ...item.settings, tasks: nextTasks } })
+  }
 
   // The field only clears when a task actually landed, so nothing typed is thrown away by a blank or full add.
   const add = () => {

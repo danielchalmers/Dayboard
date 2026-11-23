@@ -1,3 +1,8 @@
 {
-  "recommendations": ["esbenp.prettier-vscode", "ms-playwright.playwright", "vitest.explorer"]
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "oxc.oxc-vscode",
+    "ms-playwright.playwright",
+    "vitest.explorer"
+  ]
 }
