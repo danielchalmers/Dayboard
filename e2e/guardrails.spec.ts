@@ -412,11 +412,18 @@ test("the marks a card is read by survive a contrast theme", async ({ page, exte
         ring: style.outlineStyle
       }
     }, pseudo)
-  // A fill that is there: opaque, and not the card's own background.
+  // How much of a fill is there, from nothing (0) to all of it (1).
+  const alphaOf = (fill: string) => {
+    const [, , , alpha = "1"] = fill.match(/[\d.]+/g) ?? []
+
+    return Number(alpha)
+  }
+  // A fill that is there: most of the way to solid, and not the card's own background.
+  // Not all of the way, because Chromium on Linux hands out the Highlight color four-fifths solid, where Windows gives it whole.
   const walk = cardByTitle(page, "Walk")
   const ground = (await paint(walk)).fill
   const expectFilled = (fill: string, what: string) => {
-    expect(fill, what).toMatch(/^rgb\(/)
+    expect(alphaOf(fill), `${what}: ${fill}`).toBeGreaterThan(0.5)
     expect(fill, what).not.toBe(ground)
   }
 
@@ -426,7 +433,7 @@ test("the marks a card is read by survive a contrast theme", async ({ page, exte
     day(":not(.habit-day--done):not(.habit-day--today):not(.habit-day--future)")
   )
   expect(open.edge, "a day left open").toBeGreaterThan(0)
-  expect(open.fill, "a day left open").not.toMatch(/^rgb\(/)
+  expect(alphaOf(open.fill), `a day left open: ${open.fill}`).toBeLessThan(0.5)
   expect((await paint(day(".habit-day--future"))).edge, "a day to come").toBeGreaterThan(0)
   expect((await paint(day(".habit-day--today"))).ring, "today").toBe("solid")
 
