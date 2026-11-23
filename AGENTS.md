@@ -88,9 +88,9 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 
 ## CI And Release
 
-- CI is split into typecheck, unit, Chrome/Edge build matrix, and Playwright jobs.
+- CI has the same four jobs as Teichos: Static Analysis (typecheck), Unit Tests, Extension E2E, and Package Extension, which runs `npm run zip` and `npm run zip:edge`, as the release does, and uploads each zip as is.
 - CI uses Node 24 and npm cache.
-- The Playwright job uses the Microsoft Playwright container.
+- The E2E job uses the Microsoft Playwright container.
 - Release runs on `vX.Y.Z` tags.
 - The release workflow passes the tag version to the build via the `RELEASE_VERSION` environment variable, which `vite.config.ts` writes into the manifest.
 - Do not manually bump the checked-in `package.json.version`; the release workflow stamps the manifest version from the tag.
