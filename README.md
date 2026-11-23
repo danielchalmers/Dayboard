@@ -6,7 +6,7 @@
 
 Dayboard is a new tab page for Chrome and Edge. It replaces the blank tab with a board of small widgets (clocks, countdowns, timers, stopwatches, notes, todo lists, habit trackers, quotes) so a new tab can show the few things you want to keep an eye on.
 
-It's a free, open-source browser extension. Everything is stored locally and it makes no network requests.
+It's a free, open-source browser extension with no account and no network requests of its own. Your board is saved in your browser's extension storage, which the browser syncs to your other devices if you have browser sync turned on.
 
 <img width="1280" height="800" alt="Dayboard new tab page" src="https://github.com/user-attachments/assets/faba12fc-b6f4-48da-9818-ea3f9e4f6227" />
 
@@ -54,7 +54,8 @@ Then load the unpacked build:
 ## Privacy
 
 - Dayboard requests only the `storage` permission.
-- No accounts, analytics, ads, tracking, or remote code, and no network requests.
+- Your board is saved with `chrome.storage.sync`. It stays in your browser, and goes to your other signed-in browsers only if browser sync is on; that is the browser's doing, and Dayboard sends it nowhere else.
+- No accounts, analytics, ads, tracking, or remote code, and no network requests of its own.
 
 See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
 
