@@ -3,9 +3,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { STORED_DAYS, toDayKey } from "./habit"
-import type { CountdownWidget, DayboardState, HabitWidget, TodoWidget } from "./types"
+import type { CountdownWidget, DayboardState, HabitWidget, NoteWidget, TodoWidget } from "./types"
 
-const STORAGE_KEY = "dayboard-state"
+// The one item a board was kept in up to v0.9, and the items it is kept in now.
+const LEGACY_KEY = "dayboard-state"
+const BOARD_KEY = "dayboard-board"
+const cardKey = (id: string) => `dayboard-card:${id}`
 
 const sampleState: DayboardState = {
   widgets: [
@@ -32,9 +35,13 @@ const stubChromeStorage = () => {
   vi.stubGlobal("chrome", {
     storage: {
       sync: {
-        get: vi.fn(async (key: string) => ({ [key]: store.get(key) })),
+        // Asked for everything, as the board is, sync answers with every item it holds.
+        get: vi.fn(async () => Object.fromEntries(store)),
         set: vi.fn(async (items: Record<string, unknown>) => {
-          Object.entries(items).forEach(([key, value]) => store.set(key, value))
+          Object.entries(items).forEach(([key, value]) => store.set(key, structuredClone(value)))
+        }),
+        remove: vi.fn(async (keys: string[]) => {
+          keys.forEach((key) => store.delete(key))
         })
       },
       onChanged: {
@@ -72,7 +79,7 @@ describe("readDayboardState", () => {
 
   it("returns the stored state when present", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, sampleState)
+    store.set(LEGACY_KEY, sampleState)
 
     const { readDayboardState } = await import("./storage")
 
@@ -81,7 +88,7 @@ describe("readDayboardState", () => {
 
   it("falls back to defaults when the stored value is malformed", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, "not-an-object")
+    store.set(LEGACY_KEY, "not-an-object")
 
     const { readDayboardState } = await import("./storage")
     const state = await readDayboardState()
@@ -92,7 +99,7 @@ describe("readDayboardState", () => {
 
   it("fills in default settings for state stored before settings existed", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, { widgets: sampleState.widgets })
+    store.set(LEGACY_KEY, { widgets: sampleState.widgets })
 
     const { readDayboardState } = await import("./storage")
     const state = await readDayboardState()
@@ -103,7 +110,7 @@ describe("readDayboardState", () => {
 
   it("drops malformed widget entries while keeping valid ones", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, {
+    store.set(LEGACY_KEY, {
       widgets: [
         sampleState.widgets[0],
         { id: "x", kind: 7, settings: {} },
@@ -129,7 +136,7 @@ describe("readDayboardState", () => {
       return toDayKey(d)
     })
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, {
+    store.set(LEGACY_KEY, {
       widgets: [
         {
           id: "habit-1",
@@ -153,7 +160,7 @@ describe("readDayboardState", () => {
 
   it("cleans up a todo list from an imported or hand-edited board", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, {
+    store.set(LEGACY_KEY, {
       widgets: [
         {
           id: "todo-1",
@@ -177,7 +184,7 @@ describe("readDayboardState", () => {
 
   it("retires a legacy countdown display setting", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, {
+    store.set(LEGACY_KEY, {
       widgets: [
         {
           id: "kept",
@@ -220,7 +227,7 @@ describe("readDayboardState", () => {
 
   it("sanitizes malformed settings fields back to their defaults", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, {
+    store.set(LEGACY_KEY, {
       widgets: sampleState.widgets,
       settings: { name: 7 }
     })
@@ -577,7 +584,7 @@ describe("a board written by a newer Dayboard", () => {
 
   it("keeps the cards and fields it can't show through a read and a save", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, structuredClone(newer))
+    store.set(LEGACY_KEY, structuredClone(newer))
 
     const { readDayboardState, writeDayboardState } = await import("./storage")
     const state = await readDayboardState()
@@ -585,36 +592,76 @@ describe("a board written by a newer Dayboard", () => {
     // Only the kinds this build can draw reach the board.
     expect(state.widgets.map((widget) => widget.id)).toEqual(["today", "stretch", "laps"])
 
-    await writeDayboardState(state)
+    // The first save moves the board out of the old item, and every card goes with it, the ones this build can't show included.
+    await writeDayboardState(state, state)
 
-    expect(store.get(STORAGE_KEY)).toEqual(newer)
+    for (const { id, ...card } of newer.widgets) {
+      expect(store.get(cardKey(id))).toEqual(card)
+    }
+    expect(store.get(BOARD_KEY)).toEqual({
+      order: ["today", "agenda", "stretch", "laps", "weather"],
+      settings: newer.settings
+    })
   })
 
   it("puts an unknown card back where it was among the cards around it", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, structuredClone(newer))
+    store.set(LEGACY_KEY, structuredClone(newer))
 
     const { readDayboardState, writeDayboardState } = await import("./storage")
     const state = await readDayboardState()
+    const order = () => (store.get(BOARD_KEY) as { order: string[] }).order
     // A new card joins the end of the list, after the archived ones, just as the newer build would add it.
     const added = { ...sampleState.widgets[0]!, id: "added" }
-    await writeDayboardState({ ...state, widgets: [...state.widgets, added] })
+    const withAdded = { ...state, widgets: [...state.widgets, added] }
+    await writeDayboardState(withAdded, state)
 
-    expect(
-      (store.get(STORAGE_KEY) as { widgets: { id: string }[] }).widgets.map((widget) => widget.id)
-    ).toEqual(["today", "agenda", "stretch", "laps", "weather", "added"])
+    expect(order()).toEqual(["today", "agenda", "stretch", "laps", "weather", "added"])
 
-    // With the cards before it gone, an unknown card still makes it back rather than falling off the end.
-    await writeDayboardState({ ...state, widgets: [] })
+    // With every card this build shows deleted, the two it can't show are still where the newer build left them.
+    const emptied = { ...state, widgets: [] }
+    await writeDayboardState(emptied, withAdded)
 
-    expect(
-      (store.get(STORAGE_KEY) as { widgets: { id: string }[] }).widgets.map((widget) => widget.id)
-    ).toEqual(["agenda", "weather"])
+    expect([...store.keys()].filter((key) => key.startsWith(cardKey(""))).sort()).toEqual([
+      cardKey("agenda"),
+      cardKey("weather")
+    ])
+
+    // And an unknown card still makes it back into the order rather than falling off the end.
+    await writeDayboardState({ ...emptied, widgets: [added] }, emptied)
+
+    expect(order()).toEqual(["added", "agenda", "weather"])
+  })
+
+  it("leaves a card it can't show alone when the cards around it change", async () => {
+    const { store } = stubChromeStorage()
+    store.set(LEGACY_KEY, structuredClone(newer))
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(state, state)
+    vi.mocked(chrome.storage.sync.set).mockClear()
+
+    // A newer build edits its card on another device while this one renames a card of its own.
+    store.set(cardKey("agenda"), { ...newer.widgets[1], settings: { calendarId: "home" } })
+    const renamed = {
+      ...state,
+      widgets: state.widgets.map((widget) =>
+        widget.id === "laps" ? { ...widget, title: "Splits" } : widget
+      )
+    }
+    await writeDayboardState(renamed, state)
+
+    // Only the renamed card is written, so the newer build's edit is not put back to what this tab last saw.
+    expect(Object.keys(vi.mocked(chrome.storage.sync.set).mock.calls[0]![0])).toEqual([
+      cardKey("laps")
+    ])
+    expect(store.get(cardKey("agenda"))).toMatchObject({ settings: { calendarId: "home" } })
   })
 
   it("keeps them in an export, and in the copy a new tab paints from first", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, structuredClone(newer))
+    store.set(LEGACY_KEY, structuredClone(newer))
 
     const { readCachedDayboardState, readDayboardState, serializeDayboardState } =
       await import("./storage")
@@ -754,42 +801,382 @@ describe("serializeDayboardState / parseDayboardState", () => {
   })
 })
 
-describe("writeDayboardState", () => {
-  it("stores the state object under the storage key", async () => {
+// A small board, and the same board as storage holds it once it has left the old item: an item to each card, and one for the order and the settings.
+const clock = sampleState.widgets[0]!
+const note: NoteWidget = {
+  id: "note-1",
+  kind: "note",
+  title: "Jot",
+  colorPreset: "mint",
+  settings: { text: "Milk" }
+}
+const habit: HabitWidget = {
+  id: "habit-1",
+  kind: "habit",
+  title: "Walk",
+  colorPreset: "amber",
+  settings: { history: [] }
+}
+const board: DayboardState = { widgets: [clock, note, habit], settings: { name: "Dan" } }
+
+const cardItem = ({ id: _key, ...card }: DayboardState["widgets"][number]) => card
+
+const seedSplit = (store: Map<string, unknown>, state: DayboardState) => {
+  state.widgets.forEach((widget) => store.set(cardKey(widget.id), cardItem(widget)))
+  store.set(BOARD_KEY, {
+    order: state.widgets.map((widget) => widget.id),
+    settings: state.settings
+  })
+}
+
+const withNote = (state: DayboardState, text: string): DayboardState => ({
+  ...state,
+  widgets: state.widgets.map((widget) =>
+    widget.id === note.id ? { ...note, settings: { text } } : widget
+  )
+})
+
+describe("a board kept one card to an item", () => {
+  it("reads the cards in the order the board item lists", async () => {
     const { store } = stubChromeStorage()
+    seedSplit(store, { ...board, widgets: [habit, clock, note] })
 
-    const { writeDayboardState } = await import("./storage")
-    await writeDayboardState(sampleState)
+    const { readDayboardState } = await import("./storage")
 
-    expect(store.get(STORAGE_KEY)).toEqual(sampleState)
+    expect(await readDayboardState()).toEqual({ ...board, widgets: [habit, clock, note] })
   })
 
-  // chrome.storage.sync rejects any single item over QUOTA_BYTES_PER_ITEM (8192 bytes of key + serialized value), and the whole board lives under one key, so even a board packed with habits at their fullest must stay under it or every save starts failing.
-  it("keeps a board of full habit histories under the sync per-item quota", async () => {
+  // Sync carries each item on its own, so a device can hold any part of a change made on another.
+  it("puts a card the order doesn't list yet at the end", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, { ...board, widgets: [note, clock] })
+    // Two cards added elsewhere have arrived ahead of the order that places them.
+    store.set(cardKey("zebra"), cardItem({ ...habit, id: "zebra" }))
+    store.set(cardKey("apple"), cardItem({ ...habit, id: "apple" }))
+
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+
+    // By id, so every device shows them the same way round while it waits.
+    expect(state.widgets.map((widget) => widget.id)).toEqual([
+      "note-1",
+      "clock-1",
+      "apple",
+      "zebra"
+    ])
+  })
+
+  it("passes over a card the order lists that isn't there", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+    // Not arrived yet, or deleted on another device.
+    store.delete(cardKey(note.id))
+
+    const { readDayboardState } = await import("./storage")
+
+    expect(await readDayboardState()).toEqual({ ...board, widgets: [clock, habit] })
+  })
+
+  it("shows the cards it has when the board item hasn't arrived", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+    store.delete(BOARD_KEY)
+
+    const { readDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+
+    expect(state.widgets.map((widget) => widget.id)).toEqual(["clock-1", "habit-1", "note-1"])
+    expect(state.settings).toEqual({ name: "" })
+  })
+
+  it("stays empty once every card has been deleted", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, { ...board, widgets: [] })
+
+    const { readDayboardState } = await import("./storage")
+
+    // The first-run board is for a browser with nothing stored, not for someone who cleared theirs.
+    expect(await readDayboardState()).toEqual({ ...board, widgets: [] })
+  })
+
+  it("drops an item that isn't a card and keeps the rest", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+    store.set(cardKey("junk"), "nonsense")
+    store.set(cardKey("half"), { kind: "note" })
+
+    const { readDayboardState } = await import("./storage")
+
+    expect(await readDayboardState()).toEqual(board)
+  })
+
+  it("reads past whatever the old item holds once the board has left it", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+    // A device still on an older build has saved a board of its own there since.
+    store.set(LEGACY_KEY, sampleState)
+
+    const { readDayboardState } = await import("./storage")
+
+    expect(await readDayboardState()).toEqual(board)
+  })
+})
+
+describe("writeDayboardState", () => {
+  const setCalls = () => vi.mocked(chrome.storage.sync.set).mock.calls.map(([items]) => items)
+
+  it("moves a board out of the old item on its first save", async () => {
+    const { store } = stubChromeStorage()
+    store.set(LEGACY_KEY, structuredClone(board))
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    const edited = withNote(state, "Milk, eggs")
+    await writeDayboardState(edited, state)
+
+    // Every card goes, not only the one that changed, and in a single write.
+    expect(setCalls()).toHaveLength(1)
+    expect(store.get(cardKey(clock.id))).toEqual(cardItem(clock))
+    expect(store.get(cardKey(note.id))).toEqual({
+      ...cardItem(note),
+      settings: { text: "Milk, eggs" }
+    })
+    expect(store.get(cardKey(habit.id))).toEqual(cardItem(habit))
+    expect(store.get(BOARD_KEY)).toEqual({
+      order: ["clock-1", "note-1", "habit-1"],
+      settings: { name: "Dan" }
+    })
+    expect(await readDayboardState()).toEqual(edited)
+  })
+
+  // Every release since v0.5 reads only the old item, and shows the first-run board when it is missing.
+  it("leaves the old item holding one note that says where the board went", async () => {
+    const { store } = stubChromeStorage()
+    store.set(LEGACY_KEY, structuredClone(board))
+
+    const { parseDayboardState, readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    // Read the way an older build reads it, it is a board of one note.
+    const seenByOlder = parseDayboardState(JSON.stringify(store.get(LEGACY_KEY)))
+    expect(seenByOlder.widgets).toHaveLength(1)
+    expect(seenByOlder.widgets[0]).toMatchObject({ kind: "note", title: "👋 Update on the way" })
+    expect((seenByOlder.widgets[0] as NoteWidget).settings.text).toMatch(/^Your board is safe\./)
+  })
+
+  it("shows the first-run board, not that note, on a device the rest hasn't reached", async () => {
+    const { store } = stubChromeStorage()
+    store.set(LEGACY_KEY, structuredClone(board))
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    // Sync has handed a new device the old item ahead of everything else.
+    const moved = store.get(LEGACY_KEY)
+    store.clear()
+    store.set(LEGACY_KEY, moved)
+
+    expect((await readDayboardState()).widgets).toHaveLength(6)
+  })
+
+  it("says so again when an older build has saved a board there since", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+    store.set(LEGACY_KEY, sampleState)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    expect(Object.keys(setCalls()[0]!).sort()).toEqual([cardKey(note.id), LEGACY_KEY])
+    expect((store.get(LEGACY_KEY) as DayboardState).widgets).toHaveLength(1)
+  })
+
+  // A later release takes the old item away for good, and a device still on this one mustn't put it back.
+  it("never gives a board the old item when it has none", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    expect(store.has(LEGACY_KEY)).toBe(false)
+  })
+
+  it("saves the first-run board whole when nothing was stored", async () => {
+    const { store } = stubChromeStorage()
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState({ ...state, settings: { name: "Dan" } }, state)
+
+    expect((store.get(BOARD_KEY) as { order: string[] }).order).toEqual(
+      state.widgets.map((widget) => widget.id)
+    )
+    expect([...store.keys()].filter((key) => key.startsWith(cardKey("")))).toHaveLength(6)
+    expect(await readDayboardState()).toEqual({ ...state, settings: { name: "Dan" } })
+  })
+
+  it("writes only the card a change touched", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    await writeDayboardState(withNote(state, "Milk, eggs"), state)
+
+    expect(setCalls()).toEqual([
+      { [cardKey(note.id)]: { ...cardItem(note), settings: { text: "Milk, eggs" } } }
+    ])
+    expect(chrome.storage.sync.remove).not.toHaveBeenCalled()
+  })
+
+  it("writes only the board item for a new order or a new name", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    const reordered = { ...state, widgets: [habit, clock, note] }
+    await writeDayboardState(reordered, state)
+    const renamed = { ...reordered, settings: { name: "Daniel" } }
+    await writeDayboardState(renamed, reordered)
+
+    expect(setCalls()).toEqual([
+      { [BOARD_KEY]: { order: ["habit-1", "clock-1", "note-1"], settings: { name: "Dan" } } },
+      { [BOARD_KEY]: { order: ["habit-1", "clock-1", "note-1"], settings: { name: "Daniel" } } }
+    ])
+  })
+
+  it("adds a card and its place in one write", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    const added = { ...note, id: "note-2", title: "Later" }
+    await writeDayboardState({ ...state, widgets: [...state.widgets, added] }, state)
+
+    expect(setCalls()).toEqual([
+      {
+        [cardKey("note-2")]: cardItem(added),
+        [BOARD_KEY]: {
+          order: ["clock-1", "note-1", "habit-1", "note-2"],
+          settings: { name: "Dan" }
+        }
+      }
+    ])
+  })
+
+  it("takes a deleted card's item away and writes nothing else", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    const without = { ...state, widgets: [clock, habit] }
+    await writeDayboardState(without, state)
+
+    expect(chrome.storage.sync.remove).toHaveBeenCalledWith([cardKey(note.id)])
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    // The order still lists the card, and read back it is passed over.
+    expect(await readDayboardState()).toEqual(without)
+  })
+
+  it("writes nothing for a board that is as it was", async () => {
+    const { store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, writeDayboardState } = await import("./storage")
+    const state = await readDayboardState()
+    // A copy, as a board that has been through an import and back is.
+    await writeDayboardState(structuredClone(state), state)
+
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled()
+    expect(chrome.storage.sync.remove).not.toHaveBeenCalled()
+  })
+
+  describe("replacing the board with an imported one", () => {
+    const imported: DayboardState = {
+      widgets: [
+        { ...clock, id: "clock-9", title: "Lisbon" },
+        { ...note, settings: { text: "From the file" } }
+      ],
+      settings: { name: "Ana" }
+    }
+
+    it("brings the new cards in before it takes the old ones away", async () => {
+      const { store } = stubChromeStorage()
+      seedSplit(store, board)
+
+      const { readDayboardState, writeDayboardState } = await import("./storage")
+      const state = await readDayboardState()
+      await writeDayboardState(imported, state)
+
+      const [setAt] = vi.mocked(chrome.storage.sync.set).mock.invocationCallOrder
+      const [removeAt] = vi.mocked(chrome.storage.sync.remove).mock.invocationCallOrder
+      expect(setAt).toBeLessThan(removeAt!)
+      expect(chrome.storage.sync.remove).toHaveBeenCalledWith([
+        cardKey(clock.id),
+        cardKey(habit.id)
+      ])
+      expect(await readDayboardState()).toEqual(imported)
+    })
+
+    // Sync refuses a set whole when any item in it is too big, so a file that doesn't fit must not cost the board it was replacing.
+    it("takes nothing away when the new cards are refused", async () => {
+      const { store } = stubChromeStorage()
+      seedSplit(store, board)
+
+      const { readDayboardState, writeDayboardState } = await import("./storage")
+      const state = await readDayboardState()
+      vi.mocked(chrome.storage.sync.set).mockRejectedValueOnce(
+        new Error("Resource::kQuotaBytesPerItem quota exceeded")
+      )
+
+      await expect(writeDayboardState(imported, state)).rejects.toThrow("kQuotaBytesPerItem")
+      expect(chrome.storage.sync.remove).not.toHaveBeenCalled()
+      expect(await readDayboardState()).toEqual(board)
+    })
+  })
+
+  // chrome.storage.sync rejects any single item over QUOTA_BYTES_PER_ITEM (8,192 bytes of key and serialized value).
+  // The whole board once shared a single item, so one long quote list left no room for a habit to be marked; now each card has an item to itself.
+  it("saves a board bigger than one item can hold", async () => {
     const QUOTA_BYTES_PER_ITEM = 8192
     const fullHistory = Array.from({ length: STORED_DAYS }, (_, offset) => {
       const d = new Date(2026, 6, 9)
       d.setDate(d.getDate() - offset)
       return toDayKey(d)
     })
-    const habits: HabitWidget[] = Array.from({ length: 10 }, (_, index) => ({
-      id: crypto.randomUUID(),
-      kind: "habit",
-      title: `A habit with a fairly long title ${index}`,
-      colorPreset: "amber",
-      settings: { history: fullHistory }
-    }))
     const state: DayboardState = {
-      widgets: habits,
+      widgets: [
+        {
+          id: crypto.randomUUID(),
+          kind: "quote",
+          title: "A hundred lines",
+          colorPreset: "violet",
+          settings: {
+            quotes: Array.from({ length: 100 }, (_, index) => `${index} ${"q".repeat(66)}`),
+            rotation: "daily"
+          }
+        },
+        { ...note, id: crypto.randomUUID(), settings: { text: "n".repeat(2350) } },
+        { ...habit, id: crypto.randomUUID(), settings: { history: fullHistory } }
+      ],
       settings: { name: "Dan" }
     }
 
     const { store } = stubChromeStorage()
     const { writeDayboardState } = await import("./storage")
-    await writeDayboardState(state)
+    await writeDayboardState(state, null)
 
-    const stored = JSON.stringify(store.get(STORAGE_KEY))
-    expect(STORAGE_KEY.length + stored.length).toBeLessThan(QUOTA_BYTES_PER_ITEM)
+    const sizes = [...store].map(([key, value]) => key.length + JSON.stringify(value).length)
+    expect(sizes.reduce((total, size) => total + size)).toBeGreaterThan(QUOTA_BYTES_PER_ITEM)
+    expect(Math.max(...sizes)).toBeLessThan(QUOTA_BYTES_PER_ITEM)
   })
 })
 
@@ -804,19 +1191,19 @@ describe("readCachedDayboardState", () => {
 
   it("mirrors reads and writes so the next load is synchronous", async () => {
     const { store } = stubChromeStorage()
-    store.set(STORAGE_KEY, sampleState)
+    store.set(LEGACY_KEY, sampleState)
 
     const { readCachedDayboardState, readDayboardState, writeDayboardState } =
       await import("./storage")
 
-    await readDayboardState()
+    const state = await readDayboardState()
     expect(readCachedDayboardState()).toEqual(sampleState)
 
     const renamed = {
       ...sampleState,
       settings: { ...sampleState.settings, name: "Dan" }
     }
-    await writeDayboardState(renamed)
+    await writeDayboardState(renamed, state)
     expect(readCachedDayboardState()).toEqual(renamed)
   })
 
@@ -834,18 +1221,19 @@ describe("watchDayboardState", () => {
   it("notifies on sync changes and unsubscribes on stop", async () => {
     const { addListener, removeListener } = stubChromeStorage()
 
-    const { watchDayboardState } = await import("./storage")
+    const { readDayboardState, watchDayboardState } = await import("./storage")
+    await readDayboardState()
     const handleChange = vi.fn()
     const stopWatching = watchDayboardState(handleChange)
 
     const listener = addListener.mock.calls[0]?.[0]
     expect(listener).toBeTypeOf("function")
 
-    listener?.({ [STORAGE_KEY]: { newValue: sampleState } }, "sync")
+    listener?.({ [LEGACY_KEY]: { newValue: sampleState } }, "sync")
     expect(handleChange).toHaveBeenCalledWith(sampleState)
 
     handleChange.mockClear()
-    listener?.({ [STORAGE_KEY]: { newValue: sampleState } }, "local")
+    listener?.({ [LEGACY_KEY]: { newValue: sampleState } }, "local")
     expect(handleChange).not.toHaveBeenCalled()
 
     stopWatching()
@@ -855,7 +1243,8 @@ describe("watchDayboardState", () => {
   it("ignores a sync write to some other key", async () => {
     const { addListener } = stubChromeStorage()
 
-    const { watchDayboardState } = await import("./storage")
+    const { readDayboardState, watchDayboardState } = await import("./storage")
+    await readDayboardState()
     const handleChange = vi.fn()
     watchDayboardState(handleChange)
 
@@ -868,9 +1257,12 @@ describe("watchDayboardState", () => {
   })
 
   it("falls back to a default board when another device clears the key", async () => {
-    const { addListener } = stubChromeStorage()
+    const { addListener, store } = stubChromeStorage()
+    store.set(LEGACY_KEY, sampleState)
 
-    const { readCachedDayboardState, watchDayboardState } = await import("./storage")
+    const { readCachedDayboardState, readDayboardState, watchDayboardState } =
+      await import("./storage")
+    await readDayboardState()
     const cachedWhenNotified: (DayboardState | null)[] = []
     const handleChange = vi.fn<(next: DayboardState) => void>(() => {
       cachedWhenNotified.push(readCachedDayboardState())
@@ -879,7 +1271,7 @@ describe("watchDayboardState", () => {
 
     // Clearing sync storage elsewhere arrives as a change with an oldValue and no newValue.
     const listener = addListener.mock.calls[0]?.[0]
-    listener?.({ [STORAGE_KEY]: { oldValue: sampleState } }, "sync")
+    listener?.({ [LEGACY_KEY]: { oldValue: sampleState } }, "sync")
 
     const [next] = handleChange.mock.calls[0] as [DayboardState]
     expect(next.widgets.map((widget) => widget.kind)).toEqual([
@@ -892,5 +1284,70 @@ describe("watchDayboardState", () => {
     ])
     // The mirror is written before the listener runs, so a tab reloading in the middle of the sync hydrates to the same board rather than the one that was just cleared.
     expect(cachedWhenNotified[0]).toEqual(next)
+  })
+
+  // A change names only the items it touched, so the rest of the board comes from what was last read.
+  it("lays a change made elsewhere over the board it already holds", async () => {
+    const { addListener, store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { readDayboardState, watchDayboardState } = await import("./storage")
+    await readDayboardState()
+    const handleChange = vi.fn<(next: DayboardState) => void>()
+    watchDayboardState(handleChange)
+    const listener = addListener.mock.calls[0]![0]
+    const editedNote = { ...note, settings: { text: "Milk, eggs" } }
+
+    // Another tab edits the note.
+    listener({ [cardKey(note.id)]: { newValue: cardItem(editedNote) } }, "sync")
+    expect(handleChange).toHaveBeenLastCalledWith({ ...board, widgets: [clock, editedNote, habit] })
+
+    // Then deletes the habit, which arrives as an item with no new value.
+    listener({ [cardKey(habit.id)]: { oldValue: cardItem(habit) } }, "sync")
+    expect(handleChange).toHaveBeenLastCalledWith({ ...board, widgets: [clock, editedNote] })
+
+    // Then moves the note first.
+    listener(
+      { [BOARD_KEY]: { newValue: { order: ["note-1", "clock-1"], settings: board.settings } } },
+      "sync"
+    )
+    expect(handleChange).toHaveBeenLastCalledWith({ ...board, widgets: [editedNote, clock] })
+  })
+
+  it("hears the board leave the old item in another tab", async () => {
+    const { addListener, store } = stubChromeStorage()
+    store.set(LEGACY_KEY, structuredClone(sampleState))
+
+    const { readDayboardState, watchDayboardState } = await import("./storage")
+    await readDayboardState()
+    const handleChange = vi.fn<(next: DayboardState) => void>()
+    watchDayboardState(handleChange)
+
+    // One write carries every item, the old one with its note included.
+    addListener.mock.calls[0]![0](
+      {
+        [cardKey(note.id)]: { newValue: cardItem(note) },
+        [cardKey(clock.id)]: { newValue: cardItem(clock) },
+        [BOARD_KEY]: { newValue: { order: ["note-1", "clock-1"], settings: board.settings } },
+        [LEGACY_KEY]: { newValue: { widgets: [{ id: "dayboard-moved", kind: "note" }] } }
+      },
+      "sync"
+    )
+
+    expect(handleChange).toHaveBeenCalledTimes(1)
+    expect(handleChange).toHaveBeenCalledWith({ ...board, widgets: [note, clock] })
+  })
+
+  it("reads the board whole when a change arrives before anything has been read", async () => {
+    const { addListener, store } = stubChromeStorage()
+    seedSplit(store, board)
+
+    const { watchDayboardState } = await import("./storage")
+    const handleChange = vi.fn<(next: DayboardState) => void>()
+    watchDayboardState(handleChange)
+
+    addListener.mock.calls[0]![0]({ [cardKey(note.id)]: { newValue: cardItem(note) } }, "sync")
+
+    await vi.waitFor(() => expect(handleChange).toHaveBeenCalledWith(board))
   })
 })

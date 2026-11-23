@@ -4,8 +4,8 @@ import { act, render as renderComponent, renderHook, waitFor } from "@testing-li
 import { createElement, useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { CACHE_KEY } from "~/lib/storage"
-import type { DayboardState, HabitWidget, NoteWidget, TimerWidget } from "~/lib/types"
+import { BOARD_KEY, CACHE_KEY, CARD_PREFIX, toDayboardState } from "~/lib/storage"
+import type { DayboardState, HabitWidget, NoteWidget, TimerWidget, Widget } from "~/lib/types"
 
 // Chrome's own wording for the two quotas a write runs into, which is all there is to tell them apart by.
 const TOO_LARGE = new Error("Resource::kQuotaBytesPerItem quota exceeded")
@@ -15,22 +15,67 @@ const TOO_LARGE_NOTICE =
 const TOO_OFTEN_NOTICE =
   "Couldn’t save — too many changes in a row. Give it a moment, then try again."
 
+// What sync holds: an item to each card under its id, and one for the order and the settings.
+type Items = Record<string, unknown>
+
+const cardKey = (id: string) => CARD_PREFIX + id
+const cardItem = ({ id: _key, ...card }: Widget) => card
+
+const itemsOf = (board: DayboardState): Items => ({
+  ...Object.fromEntries(board.widgets.map((widget) => [cardKey(widget.id), cardItem(widget)])),
+  [BOARD_KEY]: { order: board.widgets.map((widget) => widget.id), settings: board.settings }
+})
+
+// A board arriving from another tab or device, as the change to every item it is kept in.
+const changesTo = (board: DayboardState) =>
+  Object.fromEntries(
+    Object.entries(structuredClone(itemsOf(board))).map(([key, newValue]) => [key, { newValue }])
+  )
+
+// `get` answers with every item, which is how the board is asked for.
 const stubChrome = ({
-  get = async (key: string) => ({ [key]: undefined }),
-  set = () => Promise.resolve()
+  get = async () => ({}),
+  set = () => Promise.resolve(),
+  remove = () => Promise.resolve()
 }: {
-  get?: (key: string) => Promise<Record<string, unknown>>
-  set?: (items: Record<string, DayboardState>) => Promise<void>
+  get?: () => Promise<Items>
+  set?: (items: Items) => Promise<void>
+  remove?: (keys: string[]) => Promise<void>
 } = {}) => {
   vi.stubGlobal("chrome", {
     storage: {
       sync: {
         get: vi.fn(get),
-        set: vi.fn(set)
+        set: vi.fn(set),
+        remove: vi.fn(remove)
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() }
     }
   })
+}
+
+// A stand-in for sync that holds what is written to it, and refuses a write when `refuses` objects to the board it would leave.
+const stubStore = (initial: DayboardState, refuses: (next: DayboardState) => Error | null) => {
+  let items = itemsOf(initial)
+
+  const take = async (next: Items) => {
+    const refusal = refuses(toDayboardState(next))
+
+    if (refusal) {
+      throw refusal
+    }
+
+    items = structuredClone(next)
+  }
+
+  stubChrome({
+    get: async () => structuredClone(items),
+    set: (changed) => take({ ...items, ...changed }),
+    remove: (keys) =>
+      take(Object.fromEntries(Object.entries(items).filter(([key]) => !keys.includes(key))))
+  })
+
+  return { stored: () => toDayboardState(items) }
 }
 
 // Reads mirror themselves into localStorage, so without this a board cached by one test hydrates the next one's first render.
@@ -162,7 +207,7 @@ describe("useDayboardState change handling", () => {
   }
 
   it("keeps both of two changes made in the same tick", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -180,17 +225,22 @@ describe("useDayboardState change handling", () => {
       widgets.map((widget) => widget.kind === "timer" && widget.settings.remainingMs === 0)
 
     expect(finished(result.current.state!.widgets)).toEqual([true, true])
-    const written = vi.mocked(chrome.storage.sync.set).mock.calls.at(-1)?.[0] as Record<
-      string,
-      DayboardState
-    >
-    expect(finished(Object.values(written)[0]!.widgets)).toEqual([true, true])
+    // Each finish writes its own card, as the board it was made to left it.
+    const written: Items = Object.assign(
+      {},
+      ...vi.mocked(chrome.storage.sync.set).mock.calls.map(([items]) => items)
+    )
+    expect(written).toEqual(
+      Object.fromEntries(
+        result.current.state!.widgets.map((widget) => [cardKey(widget.id), cardItem(widget)])
+      )
+    )
 
     unmount()
   })
 
   it("does not write when the changed widget is no longer on the board", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -207,7 +257,7 @@ describe("useDayboardState change handling", () => {
   })
 
   it("leaves the board untouched when storage echoes back what is already shown", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -217,7 +267,7 @@ describe("useDayboardState change handling", () => {
 
     const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
     act(() => {
-      listener({ "dayboard-state": { newValue: JSON.parse(JSON.stringify(board)) } }, "sync")
+      listener(changesTo(board), "sync")
     })
 
     expect(result.current.state).toBe(shown)
@@ -227,9 +277,10 @@ describe("useDayboardState change handling", () => {
 
   it("puts a failed write back to what storage holds", async () => {
     const stored = { ...board, settings: { name: "Sam" } }
+    // Emptying the board only takes items away, so that is the call refused here.
     stubChrome({
-      get: async (key) => ({ [key]: stored }),
-      set: () => Promise.reject(TOO_OFTEN)
+      get: async () => itemsOf(stored),
+      remove: () => Promise.reject(TOO_OFTEN)
     })
 
     const { useDayboardState } = await import("./useDayboardState")
@@ -251,16 +302,16 @@ describe("useDayboardState change handling", () => {
     // The first read loads the board; by the time the write fails, sync has gone away altogether.
     let reads = 0
     stubChrome({
-      get: async (key) => {
+      get: async () => {
         reads += 1
 
         if (reads > 1) {
           throw new Error("Sync is unavailable")
         }
 
-        return { [key]: board }
+        return itemsOf(board)
       },
-      set: () => Promise.reject(TOO_OFTEN)
+      remove: () => Promise.reject(TOO_OFTEN)
     })
 
     const { useDayboardState } = await import("./useDayboardState")
@@ -282,7 +333,7 @@ describe("useDayboardState change handling", () => {
   })
 
   it("settles a timer's run from the card as it stands, once", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -300,7 +351,7 @@ describe("useDayboardState change handling", () => {
       )
     }
     act(() => {
-      listener({ "dayboard-state": { newValue: chimed } }, "sync")
+      listener(changesTo(chimed), "sync")
     })
 
     let settled: (TimerWidget | null)[] = []
@@ -329,7 +380,7 @@ describe("useDayboardState change handling", () => {
 
   // A board can hear of a newer board from storage before it has rendered it, so the card asks about the run it last saw.
   it("leaves a run started since alone when an older finish is reported", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -348,7 +399,7 @@ describe("useDayboardState change handling", () => {
 
     let settling: Promise<TimerWidget | null> = Promise.resolve(null)
     act(() => {
-      listener({ "dayboard-state": { newValue: restarted } }, "sync")
+      listener(changesTo(restarted), "sync")
       settling = result.current.settleTimer("t1", 1)
     })
 
@@ -379,9 +430,9 @@ describe("useDayboardState change handling", () => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(board))
     let answerRead = () => {}
     stubChrome({
-      get: (key) =>
+      get: () =>
         new Promise((resolve) => {
-          answerRead = () => resolve({ [key]: stored })
+          answerRead = () => resolve(itemsOf(stored))
         })
     })
 
@@ -405,17 +456,13 @@ describe("useDayboardState change handling", () => {
       settled = await settling
     })
 
-    // Tea was settled on the other device, so only Eggs is, and on the board as storage has it.
+    // Tea was settled on the other device, so only Eggs is, and its card is all that is written: the name and Tea stay as storage has them.
     expect(settled[0]).toBeNull()
     expect(settled[1]?.title).toBe("Eggs")
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
-    const written = vi.mocked(chrome.storage.sync.set).mock.calls[0]![0] as Record<
-      string,
-      DayboardState
-    >
-    const saved = Object.values(written)[0]!
-    expect(saved.settings).toEqual({ name: "Sam" })
-    expect(saved.widgets.map((widget) => widget.settings)).toMatchObject([
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ [cardKey("t2")]: cardItem(settled[1]!) })
+    expect(result.current.state!.settings).toEqual({ name: "Sam" })
+    expect(result.current.state!.widgets.map((widget) => widget.settings)).toMatchObject([
       { running: false, remainingMs: 0 },
       { running: false, remainingMs: 0 }
     ])
@@ -423,8 +470,8 @@ describe("useDayboardState change handling", () => {
     unmount()
   })
 
-  it("saves new settings alongside the board as it stands", async () => {
-    stubChrome({ get: async (key) => ({ [key]: board }) })
+  it("saves new settings beside the cards as they stand", async () => {
+    stubChrome({ get: async () => itemsOf(board) })
 
     const { useDayboardState } = await import("./useDayboardState")
     const { result, unmount } = renderHook(() => useDayboardState())
@@ -435,10 +482,10 @@ describe("useDayboardState change handling", () => {
       await result.current.setSettings({ name: "Sam" })
     })
 
-    const expected = { widgets: board.widgets, settings: { name: "Sam" } }
-    expect(result.current.state).toEqual(expected)
+    expect(result.current.state).toEqual({ widgets: board.widgets, settings: { name: "Sam" } })
+    // The settings share an item with the order, and no card is written for them.
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-      "dayboard-state": expected
+      [BOARD_KEY]: { order: ["t1", "t2"], settings: { name: "Sam" } }
     })
 
     unmount()
@@ -480,13 +527,13 @@ describe("useDayboardState in a tab waking from being frozen", () => {
     let answerWake: (state: DayboardState) => void = () => {}
     let reads = 0
     stubChrome({
-      get: (key) => {
+      get: () => {
         reads += 1
 
         return reads === 1
-          ? Promise.resolve({ [key]: structuredClone(frozenWith) })
+          ? Promise.resolve(structuredClone(itemsOf(frozenWith)))
           : new Promise((resolve) => {
-              answerWake = (state) => resolve({ [key]: structuredClone(state) })
+              answerWake = (state) => resolve(structuredClone(itemsOf(state)))
             })
       }
     })
@@ -499,7 +546,7 @@ describe("useDayboardState in a tab waking from being frozen", () => {
     const deliver = (state: DayboardState) => {
       const listener = vi.mocked(chrome.storage.onChanged.addListener).mock.calls[0]![0]
       act(() => {
-        listener({ "dayboard-state": { newValue: structuredClone(state) } }, "sync")
+        listener(changesTo(state), "sync")
       })
     }
 
@@ -569,8 +616,11 @@ describe("useDayboardState in a tab waking from being frozen", () => {
       widgets: [tea(99_000), groceries("Milk, tea")],
       settings: { name: "" }
     }
+    // Only the note is written, so the timer the other tab started again is not put back.
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
-    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      [cardKey("groceries")]: cardItem(groceries("Milk, tea"))
+    })
     expect(result.current.state).toEqual(expected)
 
     unmount()
@@ -633,9 +683,9 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
 
     let answerFirstRead: (state: DayboardState) => void = () => {}
     stubChrome({
-      get: (key) =>
+      get: () =>
         new Promise((resolve) => {
-          answerFirstRead = (state) => resolve({ [key]: structuredClone(state) })
+          answerFirstRead = (state) => resolve(structuredClone(itemsOf(state)))
         })
     })
 
@@ -719,7 +769,9 @@ describe("useDayboardState in a new tab painted from the mirror", () => {
     }
     expect(answers).toEqual([finished(tea(1_000))])
     expect(chrome.storage.sync.set).toHaveBeenCalledTimes(1)
-    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ "dayboard-state": expected })
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      [cardKey("tea")]: cardItem(finished(tea(1_000)))
+    })
     expect(board.current!.state).toEqual(expected)
 
     unmount()
@@ -768,26 +820,9 @@ describe("useDayboardState with a note holding refused words", () => {
   }
   const long = "Short, and a long paste after it"
 
-  // A store that holds what is written to it and refuses whatever `refuses` says it can't take, the way sync refuses a note grown past its item quota.
-  const stubStore = (refuses: (state: DayboardState) => Error | null) => {
-    let stored: DayboardState = { widgets: [note, habit], settings: { name: "" } }
-
-    stubChrome({
-      get: async (key) => ({ [key]: structuredClone(stored) }),
-      set: async (items) => {
-        const next = Object.values(items)[0]!
-        const refusal = refuses(next)
-
-        if (refusal) {
-          throw refusal
-        }
-
-        stored = structuredClone(next)
-      }
-    })
-
-    return { stored: () => stored }
-  }
+  // A store that refuses whatever `refuses` says it can't take, the way sync refuses a note grown past its item quota.
+  const stubNotes = (refuses: (state: DayboardState) => Error | null) =>
+    stubStore({ widgets: [note, habit], settings: { name: "" } }, refuses)
 
   const noteIn = (state: DayboardState) =>
     state.widgets.find((widget) => widget.id === note.id) as NoteWidget | undefined
@@ -807,7 +842,7 @@ describe("useDayboardState with a note holding refused words", () => {
   }
 
   it("keeps the notice up through other saves until the note's own words land", async () => {
-    stubStore(tooLong)
+    stubNotes(tooLong)
     const { result, unmount } = await render()
 
     await act(async () => {
@@ -830,7 +865,7 @@ describe("useDayboardState with a note holding refused words", () => {
   })
 
   it("lets the notice go at the next save after a card that shows what rolled back", async () => {
-    stubStore((state) =>
+    stubNotes((state) =>
       state.widgets.some((widget) => widget.kind === "habit" && widget.settings.history.length > 0)
         ? TOO_OFTEN
         : null
@@ -851,7 +886,7 @@ describe("useDayboardState with a note holding refused words", () => {
   })
 
   it("lets the notice go once the words are typed back to what is stored, without a write", async () => {
-    stubStore(tooLong)
+    stubNotes(tooLong)
     const { result, unmount } = await render()
 
     await act(async () => {
@@ -870,7 +905,7 @@ describe("useDayboardState with a note holding refused words", () => {
   })
 
   it("lets the notice go once the note is deleted", async () => {
-    stubStore(tooLong)
+    stubNotes(tooLong)
     const { result, unmount } = await render()
 
     await act(async () => {
@@ -894,7 +929,7 @@ describe("useDayboardState with a note holding refused words", () => {
   it("keeps a note archived when it offers refused words again as it unmounts", async () => {
     // Refused once for writing too often, then let through, as a burst of saves plays out.
     let refusals = 1
-    const { stored } = stubStore(() => (refusals-- > 0 ? TOO_OFTEN : null))
+    const { stored } = stubNotes(() => (refusals-- > 0 ? TOO_OFTEN : null))
     const { result, unmount } = await render()
 
     await act(async () => {
@@ -930,20 +965,9 @@ describe("useDayboardState saving the greeting name", () => {
   // Refuses every write that would change the name while `refusing` says so, the way a burst of writes plays out.
   const render = async () => {
     const control = { refusing: true }
-    let stored: DayboardState = { widgets: [habit], settings: { name: "Sam" } }
-
-    stubChrome({
-      get: async (key) => ({ [key]: structuredClone(stored) }),
-      set: async (items) => {
-        const next = Object.values(items)[0]!
-
-        if (control.refusing && next.settings.name !== stored.settings.name) {
-          throw TOO_OFTEN
-        }
-
-        stored = structuredClone(next)
-      }
-    })
+    const { stored } = stubStore({ widgets: [habit], settings: { name: "Sam" } }, (next) =>
+      control.refusing && next.settings.name !== stored().settings.name ? TOO_OFTEN : null
+    )
 
     const { useDayboardState } = await import("./useDayboardState")
     const hook = renderHook(() => useDayboardState())

@@ -27,7 +27,7 @@ interface UseDayboardStateResult {
   dismissSaveError: () => void
 }
 
-// chrome.storage.sync refuses a write for two reasons worth telling apart, because they ask opposite things of the user: a board grown past what one sync item holds needs something shortened, while a burst of writes only needs a moment.
+// chrome.storage.sync refuses a write for two reasons worth telling apart, because they ask opposite things of the user: a card grown past what one sync item holds, or a board past what sync holds in all, needs something shortened, while a burst of writes only needs a moment.
 // The message is the only place Chrome says which quota it hit, as in "Resource::kQuotaBytesPerItem quota exceeded" or "This request exceeds the MAX_WRITE_OPERATIONS_PER_MINUTE quota".
 // A wording it doesn't recognise gets no guess at a cause, since a wrong one sends the user off shortening notes for nothing.
 export const describeSaveError = (cause: unknown): string => {
@@ -62,7 +62,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   // The latest board, for the callbacks below to build on without depending on it.
-  // It moves the moment a change is made rather than on the next render: two changes in one tick (two timers finishing together) would otherwise both start from the board before either, and the second would write the first one back out.
+  // It moves the moment a change is made rather than on the next render: two changes in one tick (two timers finishing together) would otherwise both start from the board before either, and the second would put the first one back on screen as it was.
   const stateRef = useRef(state)
 
   // Notes still showing words storage refused, by id.
@@ -136,7 +136,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
   }, [adopt])
 
   // Chrome freezes a tab left in the background (energy saver, Edge's sleeping tabs), and it wakes holding the board it froze with.
-  // The changes other tabs made meanwhile are queued for it, but they are delivered only after its own wake-up work has run, and coming back into view is part of that: the clock catches up first, and a timer that ran out while the tab slept would settle from the old board and write it back over everything since.
+  // The changes other tabs made meanwhile are queued for it, but they are delivered only after its own wake-up work has run, and coming back into view is part of that: the clock catches up first, and a timer that ran out while the tab slept would settle from the old board and write its card back over a run started since.
   // A read started on waking is answered after those queued changes, so until it lands, a timer's finish and any card's change wait for it (see settleTimer and updateWidget).
   useEffect(() => {
     const catchUp = () => catchUpWith(reload())
@@ -153,7 +153,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
       commit(nextState)
 
       try {
-        await writeDayboardState(nextState)
+        await writeDayboardState(nextState, previous)
       } catch (cause) {
         // The optimistic update never persisted (e.g. chrome.storage.sync quota or write-rate limit), so put the board back to what storage holds and surface a calm notice instead of silently diverging.
         // Storage is asked rather than the board from before this change being restored, because a later change made while this write was in flight may have landed, and restoring the snapshot would take it off the screen while it sits in storage.
@@ -226,7 +226,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   const updateWidget = useCallback(
     async (widget: Widget) => {
-      // A change made before the tab has caught up with storage was worked out from the card as the tab remembered it or froze with it, and saving it then would write that whole board back over storage.
+      // A change made before the tab has caught up with storage was worked out from the card as the tab remembered it or froze with it, and saving it then would write that copy of the card over whatever another tab or device has made of it since.
       // So it waits, and once caught up goes ahead only if that card hasn't changed since; otherwise the card renders as it is now and does over from there whatever still needs doing, rather than laying a change worked out from an old copy over a newer one.
       if (catchingUpRef.current) {
         const cardIn = (board: DayboardState | null) =>
@@ -244,7 +244,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
       const current = stateRef.current
       const existing = current?.widgets.find((candidate) => candidate.id === widget.id)
 
-      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), or one that leaves it as it is (a note typed back to what it held), and writing the board back unchanged would only spend sync quota.
+      // A card can report a change after its widget has gone (a note flushing its last keystrokes as it unmounts), or one that leaves it as it is (a note typed back to what it held), and neither has anything to save.
       if (!current || !existing || isSameData(existing.settings, widget.settings)) {
         release(widget.id)
         return null
@@ -274,7 +274,7 @@ export const useDayboardState = (): UseDayboardStateResult => {
 
   // A timer's finish settles the run it was aimed at and nothing else, so it is checked against the latest board rather than the card's copy.
   // A board can hear of a newer board from storage before it has rendered it, and settling from the copy the timeout was set with would end a run started since in another tab.
-  // Like a card's change, it first waits for the tab to catch up with storage (see updateWidget): the mirror a new tab paints first and the board a frozen tab wakes holding may both show a run another tab or device has since settled or started again, and settling it there would write that whole board back over storage.
+  // Like a card's change, it first waits for the tab to catch up with storage (see updateWidget): the mirror a new tab paints first and the board a frozen tab wakes holding may both show a run another tab or device has since settled or started again, and settling it there would write the timer as this tab last saw it over theirs.
   // It answers with the timer as the finish left it, or null when there was no run to settle, so the card only announces a finish the board took, and announces it as the board holds the timer now.
   const settleTimer = useCallback(
     async (id: string, endsAt: number): Promise<TimerWidget | null> => {
