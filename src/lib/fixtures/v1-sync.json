@@ -1,0 +1,182 @@
+{
+  "dayboard-board": {
+    "order": [
+      "home-clock",
+      "tomorrow-countdown",
+      "welcome-note",
+      "reminder-quote",
+      "daily-walk-habit",
+      "year-progress",
+      "7d1f6a52-3c0e-4a4b-9f6e-2b8f0c1d5e11",
+      "0b9a4c1e-88f2-4d0a-a7c3-51e6d2f4a902",
+      "c4e2b7a0-5d19-4f63-8a2e-9f0b3c6d7e15",
+      "e81d3f09-6b7c-4a25-b1d4-0a9c8e7f6d23",
+      "2f6c9d84-1a3b-4e7f-9c50-d8e7f6a5b431",
+      "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+      "5b4a3c2d-1e0f-4d9c-8b7a-6f5e4d3c2b1a",
+      "d0e1f2a3-b4c5-4d6e-8f7a-8b9c0d1e2f3a"
+    ],
+    "settings": {
+      "name": "Samira"
+    }
+  },
+  "dayboard-card:0b9a4c1e-88f2-4d0a-a7c3-51e6d2f4a902": {
+    "colorPreset": "rose",
+    "kind": "countdown",
+    "settings": {
+      "repeat": "yearly",
+      "targetAt": "2026-12-25T06:00:00.000Z",
+      "timeZone": "America/Chicago"
+    },
+    "title": "Christmas"
+  },
+  "dayboard-card:2f6c9d84-1a3b-4e7f-9c50-d8e7f6a5b431": {
+    "colorPreset": "lemon",
+    "kind": "stopwatch",
+    "settings": {
+      "elapsedMs": 65000,
+      "running": false,
+      "startedAt": null
+    },
+    "title": "Stopwatch"
+  },
+  "dayboard-card:5b4a3c2d-1e0f-4d9c-8b7a-6f5e4d3c2b1a": {
+    "colorPreset": "fuchsia",
+    "kind": "todo",
+    "settings": {
+      "tasks": [
+        {
+          "done": true,
+          "id": "3c1f0e9d-8b7a-4f6e-9d5c-4b3a2f1e0d9c",
+          "text": "Ship it"
+        },
+        {
+          "done": false,
+          "id": "a7b8c9d0-e1f2-4a3b-8c4d-5e6f7a8b9c0d",
+          "text": "Write the notes"
+        }
+      ]
+    },
+    "title": "Today"
+  },
+  "dayboard-card:7d1f6a52-3c0e-4a4b-9f6e-2b8f0c1d5e11": {
+    "colorPreset": "teal",
+    "kind": "clock",
+    "settings": {
+      "timeZone": "Asia/Tokyo"
+    },
+    "title": "Tokyo"
+  },
+  "dayboard-card:9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d": {
+    "colorPreset": "coral",
+    "kind": "timer",
+    "settings": {
+      "chime": true,
+      "durationMs": 180000,
+      "endsAt": null,
+      "remainingMs": 90000,
+      "running": false
+    },
+    "title": "Tea"
+  },
+  "dayboard-card:c4e2b7a0-5d19-4f63-8a2e-9f0b3c6d7e15": {
+    "colorPreset": "indigo",
+    "kind": "countdown",
+    "settings": {
+      "targetAt": "2027-03-01T15:30:00.000Z"
+    },
+    "title": "Launch"
+  },
+  "dayboard-card:d0e1f2a3-b4c5-4d6e-8f7a-8b9c0d1e2f3a": {
+    "archived": true,
+    "colorPreset": "slate",
+    "kind": "note",
+    "settings": {
+      "text": "Put away for later."
+    },
+    "title": "Old note"
+  },
+  "dayboard-card:daily-walk-habit": {
+    "colorPreset": "amber",
+    "kind": "habit",
+    "settings": {
+      "history": [
+        "2026-11-23"
+      ]
+    },
+    "title": "🚶 Daily walk"
+  },
+  "dayboard-card:e81d3f09-6b7c-4a25-b1d4-0a9c8e7f6d23": {
+    "colorPreset": "amber",
+    "kind": "countdown",
+    "settings": {
+      "startAt": "2026-11-23T06:00:00.000Z",
+      "targetAt": "2026-12-07T06:00:00.000Z",
+      "timeZone": "America/Chicago"
+    },
+    "title": "Sprint"
+  },
+  "dayboard-card:home-clock": {
+    "colorPreset": "sky",
+    "kind": "clock",
+    "settings": {
+      "timeZone": ""
+    },
+    "title": "🕒 Local time"
+  },
+  "dayboard-card:reminder-quote": {
+    "colorPreset": "violet",
+    "kind": "quote",
+    "settings": {
+      "quotes": [
+        "Begin where you are; that is always enough.",
+        "One small thing, done well.",
+        "Quiet days still count.",
+        "Breathe. The rest can wait a moment."
+      ],
+      "rotation": "daily"
+    },
+    "title": "💬 Today's reminder"
+  },
+  "dayboard-card:tomorrow-countdown": {
+    "colorPreset": "indigo",
+    "kind": "countdown",
+    "settings": {
+      "repeat": "daily",
+      "targetAt": "2026-11-23T15:00:00.000Z"
+    },
+    "title": "🌅 Morning"
+  },
+  "dayboard-card:welcome-note": {
+    "colorPreset": "emerald",
+    "kind": "note",
+    "settings": {
+      "text": "Good to have you here. This is your space for the day. Keep what helps, change what doesn't, and let the rest be quiet.\nMilk, eggs"
+    },
+    "title": "👋 Welcome"
+  },
+  "dayboard-card:year-progress": {
+    "colorPreset": "rose",
+    "kind": "countdown",
+    "settings": {
+      "repeat": "yearly",
+      "startAt": "2026-01-01T06:00:00.000Z",
+      "targetAt": "2027-01-01T06:00:00.000Z",
+      "timeZone": "America/Chicago"
+    },
+    "title": "📅 This year"
+  },
+  "dayboard-state": {
+    "widgets": [
+      {
+        "colorPreset": "slate",
+        "id": "dayboard-moved",
+        "kind": "note",
+        "settings": {
+          "text": "Your board is safe. A newer Dayboard on another device saved it, and it will be back here once this browser updates Dayboard too, which it does on its own."
+        },
+        "title": "👋 Update on the way"
+      }
+    ]
+  }
+}

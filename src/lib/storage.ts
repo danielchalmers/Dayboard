@@ -10,6 +10,7 @@ import {
   type Widget
 } from "./types"
 import { normalizeHistory } from "./habit"
+import { assumeLocalZone } from "./time"
 import { normalizeTasks } from "./todo"
 import { DEFAULT_TIMER_DURATION_MS, widgetRegistry } from "./widgets"
 
@@ -82,6 +83,7 @@ type StoredSettings = Record<string, unknown>
 // Boards written before that still carry the key, so retire it on read, dropping the start alongside it when the card was set to text, which would otherwise come back as a bar the owner never asked for.
 // A repeat this build does not know is dropped rather than stepped by, since stepping by it runs the target off into an invalid date that throws on its way to the screen.
 // The zone the dates were set in is kept only as text; whether it names a real zone is asked when the dates are read (see `localizeCountdown` in time.ts).
+// A countdown saved before the zone was recorded is given this device's when its dates are dates here (see `assumeLocalZone`), so the next write of the card carries it.
 const normalizeCountdown = ({
   display,
   startAt,
@@ -91,7 +93,7 @@ const normalizeCountdown = ({
 }: StoredSettings): CountdownWidget["settings"] => {
   const known = REPEATS.find((option) => option === repeat)
 
-  return {
+  return assumeLocalZone({
     ...settings,
     targetAt: text(settings["targetAt"]),
     ...(typeof timeZone === "string" && timeZone ? { timeZone } : {}),
@@ -99,7 +101,7 @@ const normalizeCountdown = ({
       ? { startAt }
       : {}),
     ...(known ? { repeat: known } : {})
-  }
+  })
 }
 
 // Every card reads its settings straight from render, so one field of the wrong type (a hand-edited import, or a board synced in from a different version of Dayboard) would throw there and blank the whole page.
@@ -286,7 +288,8 @@ const MOVED_ID = "dayboard-moved"
 
 // What the old item is left holding once the board has moved out of it, for a device whose Dayboard still reads only that item.
 // Every release since v0.5 shows the first-run board when the item is missing, which looks like a board lost, so it holds one note saying where the board went instead.
-// A later release can remove the item once those builds are gone, which is why a board that has no old item is never given one.
+// A board saved for the first time gets the note too, though it never had the old item: an old build on another device would otherwise go on showing the first-run board, and whatever was changed there would be written to the old item only for the next save here to put the note over it.
+// A later release can remove the item once those builds are gone, which is why a board already kept one card to an item, with no old item beside it, is never given one.
 const movedNotice = () => ({
   widgets: [
     {
@@ -503,10 +506,14 @@ export const writeDayboardState = async (
   const lastOrder = last.widgets.map((widget) => widget.id).filter((id) => kept.has(id))
 
   if (!split || !isSameData(order, lastOrder) || !isSameData(next.settings, last.settings)) {
-    changed[BOARD_KEY] = { order, settings: next.settings }
+    // Anything else the item holds was put there by a newer build, and is written back as it was, the way a card's and the settings' unknown fields are.
+    // Rebuilt from the two fields this build knows, the item would lose it at the first reorder made here.
+    const stored = items[BOARD_KEY]
+
+    changed[BOARD_KEY] = { ...(isRecord(stored) ? stored : {}), order, settings: next.settings }
   }
 
-  // The old item says where the board went from the first save out of it, and again if a build that still reads it has written a board of its own there since.
+  // The old item says where the board went from the first save onto an empty or old-style store, and again if a build that still reads it has written a board of its own there since.
   const legacy = items[LEGACY_KEY]
 
   if (!isMoved(legacy) && (!split || legacy !== undefined)) {

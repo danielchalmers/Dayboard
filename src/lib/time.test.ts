@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  assumeLocalZone,
   dateTimeInputValueToIsoInstant,
   formatClockDate,
   formatClockTime,
@@ -566,6 +567,77 @@ describe("localizeCountdown", () => {
       process.env["TZ"] = "Asia/Tokyo"
 
       expect(localizeCountdown(christmas).settings.targetAt).toBe("2026-12-24T15:00:00.000Z")
+    } finally {
+      // Assigning undefined would set the string "undefined", which Node reads as UTC.
+      if (zone === undefined) {
+        delete process.env["TZ"]
+      } else {
+        process.env["TZ"] = zone
+      }
+    }
+  })
+})
+
+// Every countdown saved up to v0.9 has no zone, and the suite's Chicago stands in for the device it was made on.
+describe("assumeLocalZone", () => {
+  const christmas = { targetAt: new Date(2026, 11, 25).toISOString(), repeat: "yearly" as const }
+
+  it("gives a date saved without a zone this device's", () => {
+    expect(assumeLocalZone(christmas)).toEqual({ ...christmas, timeZone: "America/Chicago" })
+  })
+
+  it("goes by the start when the span ends at a time of day", () => {
+    const term = {
+      targetAt: new Date(2026, 5, 30, 17, 0).toISOString(),
+      startAt: new Date(2026, 0, 5).toISOString()
+    }
+
+    expect(assumeLocalZone(term)).toEqual({ ...term, timeZone: "America/Chicago" })
+  })
+
+  // Midnight in New York: a date set there, or 11 PM set here, and nothing stored says which.
+  it("leaves a countdown whose ends are not midnight here as it was", () => {
+    const elsewhere = { targetAt: "2026-12-25T05:00:00.000Z" }
+    const unreadable = { targetAt: "" }
+
+    expect(assumeLocalZone(elsewhere)).toBe(elsewhere)
+    expect(assumeLocalZone(unreadable)).toBe(unreadable)
+  })
+
+  it("leaves an hourly or daily repeat, which is never a date", () => {
+    for (const repeat of ["hourly", "daily"] as const) {
+      const midnight = { targetAt: new Date(2026, 11, 25).toISOString(), repeat }
+
+      expect(assumeLocalZone(midnight)).toBe(midnight)
+    }
+  })
+
+  it("leaves the zone a countdown already has", () => {
+    const tokyo = { targetAt: new Date(2026, 11, 25).toISOString(), timeZone: "Asia/Tokyo" }
+
+    expect(assumeLocalZone(tokyo)).toBe(tokyo)
+  })
+
+  it("keeps the date on its day once the board is opened somewhere else", () => {
+    const zone = process.env["TZ"]
+    const saved = countdownWidget(christmas.targetAt, christmas)
+    const given = countdownWidget(christmas.targetAt, assumeLocalZone(christmas))
+
+    try {
+      process.env["TZ"] = "America/Los_Angeles"
+      const now = new Date(2026, 9, 7, 10, 0, 0)
+
+      const dayAndHour = (card: CountdownWidget) => {
+        const target = new Date(resolveCountdown(card, now).settings.targetAt)
+
+        return [target.getDate(), target.getHours()]
+      }
+
+      expect(dayAndHour(given)).toEqual([25, 0])
+      expect(formatCountdownTarget(resolveCountdown(given, now), now)).toBe("Fri, Dec 25")
+      expect(getCountdownParts(resolveCountdown(given, now), now).label).toBe("79 days from now")
+      // As it was saved, it ended at 10 PM the evening before there.
+      expect(dayAndHour(saved)).toEqual([24, 22])
     } finally {
       // Assigning undefined would set the string "undefined", which Node reads as UTC.
       if (zone === undefined) {
