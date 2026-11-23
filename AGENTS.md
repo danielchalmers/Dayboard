@@ -95,6 +95,7 @@ The product should feel premium, polished, quiet, and useful at a glance. The wh
 - The release workflow passes the tag version to the build via the `RELEASE_VERSION` environment variable, which `vite.config.ts` writes into the manifest.
 - Do not manually bump the checked-in `package.json.version`; the release workflow stamps the manifest version from the tag.
 - Release zips and publishes both browser targets through `npm run zip` and `npm run zip:edge`.
+- The release job can write to the repository, so it attaches the zips with the runner's `gh` CLI. Keep third-party actions out of it.
 - Prefer descriptive, sentence-style commit subjects without conventional-commit prefixes.
 - Commit bodies should explain the reasoning behind the change.
 
