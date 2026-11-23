@@ -609,6 +609,41 @@ describe("BoardRow", () => {
     })
   })
 
+  // The stylesheet rings the marked field; telling Tab from a click is the note's own job, since a text field matches :focus-visible either way.
+  it("marks a note that focus reached by keyboard, and not one that was clicked into", () => {
+    const item: Widget = {
+      id: "scratch",
+      kind: "note",
+      title: "Scratchpad",
+      colorPreset: "slate",
+      settings: { text: "" }
+    }
+
+    render(<BoardRow item={item} now={new Date("2026-01-01T12:30:00.000Z")} />)
+
+    const field = screen.getByLabelText("Scratchpad note")
+    fireEvent.focus(field)
+    expect(field).toHaveClass("note-field--keyboard-focus")
+
+    // A click inside a note that Tab reached is a pointer taking over.
+    fireEvent.pointerDown(field)
+    expect(field).not.toHaveClass("note-field--keyboard-focus")
+
+    fireEvent.blur(field)
+    fireEvent.focus(field)
+    expect(field).toHaveClass("note-field--keyboard-focus")
+    fireEvent.blur(field)
+
+    fireEvent.pointerDown(field)
+    act(() => field.focus())
+    expect(field).not.toHaveClass("note-field--keyboard-focus")
+
+    // Another window taking focus blurs the note without moving the page's focus off it, and coming back must not turn a click into a ring.
+    fireEvent.blur(field)
+    fireEvent.focus(field)
+    expect(field).not.toHaveClass("note-field--keyboard-focus")
+  })
+
   it("keeps a note's words in the field when storage refuses them, and offers them again", async () => {
     const item: NoteWidget = {
       id: "scratch",
