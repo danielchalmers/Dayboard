@@ -1,0 +1,9 @@
+# Normalize line endings: store text files with LF in the repo and check
+# them out with LF in every working tree, regardless of core.autocrlf.
+# Keeps Prettier's default endOfLine: "lf" green on Windows checkouts, as in Teichos.
+* text=auto eol=lf
+
+# Binary assets git should never touch.
+*.png binary
+*.zip binary
+*.svg text eol=lf

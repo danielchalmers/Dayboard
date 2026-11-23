@@ -1,3 +1,7 @@
 {
-  "recommendations": ["editorconfig.editorconfig", "ms-playwright.playwright", "vitest.explorer"]
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    "vitest.explorer"
+  ]
 }

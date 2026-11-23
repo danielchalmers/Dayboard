@@ -11,11 +11,13 @@
     "dev:edge": "node scripts/dev.ts edge",
     "build": "vite build",
     "build:edge": "vite build --outDir .output/edge-mv3",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check:fast": "npm run typecheck && npm run test",
+    "check:fast": "npm run format:check && npm run typecheck && npm run test",
     "check": "npm run check:fast && npm run test:e2e",
     "zip": "npm run build && cd .output/chrome-mv3 && zip -qrD -FS ../dayboard-chrome.zip .",
     "zip:edge": "npm run build:edge && cd .output/edge-mv3 && zip -qrD -FS ../dayboard-edge.zip ."
@@ -36,6 +38,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "jsdom": "^31.0.1",
+    "prettier": "^3.10.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
