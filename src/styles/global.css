@@ -662,6 +662,8 @@ details > summary::-webkit-details-marker {
   padding: 26px 30px 24px;
   position: relative;
   overflow: hidden;
+  /* A card scrolled into view (a new one, or one Tab reaches) stops short of the window's edge, with room for its shadow and its focus ring. */
+  scroll-margin-block: 24px;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast),

@@ -1013,6 +1013,35 @@ test("multiple open tabs stay synchronized", async ({
   await thirdPage.close()
 })
 
+test("a new card is scrolled into view, and an edit leaves the page where it was", async ({
+  page,
+  extensionId
+}) => {
+  // A 1366x768 laptop, which the first-run board fills, so the first card anyone adds starts a row below the fold.
+  // The dialog used to close on a page that looked untouched.
+  await page.setViewportSize({ width: 1366, height: 657 })
+  await openNewTab(page, extensionId)
+
+  await addWidget(page, "timer", "Tea")
+  await expect(cardByTitle(page, "Tea", true)).toBeInViewport({ ratio: 1 })
+
+  // With motion turned down the page jumps rather than glides, so where it is can be read as soon as the dialog has closed.
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await addWidget(page, "note", "Errands")
+  await expect(cardByTitle(page, "Errands", true)).toBeInViewport({ ratio: 1 })
+
+  // Only an arrival moves the page: a card that was edited is wherever it was left.
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await openWidgetMenu(page, "🕒 Local time")
+  await page.getByRole("menuitem", { name: "Edit 🕒 Local time" }).click()
+  await page.getByLabel("Name").fill("Home")
+  await page.getByRole("button", { name: "Save changes" }).click()
+  await expect(cardByTitle(page, "Home", true)).toBeVisible()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
 test("add note flow saves typed text and persists across reloads", async ({
   page,
   extensionId
